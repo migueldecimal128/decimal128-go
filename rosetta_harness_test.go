@@ -184,6 +184,8 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkUnaryCtx(c, d128_sqrt_ctx)
 	case "d128_stripTrailingZeros", "reduce":
 		return checkUnaryCtx(c, func(x d128, ctx *context) d128 { return d128_stripTrailingZeros_ctx(x, 6176, ctx) })
+	case "d128_quantize", "quantize":
+		return checkBinaryCtx(c, d128_quantize)
 	case "apply":
 		return dispatchApply(c)
 	default:
