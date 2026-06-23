@@ -162,6 +162,12 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkBinaryBoolCtx(c, d128_isLess_ctx)
 	case "d128_divideInteger_ctx", "divideint":
 		return checkBinaryCtx(c, d128_divideInteger_ctx)
+	case "d128_fma_ctx", "fma":
+		return checkTernaryCtx(c, d128_fma_ctx)
+	case "d128_remainder_ctx", "remainder":
+		return checkBinaryCtx(c, d128_remainderTrunc_ctx)
+	case "d128_remainderNear_ctx", "remaindernear":
+		return checkBinaryCtx(c, d128_remainderNear_ctx)
 	case "d128_roundToIntegralSignalInexact", "tointegralx":
 		return checkUnaryCtx(c, d128_roundToIntegralSignalInexact)
 	case "d128_round_integral_nearest_even":
@@ -241,6 +247,26 @@ func checkPredicate(c *rosettaCase, pred func(d128) bool) (outcome, string) {
 		return outPass, ""
 	}
 	return outFail, "got " + got + " want " + c.result
+}
+
+// checkTernaryCtx runs a three-operand context op (fma) and checks the result
+// (bitwise) and the raised flags.
+func checkTernaryCtx(c *rosettaCase, op func(x, y, a d128, ctx *context) d128) (outcome, string) {
+	if len(c.operands) != 3 {
+		return outUnsupported, "bad operand count"
+	}
+	if c.rounding == roundingUnsupported {
+		return outUnsupported, "rounding mode not representable"
+	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	z := op(decodeOperand(c.operands[0]), decodeOperand(c.operands[1]), decodeOperand(c.operands[2]), ctx)
+	expected := decodeOperand(c.result)
+	if d128_bitwiseEQ(z, expected) && ctx.exceptionLetters() == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
+		d128_format(z, FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
+		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 // checkUnaryCtx runs a one-operand context op and checks the result (bitwise)

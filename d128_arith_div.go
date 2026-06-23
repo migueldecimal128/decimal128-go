@@ -95,6 +95,114 @@ func divIntFnzFnz_rnd_ctx(x, y d128, ctxnull *context) d128 {
 	return decimalFNZ_128(d128_signFlag(q2), 0, scaled.dw0, scaled.dw1)
 }
 
+// Remainder never rounds: |r| < |y| (trunc) or |r| <= |y|/2 (near), exact or NaN.
+
+func d128_remainderTrunc(x, y d128) d128 { return d128_remainderTrunc_ctxnull(x, y, nil) }
+func d128_remainderTrunc_ctx(x, y d128, ctx *context) d128 {
+	return d128_remainderTrunc_ctxnull(x, y, ctx)
+}
+
+func d128_remainderTrunc_ctxnull(x, y d128, ctxnull *context) d128 {
+	if bothFinite(x, y) {
+		if d128_isNotZER(x) && d128_isNotZER(y) {
+			r, _ := remTruncFnzFnz(x, y, ctxnull)
+			return r
+		}
+		if d128_isZER(x) && d128_isNotZER(y) {
+			return d128_zero(d128_signFlag(x), min(d128_qExp(x), d128_qExp(y)))
+		}
+		return ctxSignalInvalidOperation(ctxnull, causeDivByZeroInRemainderOp)
+	}
+	if d128_isNAN(x) || d128_isNAN(y) {
+		return ctxNanOperand2(ctxnull, x, y)
+	}
+	if d128_isINF(x) {
+		return ctxSignalInvalidOperation(ctxnull, causeInfNumeratorInRemainderOp)
+	}
+	return x
+}
+
+func d128_remainderNear(x, y d128) d128 { return d128_remainderNear_ctxnull(x, y, nil) }
+func d128_remainderNear_ctx(x, y d128, ctx *context) d128 {
+	return d128_remainderNear_ctxnull(x, y, ctx)
+}
+
+func d128_remainderNear_ctxnull(x, y d128, ctxnull *context) d128 {
+	if bothFinite(x, y) {
+		if d128_isNotZER(x) && d128_isNotZER(y) {
+			return remainderNearFnzFnz(x, y, ctxnull)
+		}
+		if d128_isZER(x) && d128_isNotZER(y) {
+			return d128_zero(d128_signFlag(x), min(d128_qExp(x), d128_qExp(y)))
+		}
+		return ctxSignalInvalidOperation(ctxnull, causeDivByZeroInRemainderOp)
+	}
+	if d128_isNAN(x) || d128_isNAN(y) {
+		return ctxNanOperand2(ctxnull, x, y)
+	}
+	if d128_isINF(x) {
+		return ctxSignalInvalidOperation(ctxnull, causeInfNumeratorInRemainderOp)
+	}
+	return x
+}
+
+// remTruncFnzFnz returns (r = x - trunc(x/y)*y, truncQuotientIsOdd).
+func remTruncFnzFnz(x, y d128, ctxnull *context) (d128, bool) {
+	truncCtx := newContextRound(TOWARD_ZERO) // scratch: discards flags
+	n1 := d128_divide_ctx(x, y, truncCtx)
+	if truncCtx.isOverflow() {
+		nan := ctxSignalInvalidOperation(ctxnull, causeDivIntOverflowsCoefficient)
+		return nan, false
+	}
+	verify("", d128_isFIN(n1))
+	n := n1
+	if d128_qExp(n1) < 0 {
+		n = d128_roundToIntegralTowardZeroSignalInexact(n1, truncCtx)
+	}
+	verify("", d128_qExp(n) >= 0)
+	// If the integer quotient has more than 34 digits it cannot be represented
+	// exactly, so the remainder is undefined (dectest "Division_impossible").
+	if d128_digitLen(n)+d128_qExp(n) > 34 {
+		return ctxSignalInvalidOperation(ctxnull, causeDivIntOverflowsCoefficient), false
+	}
+	truncIsOdd := false
+	if !d128_isZER(n) && d128_qExp(n) == 0 {
+		truncIsOdd = (n.ubdLo64 & 1) != 0
+	}
+	r1 := d128_fma_tte(d128_negate(n), y, x) // r = x - n*y, single rounding
+	if d128_isZER(r1) {
+		return d128_zero(d128_signFlag(x), min(d128_qExp(x), d128_qExp(y))), truncIsOdd
+	}
+	return r1, truncIsOdd
+}
+
+func remainderNearFnzFnz(x, y d128, ctxnull *context) d128 {
+	r1, truncIsOdd := remTruncFnzFnz(x, y, ctxnull)
+	if !d128_isFIN(r1) {
+		return r1
+	}
+	if d128_isZER(r1) {
+		return r1
+	}
+	var truncCtx *context
+	if ctxnull != nil {
+		truncCtx = ctxnull.withRoundingAndNewFlags(TOWARD_ZERO)
+	} else {
+		truncCtx = newContextRound(TOWARD_ZERO)
+	}
+	var r2 d128
+	if d128_signFlag(r1) {
+		r2 = d128_add_ctx(r1, y, truncCtx)
+	} else {
+		r2 = d128_subtract_ctx(r1, y, truncCtx)
+	}
+	cmp := cmpMagFnzFnz(r1, r2)
+	if cmp > 0 || (cmp == 0 && truncIsOdd) {
+		return r2
+	}
+	return r1
+}
+
 func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *context) d128 {
 	digitLenDelta := d128_digitLen(x) - d128_digitLen(y)
 	numeratorScale := 34 - digitLenDelta

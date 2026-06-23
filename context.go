@@ -79,6 +79,16 @@ func ctxSignalInvalidOperation(ctxnull *context, cause invalidCause) d128 {
 	return D128_QNAN0
 }
 
+// ctxSignalInvalidOperationResult is ctxSignalInvalidOperation with an explicit
+// result (Swift's defaulted result parameter).
+func ctxSignalInvalidOperationResult(ctxnull *context, cause invalidCause, result d128) d128 {
+	_ = cause
+	if ctxnull != nil {
+		ctxnull.flags.set(INVALID_OPERATION)
+	}
+	return result
+}
+
 // ctxSignalSNanOperandFound quiets an sNaN operand and raises invalidOperation.
 func ctxSignalSNanOperandFound(ctxnull *context, nan d128) d128 {
 	verify("", d128_isNAN(nan))
