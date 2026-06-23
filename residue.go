@@ -72,6 +72,17 @@ func residueFromRemainderDivisor_64(remainder, divisor int64) residue {
 	return RESIDUE_GT_HALF
 }
 
+// The _pow10 forms look up the 10^pow10 divisor in the pow10 tables.
+
+func residueFromRemainderPow10_64(remainder int64, pow10 int) residue {
+	return residueFromRemainderDivisor_64(remainder, pow10_128_dw0(pow10))
+}
+
+func residueFromRemainderPow10_128(remDw0, remDw1 int64, pow10 int) residue {
+	verify("", pow10 >= 0 && pow10 <= 38)
+	return residueFromRemainderDivisor_128(remDw0, remDw1, pow10_128_dw0(pow10), pow10_128_dw1(pow10))
+}
+
 func residueFromRemainderDivisor_128(remDw0, remDw1, divDw0, divDw1 int64) residue {
 	if (remDw1 >> 63) == 0 {
 		if isZero_bool_128(remDw0, remDw1) {
