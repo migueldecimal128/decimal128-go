@@ -107,3 +107,22 @@ func TestRosettaDectestEncode(t *testing.T) {
 	}
 	t.Logf("dqEncode: %d cases — %d passed, %d unsupported", r.total, r.passed, r.unsupported)
 }
+
+// TestRosettaDectestAddSub runs the IBM dectest add/subtract corpora through the
+// arithmetic dispatch (value + exception flags).
+func TestRosettaDectestAddSub(t *testing.T) {
+	for _, name := range []string{"dqAdd.decTest", "dqSubtract.decTest"} {
+		cases, err := loadDectestFile(filepath.Join(resourcesDir(), "dectest", name))
+		if err != nil {
+			t.Fatalf("load %s: %v", name, err)
+		}
+		r := runRosetta(cases)
+		if r.failed != 0 {
+			t.Fatalf("%s: %d/%d failed: %v", name, r.failed, r.total, sampleFailures(r))
+		}
+		if r.passed == 0 {
+			t.Fatalf("%s: no cases passed", name)
+		}
+		t.Logf("%s: %d cases — %d passed, %d unsupported", name, r.total, r.passed, r.unsupported)
+	}
+}

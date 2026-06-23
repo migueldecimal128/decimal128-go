@@ -70,12 +70,50 @@ func signalInexactOverflow_quiet(dec d128) d128  { return dec }
 func signalInexactUnderflow_quiet(dec d128) d128 { return dec }
 
 // ctxSignalInvalidOperation sets the invalid-operation flag and returns a quiet
-// NaN. (The NaN-operand propagation helpers land in Phase 3.) The cause is
-// diagnostic and currently unused.
+// NaN (the default result). The cause is diagnostic and currently unused.
 func ctxSignalInvalidOperation(ctxnull *context, cause invalidCause) d128 {
 	_ = cause
 	if ctxnull != nil {
 		ctxnull.flags.set(INVALID_OPERATION)
 	}
 	return D128_QNAN0
+}
+
+// ctxSignalSNanOperandFound quiets an sNaN operand and raises invalidOperation.
+func ctxSignalSNanOperandFound(ctxnull *context, nan d128) d128 {
+	verify("", d128_isNAN(nan))
+	quietedNaN := nan
+	if d128_isSNAN(nan) {
+		quietedNaN = d128_quieted(nan)
+	}
+	if ctxnull != nil {
+		ctxnull.flags.set(INVALID_OPERATION)
+	}
+	return quietedNaN
+}
+
+// ctxNanOperand2 selects and propagates the NaN of a two-operand op (sNaN takes
+// precedence; raises invalidOperation if any operand was signaling).
+func ctxNanOperand2(ctxnull *context, x, y d128) d128 {
+	verify("", d128_isNAN(x) || d128_isNAN(y))
+	takeY := !d128_isNAN(x) || (d128_isSNAN(y) && !d128_isSNAN(x))
+	theNaN := x
+	if takeY {
+		theNaN = y
+	}
+	verify("", d128_isNAN(theNaN))
+	isSignaling := d128_isSNAN(x) || d128_isSNAN(y)
+	if !isSignaling {
+		return theNaN
+	}
+	return ctxSignalSNanOperandFound(ctxnull, theNaN)
+}
+
+// ctxNanOperand1 propagates a single NaN operand (quieting an sNaN with a signal).
+func ctxNanOperand1(ctxnull *context, x d128) d128 {
+	verify("", d128_isNAN(x))
+	if d128_isQNAN(x) {
+		return x
+	}
+	return ctxSignalSNanOperandFound(ctxnull, x)
 }

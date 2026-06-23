@@ -43,4 +43,11 @@ type invalidCause int
 
 const (
 	causeParseMalformed invalidCause = iota
+	causeNanOperand
+	causeSnanOperand
+	causeMagnitudeSubtractionOfInfinities
+	causeMulZeroByInfinity
+	causeDivZeroByZero
+	causeDivInfByInf
+	causeOther
 )

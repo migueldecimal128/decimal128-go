@@ -22,6 +22,14 @@ func d128Pack(sign bool, qExp int, coeffDw0, coeffDw1 int64) d128 {
 	return d128{ubdLo64: coeffDw0, ubdHi64: qExpAndSignBit | coeffDw1}
 }
 
+// d128FromQExpSignBit builds a finite d128 from a pre-packed qExpAndSignBit and
+// coefficient (the init(qExpAndSignBit, coeff) mechanic).
+func d128FromQExpSignBit(qExpAndSignBit, coeffDw0, coeffDw1 int64) d128 {
+	verify("", ushr_64_64(qExpAndSignBit, 15) == 0)
+	verify("", isLt_pow10_34_bool_128(coeffDw0, coeffDw1))
+	return d128{ubdLo64: coeffDw0, ubdHi64: (qExpAndSignBit << 49) | coeffDw1}
+}
+
 // --- field accessors ---
 
 func d128_hi49(x d128) int64 { return x.ubdHi64 & ((1 << 49) - 1) }

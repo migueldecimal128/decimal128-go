@@ -99,6 +99,11 @@ func flagLettersCanonical(s string) string {
 // decodeOperand decodes a corpus operand token into a d128: "#…" is DPD hex,
 // "[…]" is Intel BID hex, anything else is a decimal/Infinity/NaN string.
 func decodeOperand(s string) d128 {
+	if s == "#" {
+		// dectest's bare "#" is an operand syntax-error marker: an op receiving it
+		// must raise invalidOperation. A signaling NaN produces exactly that.
+		return D128_SNAN0
+	}
 	if len(s) > 0 {
 		if s[0] == '#' {
 			if u, ok := dpd128ParseDecTestHex(s); ok {
@@ -138,11 +143,52 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkPredicate(c, d128_isSNAN)
 	case "d128_isQNaN":
 		return checkPredicate(c, d128_isQNAN)
+	case "d128_add_ctx", "add":
+		return checkBinaryCtx(c, d128_add_ctx)
+	case "d128_subtract_ctx", "subtract":
+		return checkBinaryCtx(c, d128_subtract_ctx)
 	case "apply":
 		return dispatchApply(c)
 	default:
 		return outUnsupported, "no dispatch arm for " + c.operation
 	}
+}
+
+func roundingFromToken(tok string) round {
+	switch tok {
+	case "TIES_TO_EVEN":
+		return TIES_TO_EVEN
+	case "TIES_TO_AWAY":
+		return TIES_TO_AWAY
+	case "TOWARD_ZERO":
+		return TOWARD_ZERO
+	case "TOWARD_POSITIVE":
+		return TOWARD_POSITIVE
+	case "TOWARD_NEGATIVE":
+		return TOWARD_NEGATIVE
+	default:
+		return TIES_TO_EVEN
+	}
+}
+
+// checkBinaryCtx runs a two-operand context op and checks the result value
+// (bitwise) and the raised exception flags against the corpus expectation.
+func checkBinaryCtx(c *rosettaCase, op func(x, y d128, ctx *context) d128) (outcome, string) {
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	if c.rounding == roundingUnsupported {
+		return outUnsupported, "rounding mode not representable in decimal128"
+	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	z := op(decodeOperand(c.operands[0]), decodeOperand(c.operands[1]), ctx)
+	expected := decodeOperand(c.result)
+	if d128_bitwiseEQ(z, expected) && ctx.exceptionLetters() == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
+		d128_format(z, FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
+		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 func checkFormat(c *rosettaCase, style int) (outcome, string) {
@@ -272,18 +318,70 @@ func parseDectestLine(line string) (rosettaCase, bool) {
 	if len(left) < 3 || len(right) < 1 {
 		return rosettaCase{}, false
 	}
+	operands := make([]string, 0, len(left)-2)
+	for _, o := range left[2:] {
+		operands = append(operands, unquoteDectest(o))
+	}
 	c := rosettaCase{
 		src:       srcDectest,
 		text:      line,
 		operation: left[1],
-		operands:  append([]string(nil), left[2:]...),
+		operands:  operands,
 		result:    unquoteDectest(right[0]),
 	}
 	if len(right) > 1 {
-		c.expectedFlags = flagLettersCanonical(strings.Join(right[1:], ""))
+		c.expectedFlags = dectestConditionsToFlags(right[1:])
 	}
 	return c, true
 }
+
+// dectestConditionsToFlags maps dectest condition words to the canonical xuozi
+// flag letters (Rounded/Clamped/Subnormal carry no IEEE flag).
+func dectestConditionsToFlags(words []string) string {
+	var letters strings.Builder
+	for _, w := range words {
+		switch strings.ToLower(w) {
+		case "inexact":
+			letters.WriteByte('x')
+		case "underflow":
+			letters.WriteByte('u')
+		case "overflow":
+			letters.WriteByte('o')
+		case "division_by_zero":
+			letters.WriteByte('z')
+		case "invalid_operation":
+			letters.WriteByte('i')
+		}
+	}
+	return flagLettersCanonical(letters.String())
+}
+
+// parseDectestRounding maps a "rounding:" directive to a rounding token. ok=false
+// for non-directive lines.
+func parseDectestRounding(line string) (string, bool) {
+	l := strings.TrimSpace(strings.ToLower(line))
+	if !strings.HasPrefix(l, "rounding:") {
+		return "", false
+	}
+	switch strings.TrimSpace(l[len("rounding:"):]) {
+	case "half_even":
+		return "TIES_TO_EVEN", true
+	case "half_up":
+		return "TIES_TO_AWAY", true
+	case "down":
+		return "TOWARD_ZERO", true
+	case "ceiling":
+		return "TOWARD_POSITIVE", true
+	case "floor":
+		return "TOWARD_NEGATIVE", true
+	default:
+		// "up" and "half_down" are not IEEE-754 decimal modes; decimal128 can't
+		// represent them, so those cases are skipped (Unsupported).
+		return roundingUnsupported, true
+	}
+}
+
+const roundingUnsupported = "UNSUPPORTED_ROUNDING"
 
 // unquoteDectest strips the surrounding single quotes dectest uses for string
 // results/operands.
@@ -301,10 +399,17 @@ func loadDectestFile(path string) ([]rosettaCase, error) {
 	}
 	defer f.Close()
 	var cases []rosettaCase
+	rounding := "TIES_TO_EVEN"
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 0, 1<<20), 1<<20)
 	for sc.Scan() {
-		if c, ok := parseDectestLine(sc.Text()); ok {
+		line := sc.Text()
+		if r, ok := parseDectestRounding(line); ok {
+			rounding = r
+			continue
+		}
+		if c, ok := parseDectestLine(line); ok {
+			c.rounding = rounding
 			cases = append(cases, c)
 		}
 	}

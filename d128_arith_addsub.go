@@ -1,0 +1,231 @@
+// Add and subtract. The general bodies (d128_add_rnd_ctxnull /
+// d128_subtract_rnd_ctxnull) underlie the _tte/_rnd/_ctx forms. Aligned same-
+// exponent sums take a flag-free fast path; otherwise the FNZ×FNZ paths align
+// (near) or use the unaligned far-exponent helpers with the FE finalize entries.
+
+package decimal128
+
+func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
+	hi49Sum := d128_hi49(x) + d128_hi49(y)
+	if ushr_64_64(hi49Sum, 48) == 0 && d128_qExpAndSignBit(x) == d128_qExpAndSignBit(y) {
+		// Fast path: same sign and exponent, sum fits in 112 bits. No rounding.
+		coeffSum := add_128_128x128(x.ubdLo64, d128_hi49(x), y.ubdLo64, d128_hi49(y))
+		return d128FromQExpSignBit(d128_qExpAndSignBit(x), coeffSum.dw0, coeffSum.dw1)
+	}
+	if d128_isNonFinite(x) || d128_isNonFinite(y) {
+		return addNonFinite_rnd_ctx(x, y, ctxnull)
+	}
+	if d128_isZER(x) {
+		if d128_isZER(y) {
+			resultSign := (d128_signFlag(x) && d128_signFlag(y)) ||
+				(d128_signFlag(x) != d128_signFlag(y) && rounding == TOWARD_NEGATIVE)
+			return d128_zero(resultSign, min(d128_qExp(x), d128_qExp(y)))
+		}
+		return preferMinimumQExp_exact(y, d128_qExp(x))
+	}
+	if d128_isZER(y) {
+		return preferMinimumQExp_exact(x, d128_qExp(y))
+	}
+	return addFnzFnz_rnd_ctx(x, y, rounding, ctxnull)
+}
+
+func d128_add_tte(x, y d128) d128            { return d128_add_rnd_ctxnull(x, y, TIES_TO_EVEN, nil) }
+func d128_add_rnd(x, y d128, rnd round) d128 { return d128_add_rnd_ctxnull(x, y, rnd, nil) }
+func d128_add_ctx(x, y d128, ctx *context) d128 {
+	return d128_add_rnd_ctxnull(x, y, ctx.round, ctx)
+}
+
+func addFnzFnz_rnd_ctx(x, y d128, rounding round, ctxnull *context) d128 {
+	qAligned := min(d128_qExp(x), d128_qExp(y))
+	absXShift := d128_qExp(x) - qAligned // one of these is zero
+	absYShift := d128_qExp(y) - qAligned
+	if absXShift+absYShift <= 4 {
+		// Nearly aligned: align to qAligned without overflowing 128 bits.
+		xCoeffAligned := mulPow10_128_128(x.ubdLo64, d128_hi49(x), absXShift)
+		yCoeffAligned := mulPow10_128_128(y.ubdLo64, d128_hi49(y), absYShift)
+
+		var resultSign bool
+		var resultCoeff u128
+		if d128_signFlag(x) == d128_signFlag(y) {
+			resultSign = d128_signFlag(x)
+			resultCoeff = add_128_128x128(xCoeffAligned.dw0, xCoeffAligned.dw1, yCoeffAligned.dw0, yCoeffAligned.dw1)
+		} else {
+			ds := subAbs_d128swap_128x128(xCoeffAligned.dw0, xCoeffAligned.dw1, yCoeffAligned.dw0, yCoeffAligned.dw1)
+			if isZero_bool_128(ds.diffDw0, ds.diffDw1) {
+				return d128_zero(rounding == TOWARD_NEGATIVE, qAligned)
+			}
+			resultSign = d128_signFlag(x) != ds.swap
+			resultCoeff = u128{ds.diffDw0, ds.diffDw1}
+		}
+		if isLt_pow10_34_bool_128(resultCoeff.dw0, resultCoeff.dw1) {
+			return d128Pack(resultSign, qAligned, resultCoeff.dw0, resultCoeff.dw1)
+		}
+		return finalize_128_ctx(resultSign, qAligned, resultCoeff, RESIDUE_EXACT, rounding, ctxnull)
+	}
+	if d128_signFlag(x) == d128_signFlag(y) {
+		return addFnzFnzUnalignedLikeSign_rnd_ctx(x, y, rounding, ctxnull)
+	}
+	return addFnzFnzUnalignedUnlikeSign_rnd_ctx(x, y, rounding, ctxnull)
+}
+
+func d128_subtract_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
+	hi49Sum := d128_hi49(x) + d128_hi49(y)
+	if ushr_64_64(hi49Sum, 48) == 0 && d128_qExp(x) == d128_qExp(y) {
+		if d128_qExpAndSignBit(x) != d128_qExpAndSignBit(y) {
+			coeffSum := add_128_128x128(x.ubdLo64, d128_hi49(x), y.ubdLo64, d128_hi49(y))
+			return d128FromQExpSignBit(d128_qExpAndSignBit(x), coeffSum.dw0, coeffSum.dw1)
+		}
+		ds := subAbs_d128swap_128x128(x.ubdLo64, d128_hi49(x), y.ubdLo64, d128_hi49(y))
+		if !isZero_bool_128(ds.diffDw0, ds.diffDw1) {
+			resultQExpAndSignBit := d128_qExpAndSignBit(x) ^ boolToInt64(ds.swap)
+			return d128FromQExpSignBit(resultQExpAndSignBit, ds.diffDw0, ds.diffDw1)
+		}
+	}
+	if d128_isNAN(x) || d128_isNAN(y) {
+		return ctxNanOperand2(ctxnull, x, y)
+	}
+	return d128_add_rnd_ctxnull(x, d128_negate(y), rounding, ctxnull)
+}
+
+func d128_subtract_tte(x, y d128) d128            { return d128_subtract_rnd_ctxnull(x, y, TIES_TO_EVEN, nil) }
+func d128_subtract_rnd(x, y d128, rnd round) d128 { return d128_subtract_rnd_ctxnull(x, y, rnd, nil) }
+func d128_subtract_ctx(x, y d128, ctx *context) d128 {
+	return d128_subtract_rnd_ctxnull(x, y, ctx.round, ctx)
+}
+
+func addFnzFnzUnalignedLikeSign_rnd_ctx(x, y d128, rounding round, ctxnull *context) d128 {
+	verify("", d128_qExp(x) != d128_qExp(y))
+	verify("", d128_signFlag(x) == d128_signFlag(y))
+
+	var m, n d128
+	if d128_qExp(x) > d128_qExp(y) {
+		m, n = x, y
+	} else {
+		m, n = y, x
+	}
+	mQ := d128_qExp(m)
+	nQ := d128_qExp(n)
+	mDigitLen := d128_digitLen(m)
+	qDelta := mQ - nQ
+	verify("", qDelta > 0)
+	headroom := 34 - mDigitLen
+	shiftLeft := min(max(headroom, 0), qDelta)
+	zCoeff := mulPow10_128_128(m.ubdLo64, d128_hi49(m), shiftLeft)
+	qAlign := mQ - shiftLeft
+	shiftRight := qAlign - nQ
+	// Swamped fast path: n lies strictly below the result's LSD (LT_HALF residue).
+	if shiftRight > d128_digitLen(n) {
+		return finalizeSwampedFnz_128_ctx(d128_signFlag(m), qAlign, zCoeff, RESIDUE_LT_HALF, rounding, ctxnull)
+	}
+	qr := div_128_pow10_checked_q128res(d128_u128(n), shiftRight)
+	res := qr.residue
+	zCoeff = add_128_128x128(zCoeff.dw0, zCoeff.dw1, qr.quotDw0, qr.quotDw1)
+	return finalizeAddSubFnz_128_ctx(d128_signFlag(m), qAlign, zCoeff, res, rounding, ctxnull)
+}
+
+func addFnzFnzUnalignedUnlikeSign_rnd_ctx(x, y d128, rounding round, ctxnull *context) d128 {
+	verify("", d128_qExp(x) != d128_qExp(y))
+	verify("", d128_signFlag(x) != d128_signFlag(y))
+	cmp := cmpMagFnzFnz(x, y)
+	if cmp > 0 {
+		return subMagUnalignedFnzFnz_rnd_ctx(d128_signFlag(x), x, y, rounding, ctxnull)
+	}
+	if cmp < 0 {
+		return subMagUnalignedFnzFnz_rnd_ctx(d128_signFlag(y), y, x, rounding, ctxnull)
+	}
+	return d128_zero(rounding == TOWARD_NEGATIVE, min(d128_qExp(x), d128_qExp(y)))
+}
+
+func addNonFinite_rnd_ctx(x, y d128, ctxnull *context) d128 {
+	if d128_isNAN(x) || d128_isNAN(y) {
+		return ctxNanOperand2(ctxnull, x, y)
+	}
+	verify("", d128_isINF(x) || d128_isINF(y))
+	if d128_isFIN(x) {
+		return y
+	}
+	if d128_isFIN(y) {
+		return x
+	}
+	if d128_signFlag(x) == d128_signFlag(y) {
+		return x
+	}
+	return ctxSignalInvalidOperation(ctxnull, causeMagnitudeSubtractionOfInfinities)
+}
+
+func preferMinimumQExp_exact(x d128, otherExp int) d128 {
+	xSign := d128_signFlag(x)
+	xQ := d128_qExp(x)
+	xCoeff := d128_u128(x)
+	delta := xQ - otherExp
+	headroom := max(0, 34-d128_digitLen(x))
+	if delta <= 0 || headroom == 0 {
+		return x
+	}
+	expRoom := xQ + 6176
+	shiftLeft := min(min(headroom, delta), expRoom)
+	zCoeff := mulPow10_128_128(xCoeff.dw0, xCoeff.dw1, shiftLeft)
+	zQ := xQ - shiftLeft
+	verify("", isCanonical34_128(zQ, zCoeff))
+	return d128Pack(xSign, zQ, zCoeff.dw0, zCoeff.dw1)
+}
+
+func subMagUnalignedFnzFnz_rnd_ctx(zSign bool, m, s d128, rounding round, ctxnull *context) d128 {
+	verify("", d128_isFNZ(m) && d128_isFNZ(s))
+	verify("", d128_qExp(m) != d128_qExp(s))
+	verify("", cmpMagFnzFnz(m, s) > 0)
+	mQ := d128_qExp(m)
+	mCoeff := d128_u128(m)
+	mDigitLen := digitLen_int_128(mCoeff.dw0, mCoeff.dw1)
+	sQ := d128_qExp(s)
+	sCoeff := d128_u128(s)
+	sDigitLen := digitLen_int_128(sCoeff.dw0, sCoeff.dw1)
+	gap := mQ - sQ
+	if gap < 0 {
+		prod := mulPow10_128_128(sCoeff.dw0, sCoeff.dw1, -gap)
+		diff := sub_128_128x128(mCoeff.dw0, mCoeff.dw1, prod.dw0, prod.dw1)
+		return finalize_128_ctx(zSign, mQ, diff, RESIDUE_EXACT, rounding, ctxnull)
+	}
+	verify("", mDigitLen <= 34)
+	verify("", sDigitLen <= 34)
+
+	// Fully/Borderline swamped fast path at 34-digit scale.
+	headroom := 34 - mDigitLen
+	shiftM34 := min(gap, headroom)
+	qAlign34 := mQ - shiftM34
+	shiftS34 := qAlign34 - sQ
+	if shiftS34 >= sDigitLen {
+		mScaled := mulPow10_128_128(mCoeff.dw0, mCoeff.dw1, shiftM34)
+		if cmp_int_128x128_pow10(mScaled.dw0, mScaled.dw1, 33) != 0 { // not 10^33
+			raw := RESIDUE_LT_HALF
+			if shiftS34 <= sDigitLen { // == sDigitLen (borderline)
+				raw = residueFromDecadeWithDigitLen_128(sCoeff.dw0, sCoeff.dw1, sDigitLen)
+			}
+			z := sub_128_128x128(mScaled.dw0, mScaled.dw1, 1, 0)
+			return finalizeSwampedFnz_128_ctx(zSign, qAlign34, z, residueSubtractionInverse(raw), rounding, ctxnull)
+		}
+		// mScaled == 10^33: fall through to the guard path.
+	}
+
+	// Guard-digit path (the 10^33 exception and partial overlap).
+	headroomWithGuard := 1 + headroom
+	shiftMLeft := min(gap, headroomWithGuard)
+	qAlign := mQ - shiftMLeft
+	shiftSRight := qAlign - sQ
+	verify("", shiftSRight >= 0)
+
+	zCoeff := mulPow10_128_128(mCoeff.dw0, mCoeff.dw1, shiftMLeft)
+	if shiftSRight > sDigitLen {
+		borrowed := sub_128_128x128(zCoeff.dw0, zCoeff.dw1, 1, 0)
+		return finalizeAddSubFnz_128_ctx(zSign, qAlign, borrowed, residueSubtractionInverse(RESIDUE_LT_HALF), rounding, ctxnull)
+	}
+	qr := div_128_pow10_checked_q128res(sCoeff, shiftSRight)
+	rawResidue := qr.residue
+	zCoeff = sub_128_128x128(zCoeff.dw0, zCoeff.dw1, qr.quotDw0, qr.quotDw1)
+	res := RESIDUE_EXACT
+	if rawResidue != RESIDUE_EXACT {
+		res = residueSubtractionInverse(rawResidue)
+		zCoeff = sub_128_128x128(zCoeff.dw0, zCoeff.dw1, 1, 0)
+	}
+	return finalizeAddSubFnz_128_ctx(zSign, qAlign, zCoeff, res, rounding, ctxnull)
+}
