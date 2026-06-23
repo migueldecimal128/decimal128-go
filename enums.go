@@ -49,5 +49,9 @@ const (
 	causeMulZeroByInfinity
 	causeDivZeroByZero
 	causeDivInfByInf
+	causeDivByZeroInRemainderOp
+	causeInfNumeratorInRemainderOp
+	causeDivIntOverflowsCoefficient
+	causeConvertNonFiniteToInteger
 	causeOther
 )

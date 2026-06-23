@@ -160,6 +160,20 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkBinaryBoolCtx(c, d128_isEqual_ctx)
 	case "d128_isLess_ctx":
 		return checkBinaryBoolCtx(c, d128_isLess_ctx)
+	case "d128_divideInteger_ctx", "divideint":
+		return checkBinaryCtx(c, d128_divideInteger_ctx)
+	case "d128_roundToIntegralSignalInexact", "tointegralx":
+		return checkUnaryCtx(c, d128_roundToIntegralSignalInexact)
+	case "d128_round_integral_nearest_even":
+		return checkUnaryCtx(c, func(x d128, _ *context) d128 { return d128_roundToIntegralTiesToEven(x) })
+	case "d128_round_integral_nearest_away":
+		return checkUnaryCtx(c, func(x d128, _ *context) d128 { return d128_roundToIntegralTiesToAway(x) })
+	case "d128_round_integral_zero":
+		return checkUnaryCtx(c, func(x d128, _ *context) d128 { return d128_roundToIntegralTowardZero(x) })
+	case "d128_round_integral_positive":
+		return checkUnaryCtx(c, func(x d128, _ *context) d128 { return d128_roundToIntegralTowardPositive(x) })
+	case "d128_round_integral_negative":
+		return checkUnaryCtx(c, func(x d128, _ *context) d128 { return d128_roundToIntegralTowardNegative(x) })
 	case "apply":
 		return dispatchApply(c)
 	default:
@@ -227,6 +241,26 @@ func checkPredicate(c *rosettaCase, pred func(d128) bool) (outcome, string) {
 		return outPass, ""
 	}
 	return outFail, "got " + got + " want " + c.result
+}
+
+// checkUnaryCtx runs a one-operand context op and checks the result (bitwise)
+// and the raised flags.
+func checkUnaryCtx(c *rosettaCase, op func(x d128, ctx *context) d128) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	if c.rounding == roundingUnsupported {
+		return outUnsupported, "rounding mode not representable"
+	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	z := op(decodeOperand(c.operands[0]), ctx)
+	expected := decodeOperand(c.result)
+	if d128_bitwiseEQ(z, expected) && ctx.exceptionLetters() == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
+		d128_format(z, FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
+		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 // checkCompareCtx runs the tri-state compare and maps the CMP754 code to the
