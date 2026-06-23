@@ -1,0 +1,25 @@
+// from TestNonFiniteProperties{,2} — predicate assertions on the non-finites.
+// (The nanPayload getter is a 128-bit property, not an op/result tuple — it
+//  stays bespoke in TestNonFinitePayload.)
+
+// +Infinity
+d128_isSigned    TIES_TO_EVEN Infinity -> 0
+d128_isInf       TIES_TO_EVEN Infinity -> 1
+d128_isFinite    TIES_TO_EVEN Infinity -> 0
+d128_isNaN       TIES_TO_EVEN Infinity -> 0
+d128_isSignaling TIES_TO_EVEN Infinity -> 0
+d128_isQNaN      TIES_TO_EVEN Infinity -> 0
+
+// -Infinity
+d128_isSigned    TIES_TO_EVEN -Infinity -> 1
+d128_isInf       TIES_TO_EVEN -Infinity -> 1
+d128_isFinite    TIES_TO_EVEN -Infinity -> 0
+d128_isQNaN      TIES_TO_EVEN -Infinity -> 0
+
+// signaling NaN with payload
+d128_isSigned    TIES_TO_EVEN sNaN1234 -> 0
+d128_isNaN       TIES_TO_EVEN sNaN1234 -> 1
+d128_isSignaling TIES_TO_EVEN sNaN1234 -> 1
+d128_isQNaN      TIES_TO_EVEN sNaN1234 -> 0
+d128_isFinite    TIES_TO_EVEN sNaN1234 -> 0
+d128_isInf       TIES_TO_EVEN sNaN1234 -> 0

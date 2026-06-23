@@ -1,0 +1,57 @@
+// generated from TestCtxCompare.swift — 56 lines
+d128_compare_ctx TIES_TO_EVEN 3 5 -> -1
+d128_compareSignaling_ctx TIES_TO_EVEN 3 5 -> -1
+d128_compare_ctx TIES_TO_EVEN 5 3 -> 1
+d128_compareSignaling_ctx TIES_TO_EVEN 5 3 -> 1
+d128_compare_ctx TIES_TO_EVEN 5 5 -> 0
+d128_compareSignaling_ctx TIES_TO_EVEN 5 5 -> 0
+d128_compare_ctx TIES_TO_EVEN -5 5 -> -1
+d128_compareSignaling_ctx TIES_TO_EVEN -5 5 -> -1
+d128_compare_ctx TIES_TO_EVEN 5 -5 -> 1
+d128_compareSignaling_ctx TIES_TO_EVEN 5 -5 -> 1
+d128_compare_ctx TIES_TO_EVEN -10 -3 -> -1
+d128_compareSignaling_ctx TIES_TO_EVEN -10 -3 -> -1
+d128_compare_ctx TIES_TO_EVEN 0 -0 -> 0
+d128_compareSignaling_ctx TIES_TO_EVEN 0 -0 -> 0
+d128_compare_ctx TIES_TO_EVEN 0 0 -> 0
+d128_compareSignaling_ctx TIES_TO_EVEN 0 0 -> 0
+d128_compare_ctx TIES_TO_EVEN 1 1.0 -> 0
+d128_compareSignaling_ctx TIES_TO_EVEN 1 1.0 -> 0
+d128_compare_ctx TIES_TO_EVEN -1.00 -1 -> 0
+d128_compareSignaling_ctx TIES_TO_EVEN -1.00 -1 -> 0
+d128_compare_ctx TIES_TO_EVEN 0 1 -> -1
+d128_compareSignaling_ctx TIES_TO_EVEN 0 1 -> -1
+d128_compare_ctx TIES_TO_EVEN 0 -1 -> 1
+d128_compareSignaling_ctx TIES_TO_EVEN 0 -1 -> 1
+d128_compare_ctx TIES_TO_EVEN Infinity 5 -> 1
+d128_compareSignaling_ctx TIES_TO_EVEN Infinity 5 -> 1
+d128_compare_ctx TIES_TO_EVEN 5 Infinity -> -1
+d128_compareSignaling_ctx TIES_TO_EVEN 5 Infinity -> -1
+d128_compare_ctx TIES_TO_EVEN -Infinity 5 -> -1
+d128_compareSignaling_ctx TIES_TO_EVEN -Infinity 5 -> -1
+d128_compare_ctx TIES_TO_EVEN 5 -Infinity -> 1
+d128_compareSignaling_ctx TIES_TO_EVEN 5 -Infinity -> 1
+d128_compare_ctx TIES_TO_EVEN Infinity Infinity -> 0
+d128_compareSignaling_ctx TIES_TO_EVEN Infinity Infinity -> 0
+d128_compare_ctx TIES_TO_EVEN -Infinity -Infinity -> 0
+d128_compareSignaling_ctx TIES_TO_EVEN -Infinity -Infinity -> 0
+d128_compare_ctx TIES_TO_EVEN -Infinity Infinity -> -1
+d128_compareSignaling_ctx TIES_TO_EVEN -Infinity Infinity -> -1
+d128_compare_ctx TIES_TO_EVEN Infinity -Infinity -> 1
+d128_compareSignaling_ctx TIES_TO_EVEN Infinity -Infinity -> 1
+d128_compare_ctx TIES_TO_EVEN NaN 5 -> NaN
+d128_compareSignaling_ctx TIES_TO_EVEN NaN 5 -> NaN i
+d128_compare_ctx TIES_TO_EVEN 5 NaN -> NaN
+d128_compareSignaling_ctx TIES_TO_EVEN 5 NaN -> NaN i
+d128_compare_ctx TIES_TO_EVEN NaN NaN -> NaN
+d128_compareSignaling_ctx TIES_TO_EVEN NaN NaN -> NaN i
+d128_compare_ctx TIES_TO_EVEN NaN Infinity -> NaN
+d128_compareSignaling_ctx TIES_TO_EVEN NaN Infinity -> NaN i
+d128_compare_ctx TIES_TO_EVEN sNaN 5 -> NaN i
+d128_compareSignaling_ctx TIES_TO_EVEN sNaN 5 -> NaN i
+d128_compare_ctx TIES_TO_EVEN 5 sNaN -> NaN i
+d128_compareSignaling_ctx TIES_TO_EVEN 5 sNaN -> NaN i
+d128_compare_ctx TIES_TO_EVEN sNaN NaN -> NaN i
+d128_compareSignaling_ctx TIES_TO_EVEN sNaN NaN -> NaN i
+d128_compare_ctx TIES_TO_EVEN sNaN sNaN -> NaN i
+d128_compareSignaling_ctx TIES_TO_EVEN sNaN sNaN -> NaN i

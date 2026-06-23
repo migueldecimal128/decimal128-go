@@ -1,0 +1,28 @@
+// generated from TestRoundToIntegralCtx.swift — 27 cases
+d128_roundToIntegralSignalInexact TIES_TO_EVEN Infinity -> Infinity
+d128_roundToIntegralSignalInexact TOWARD_ZERO -Infinity -> -Infinity
+d128_roundToIntegralSignalInexact TIES_TO_EVEN NaN -> NaN
+d128_roundToIntegralSignalInexact TIES_TO_EVEN sNaN -> NaN i
+d128_roundToIntegralSignalInexact TIES_TO_EVEN 42 -> 42
+d128_roundToIntegralSignalInexact TOWARD_ZERO -7 -> -7
+d128_roundToIntegralSignalInexact TIES_TO_EVEN 1.00E+3 -> 1.00E+3
+d128_roundToIntegralSignalInexact TIES_TO_EVEN 0 -> 0
+d128_roundToIntegralSignalInexact TIES_TO_EVEN -0 -> -0
+d128_roundToIntegralSignalInexact TIES_TO_EVEN 0.000 -> 0
+d128_roundToIntegralSignalInexact TIES_TO_EVEN 0.5 -> 0 x
+d128_roundToIntegralSignalInexact TIES_TO_AWAY 0.5 -> 1 x
+d128_roundToIntegralSignalInexact TIES_TO_EVEN -0.5 -> -0 x
+d128_roundToIntegralSignalInexact TIES_TO_EVEN 0.1 -> 0 x
+d128_roundToIntegralSignalInexact TOWARD_POSITIVE 0.1 -> 1 x
+d128_roundToIntegralSignalInexact TIES_TO_EVEN 0.9 -> 1 x
+d128_roundToIntegralSignalInexact TIES_TO_EVEN 0.05 -> 0 x
+d128_roundToIntegralSignalInexact TIES_TO_EVEN 2.5 -> 2 x
+d128_roundToIntegralSignalInexact TIES_TO_AWAY 2.5 -> 3 x
+d128_roundToIntegralSignalInexact TIES_TO_EVEN 3.5 -> 4 x
+d128_roundToIntegralSignalInexact TIES_TO_EVEN 2.1 -> 2 x
+d128_roundToIntegralSignalInexact TOWARD_POSITIVE 2.1 -> 3 x
+d128_roundToIntegralSignalInexact TOWARD_NEGATIVE -2.1 -> -3 x
+d128_roundToIntegralSignalInexact TIES_TO_EVEN 2.0 -> 2
+d128_roundToIntegralSignalInexact TIES_TO_EVEN 2.00 -> 2
+d128_roundToIntegralSignalInexact TIES_TO_EVEN 9.5 -> 10 x
+d128_roundToIntegralSignalInexact TIES_TO_AWAY 99.5 -> 100 x

@@ -1,0 +1,103 @@
+// generated from TestSub1.swift — 101 cases
+d128_subtract_ctx TIES_TO_EVEN 0 0 -> 0
+d128_subtract_ctx TIES_TO_EVEN 1 1 -> 0
+d128_subtract_ctx TIES_TO_EVEN 2 1 -> 1
+d128_subtract_ctx TIES_TO_EVEN 5 3 -> 2
+d128_subtract_ctx TIES_TO_EVEN 3 5 -> -2
+d128_subtract_ctx TIES_TO_EVEN -2 -1 -> -1
+d128_subtract_ctx TIES_TO_EVEN -1 -2 -> 1
+d128_subtract_ctx TIES_TO_EVEN 200000000000000000000000000 100000000000000000000000000 -> 100000000000000000000000000
+d128_subtract_ctx TIES_TO_EVEN 3.0 1.5 -> 1.5
+d128_subtract_ctx TIES_TO_EVEN 3e1 2e1 -> 1E+1
+d128_subtract_ctx TIES_TO_EVEN 0.2 0.1 -> 0.1
+d128_subtract_ctx TIES_TO_EVEN 0.1 0.01 -> 0.09
+d128_subtract_ctx TIES_TO_EVEN 0 1 -> -1
+d128_subtract_ctx TIES_TO_EVEN 0 -1 -> 1
+d128_subtract_ctx TIES_TO_EVEN -0 1 -> -1
+d128_subtract_ctx TIES_TO_EVEN -0 -1 -> 1
+d128_subtract_ctx TIES_TO_EVEN 1 0 -> 1
+d128_subtract_ctx TIES_TO_EVEN -1 0 -> -1
+d128_subtract_ctx TIES_TO_EVEN 1 -0 -> 1
+d128_subtract_ctx TIES_TO_EVEN -1 -0 -> -1
+d128_subtract_ctx TIES_TO_EVEN 0 -0 -> 0
+d128_subtract_ctx TIES_TO_EVEN -0 0 -> -0
+d128_subtract_ctx TIES_TO_EVEN 0 0 -> 0
+d128_subtract_ctx TIES_TO_EVEN -0 -0 -> 0
+d128_subtract_ctx TIES_TO_EVEN 0 1234567890123456789012345678901234 -> -1234567890123456789012345678901234
+d128_subtract_ctx TIES_TO_EVEN 1234567890123456789012345678901234 0 -> 1234567890123456789012345678901234
+d128_subtract_ctx TIES_TO_EVEN 0 1E-100 -> -1E-100
+d128_subtract_ctx TIES_TO_EVEN 0 1E+100 -> -1.000000000000000000000000000000000E+100
+d128_subtract_ctx TIES_TO_EVEN 3 4 -> -1
+d128_subtract_ctx TIES_TO_EVEN -3 4 -> -7
+d128_subtract_ctx TIES_TO_EVEN 3 -4 -> 7
+d128_subtract_ctx TIES_TO_EVEN -3 -4 -> 1
+d128_subtract_ctx TIES_TO_EVEN 4 3 -> 1
+d128_subtract_ctx TIES_TO_EVEN -4 3 -> -7
+d128_subtract_ctx TIES_TO_EVEN 4 -3 -> 7
+d128_subtract_ctx TIES_TO_EVEN -4 -3 -> -1
+d128_subtract_ctx TIES_TO_EVEN 1E+20 1E+10 -> 9.999999999E+19
+d128_subtract_ctx TIES_TO_EVEN 1E+10 1E+20 -> -9.999999999E+19
+d128_subtract_ctx TIES_TO_EVEN 1E+20 1E-10 -> 99999999999999999999.9999999999
+d128_subtract_ctx TIES_TO_EVEN 1E-10 1E+20 -> -99999999999999999999.9999999999
+d128_subtract_ctx TIES_TO_EVEN 1.000000000000000000000000000000001 1 -> 1E-33
+d128_subtract_ctx TIES_TO_EVEN 1 1.000000000000000000000000000000001 -> -1E-33
+d128_subtract_ctx TIES_TO_EVEN 1E+30 1E+30 -> 0E+30
+d128_subtract_ctx TIES_TO_EVEN -1E+30 -1E+30 -> 0E+30
+d128_subtract_ctx TIES_TO_EVEN 1.00 1.00 -> 0.00
+d128_subtract_ctx TIES_TO_EVEN 1.000 1.00 -> 0.000
+d128_subtract_ctx TIES_TO_EVEN 9999999999999999999999999999999999 1 -> 9999999999999999999999999999999998
+d128_subtract_ctx TIES_TO_EVEN 1 9999999999999999999999999999999999 -> -9999999999999999999999999999999998
+d128_subtract_ctx TIES_TO_EVEN 9999999999999999999999999999999999 -1 -> 1.000000000000000000000000000000000E+34
+d128_subtract_ctx TIES_TO_EVEN -9999999999999999999999999999999999 1 -> -1.000000000000000000000000000000000E+34
+d128_subtract_ctx TIES_TO_EVEN 1E+34 1 -> 9999999999999999999999999999999999
+d128_subtract_ctx TIES_TO_EVEN -1E+34 -1 -> -9999999999999999999999999999999999
+d128_subtract_ctx TIES_TO_EVEN NaN 1 -> NaN
+d128_subtract_ctx TIES_TO_EVEN 1 NaN -> NaN
+d128_subtract_ctx TIES_TO_EVEN NaN NaN -> NaN
+d128_subtract_ctx TIES_TO_EVEN NaN Infinity -> NaN
+d128_subtract_ctx TIES_TO_EVEN Infinity NaN -> NaN
+d128_subtract_ctx TIES_TO_EVEN NaN99 1 -> NaN99
+d128_subtract_ctx TIES_TO_EVEN NaN1 NaN2 -> NaN1
+d128_subtract_ctx TIES_TO_EVEN -NaN1 NaN2 -> -NaN1
+d128_subtract_ctx TIES_TO_EVEN sNaN 1 -> NaN i
+d128_subtract_ctx TIES_TO_EVEN 1 sNaN -> NaN i
+d128_subtract_ctx TIES_TO_EVEN sNaN sNaN -> NaN i
+d128_subtract_ctx TIES_TO_EVEN -sNaN 1 -> -NaN i
+d128_subtract_ctx TIES_TO_EVEN 1 -sNaN99 -> -NaN99 i
+d128_subtract_ctx TIES_TO_EVEN NaN1 sNaN2 -> NaN2 i
+d128_subtract_ctx TIES_TO_EVEN sNaN2 NaN1 -> NaN2 i
+d128_subtract_ctx TIES_TO_EVEN 0 Infinity -> -Infinity
+d128_subtract_ctx TIES_TO_EVEN Infinity 0 -> Infinity
+d128_subtract_ctx TIES_TO_EVEN -0 Infinity -> -Infinity
+d128_subtract_ctx TIES_TO_EVEN Infinity -0 -> Infinity
+d128_subtract_ctx TIES_TO_EVEN 0 -Infinity -> Infinity
+d128_subtract_ctx TIES_TO_EVEN -Infinity 0 -> -Infinity
+d128_subtract_ctx TIES_TO_EVEN -0 -Infinity -> Infinity
+d128_subtract_ctx TIES_TO_EVEN -Infinity -0 -> -Infinity
+d128_subtract_ctx TIES_TO_EVEN Infinity 1 -> Infinity
+d128_subtract_ctx TIES_TO_EVEN 1 Infinity -> -Infinity
+d128_subtract_ctx TIES_TO_EVEN Infinity -1 -> Infinity
+d128_subtract_ctx TIES_TO_EVEN -1 Infinity -> -Infinity
+d128_subtract_ctx TIES_TO_EVEN -Infinity 1 -> -Infinity
+d128_subtract_ctx TIES_TO_EVEN 1 -Infinity -> Infinity
+d128_subtract_ctx TIES_TO_EVEN -Infinity -1 -> -Infinity
+d128_subtract_ctx TIES_TO_EVEN -1 -Infinity -> Infinity
+d128_subtract_ctx TIES_TO_EVEN Infinity 1E+6000 -> Infinity
+d128_subtract_ctx TIES_TO_EVEN Infinity 1E-6000 -> Infinity
+d128_subtract_ctx TIES_TO_EVEN 1E+6000 Infinity -> -Infinity
+d128_subtract_ctx TIES_TO_EVEN Infinity Infinity -> NaN i
+d128_subtract_ctx TIES_TO_EVEN -Infinity -Infinity -> NaN i
+d128_subtract_ctx TIES_TO_EVEN Infinity -Infinity -> Infinity
+d128_subtract_ctx TIES_TO_EVEN -Infinity Infinity -> -Infinity
+d128_subtract_ctx TIES_TO_EVEN 1 5E-34 -> 0.9999999999999999999999999999999995
+d128_subtract_ctx TIES_TO_EVEN 1 6E-34 -> 0.9999999999999999999999999999999994
+d128_subtract_ctx TIES_TO_EVEN 1 1E-50 -> 1.000000000000000000000000000000000 x
+d128_subtract_ctx TIES_TO_EVEN 1E+6111 1E+6111 -> 0E+6111
+d128_subtract_ctx TIES_TO_EVEN 1E+6111 -1E+6111 -> 2E+6111
+d128_subtract_ctx TIES_TO_EVEN 1E-6176 1E-6176 -> 0E-6176
+d128_subtract_ctx TIES_TO_EVEN 1E-6176 -1E-6176 -> 2E-6176
+d128_subtract_ctx TIES_TO_EVEN 9.999999999999999999999999999999999E+6144 -1E+6128 -> Infinity xo
+d128_subtract_ctx TIES_TO_EVEN -9.999999999999999999999999999999999E+6144 1E+6128 -> -Infinity xo
+d128_subtract_ctx TIES_TO_EVEN 1234567890123456789012345678901234 1E-50 -> 1234567890123456789012345678901234 x
+d128_subtract_ctx TIES_TO_EVEN 9999999999999999999999999999999999 1E+1 -> 9999999999999999999999999999999989
+

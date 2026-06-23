@@ -1,0 +1,36 @@
+// generated from TestMul2.swift — 34 cases
+d128_multiply_ctx TIES_TO_EVEN 1 1 -> 1
+d128_multiply_ctx TIES_TO_EVEN 2 3 -> 6
+d128_multiply_ctx TIES_TO_EVEN 0 42 -> 0
+d128_multiply_ctx TIES_TO_EVEN 42 0 -> 0
+d128_multiply_ctx TIES_TO_EVEN -2 3 -> -6
+d128_multiply_ctx TIES_TO_EVEN 2 -3 -> -6
+d128_multiply_ctx TIES_TO_EVEN -2 -3 -> 6
+d128_multiply_ctx TIES_TO_EVEN -0 5 -> -0
+d128_multiply_ctx TIES_TO_EVEN 0 -5 -> -0
+d128_multiply_ctx TIES_TO_EVEN -0 -5 -> 0
+d128_multiply_ctx TIES_TO_EVEN 1.5 2.0 -> 3.00
+d128_multiply_ctx TIES_TO_EVEN 1e10 1e-10 -> 1E+0
+d128_multiply_ctx TIES_TO_EVEN 2.5E+5 4E-3 -> 1.00E+3
+d128_multiply_ctx TIES_TO_EVEN 9999999999999999 9999999999999999 -> 99999999999999980000000000000001
+d128_multiply_ctx TIES_TO_EVEN 9999999999999999999999999999999999 1 -> 9999999999999999999999999999999999
+d128_multiply_ctx TIES_TO_EVEN 9999999999999999999999999999999999 9999999999999999999999999999999999 -> 9999999999999999999999999999999998E+34 x
+d128_multiply_ctx TIES_TO_EVEN 1E+6000 1E+1000 -> Infinity xo
+d128_multiply_ctx TIES_TO_EVEN -1E+6000 1E+1000 -> -Infinity xo
+d128_multiply_ctx TIES_TO_EVEN 1E-6100 1E-200 -> 0E-6176 xu
+d128_multiply_ctx TIES_TO_EVEN Infinity 2 -> Infinity
+d128_multiply_ctx TIES_TO_EVEN 2 Infinity -> Infinity
+d128_multiply_ctx TIES_TO_EVEN -Infinity 2 -> -Infinity
+d128_multiply_ctx TIES_TO_EVEN Infinity -2 -> -Infinity
+d128_multiply_ctx TIES_TO_EVEN Infinity Infinity -> Infinity
+d128_multiply_ctx TIES_TO_EVEN -Infinity Infinity -> -Infinity
+d128_multiply_ctx TIES_TO_EVEN -Infinity -Infinity -> Infinity
+d128_multiply_ctx TIES_TO_EVEN 0 Infinity -> NaN i
+d128_multiply_ctx TIES_TO_EVEN Infinity 0 -> NaN i
+d128_multiply_ctx TIES_TO_EVEN -0 Infinity -> NaN i
+d128_multiply_ctx TIES_TO_EVEN Infinity -0 -> NaN i
+d128_multiply_ctx TIES_TO_EVEN NaN 2 -> NaN
+d128_multiply_ctx TIES_TO_EVEN 2 NaN -> NaN
+d128_multiply_ctx TIES_TO_EVEN NaN Infinity -> NaN
+d128_multiply_ctx TIES_TO_EVEN NaN NaN -> NaN
+

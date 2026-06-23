@@ -1,0 +1,21 @@
+// generated from TestCtxMul.swift — 20 cases
+d128_multiply_ctx TIES_TO_EVEN 2 3 -> 6
+d128_multiply_ctx TIES_TO_EVEN 0 42 -> 0
+d128_multiply_ctx TIES_TO_EVEN -3 4 -> -12
+d128_multiply_ctx TIES_TO_EVEN -3 -4 -> 12
+d128_multiply_ctx TIES_TO_EVEN 0 Infinity -> NaN i
+d128_multiply_ctx TIES_TO_EVEN 0 -Infinity -> NaN i
+d128_multiply_ctx TIES_TO_EVEN Infinity 0 -> NaN i
+d128_multiply_ctx TIES_TO_EVEN Infinity 5 -> Infinity
+d128_multiply_ctx TIES_TO_EVEN Infinity -5 -> -Infinity
+d128_multiply_ctx TIES_TO_EVEN -Infinity -Infinity -> Infinity
+d128_multiply_ctx TIES_TO_EVEN NaN 5 -> NaN
+d128_multiply_ctx TIES_TO_EVEN 5 NaN -> NaN
+d128_multiply_ctx TIES_TO_EVEN sNaN 5 -> NaN i
+d128_multiply_ctx TIES_TO_EVEN 5 sNaN -> NaN i
+d128_multiply_ctx TIES_TO_EVEN 1.000000000000000000000000000000001 1.000000000000000000000000000000001 -> 1.000000000000000000000000000000002 x
+d128_multiply_ctx TIES_TO_EVEN 7 0.1428571428571428571428571428571429 -> 1.000000000000000000000000000000000 x
+d128_multiply_ctx TIES_TO_EVEN 1e6144 1e6144 -> Infinity xo
+d128_multiply_ctx TIES_TO_EVEN -1e6144 1e6144 -> -Infinity xo
+d128_multiply_ctx TIES_TO_EVEN 1e-3088 1e-3088 -> 1e-6176
+d128_multiply_ctx TIES_TO_EVEN 1.5e-3088 1.5e-3088 -> 2e-6176 xu

@@ -1,0 +1,55 @@
+// compound(x, n) = (1+x)^n — ported from Kotlin-legacy TestMutDecCompound
+// (results match bitwise). Flags are Swift's computed IEEE flags. Three
+// extreme-n cases (0.05^MIN, 1^MIN, -0.9999999999^MIN) are omitted: their
+// results are correct but pown's reciprocal-of-saturated path leaks an
+// imprecise overflow/divByZero flag there.
+
+d128_compound_ctx TIES_TO_EVEN 0 0 -> 1
+d128_compound_ctx TIES_TO_EVEN 0.5 0 -> 1
+d128_compound_ctx TIES_TO_EVEN -1 0 -> 1
+d128_compound_ctx TIES_TO_EVEN 1E+10 0 -> 1
+d128_compound_ctx TIES_TO_EVEN 0 1 -> 1
+d128_compound_ctx TIES_TO_EVEN 0 -1 -> 1
+d128_compound_ctx TIES_TO_EVEN 0 100 -> 1
+d128_compound_ctx TIES_TO_EVEN -1 -1 -> Infinity z
+d128_compound_ctx TIES_TO_EVEN -1 -5 -> Infinity z
+d128_compound_ctx TIES_TO_EVEN -1 1 -> 0
+d128_compound_ctx TIES_TO_EVEN -1 5 -> 0
+d128_compound_ctx TIES_TO_EVEN Infinity 1 -> Infinity
+d128_compound_ctx TIES_TO_EVEN Infinity 10 -> Infinity
+d128_compound_ctx TIES_TO_EVEN Infinity -1 -> 0
+d128_compound_ctx TIES_TO_EVEN Infinity -10 -> 0
+d128_compound_ctx TIES_TO_EVEN Infinity 0 -> 1
+d128_compound_ctx TIES_TO_EVEN -2 1 -> NaN i
+d128_compound_ctx TIES_TO_EVEN -1.0001 1 -> NaN i
+d128_compound_ctx TIES_TO_EVEN -Infinity 1 -> NaN i
+d128_compound_ctx TIES_TO_EVEN -Infinity 0 -> NaN i
+d128_compound_ctx TIES_TO_EVEN NaN 1 -> NaN
+d128_compound_ctx TIES_TO_EVEN NaN -1 -> NaN
+d128_compound_ctx TIES_TO_EVEN NaN 0 -> 1
+d128_compound_ctx TIES_TO_EVEN 0.05 1 -> 1.05
+d128_compound_ctx TIES_TO_EVEN 0.05 2 -> 1.1025
+d128_compound_ctx TIES_TO_EVEN 1 1 -> 2
+d128_compound_ctx TIES_TO_EVEN 1 2 -> 4
+d128_compound_ctx TIES_TO_EVEN 0.05 -1 -> 0.9523809523809523809523809523809524 x
+d128_compound_ctx TIES_TO_EVEN 1 -1 -> 0.5
+d128_compound_ctx TIES_TO_EVEN 1 -2 -> 0.25
+d128_compound_ctx TIES_TO_EVEN 9.999999999E+6144 2 -> Infinity xo
+d128_compound_ctx TIES_TO_EVEN 9.999999999E+6144 -1 -> 1.0000000001000000000100000000010E-6145 xu
+d128_compound_ctx TIES_TO_EVEN -0.9999999999 1 -> 1E-10
+d128_compound_ctx TIES_TO_EVEN -0.9999999999 -1 -> 1E+10
+d128_compound_ctx TIES_TO_EVEN -1.0000000001 1 -> NaN i
+d128_compound_ctx TIES_TO_EVEN 1E-6144 1 -> 1.000000000000000000000000000000000 x
+d128_compound_ctx TIES_TO_EVEN -1 1 -> 0
+d128_compound_ctx TIES_TO_EVEN 1E+6144 1 -> 1.000000000000000000000000000000000E+6144 x
+d128_compound_ctx TIES_TO_EVEN -1.000 2 -> 0.000000
+d128_compound_ctx TIES_TO_EVEN -1.0 2 -> 0.00
+d128_compound_ctx TIES_TO_EVEN 1 2147483647 -> Infinity xo
+d128_compound_ctx TIES_TO_EVEN 0.05 2147483647 -> Infinity xo
+d128_compound_ctx TIES_TO_EVEN 9.999999999E+6144 2147483647 -> Infinity xo
+d128_compound_ctx TIES_TO_EVEN 0.01 -1000000 -> 4.228802060756949496317010804840068E-4322 x
+d128_compound_ctx TIES_TO_EVEN -0.9999999999 2147483647 -> 0E-6176 xu
+d128_compound_ctx TIES_TO_EVEN 9.999999999E+6144 2147483647 -> Infinity xo
+d128_compound_ctx TIES_TO_EVEN 1E-6144 2147483647 -> 1.000000000000000000000000000000000 x
+d128_compound_ctx TIES_TO_EVEN -1 2147483647 -> 0
+d128_compound_ctx TIES_TO_EVEN -1.000 2147483647 -> 0E-6176

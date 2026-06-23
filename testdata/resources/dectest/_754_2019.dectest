@@ -1,0 +1,133 @@
+------------------------------------------------------------------------
+-- _754_2019.dectest : IEEE 754-2019 hand-written cases                 --
+------------------------------------------------------------------------
+-- Hand-written cases extracted from the legacy TestDectest* inline     --
+-- reproducers (the only non-corpus cases; all other inline cases are   --
+-- corpus duplicates). They assert IEEE 754-2019 behaviour where the    --
+-- stock pre-2019 dq* files differ:                                     --
+--   max/min/maxmag/minmag : maxNumber/minNumber return the number on a --
+--                           signaling NaN (raising invalid).           --
+--   abs (copyAbs)         : a signaling NaN is NOT quieted.            --
+--   minus (negate)        : pure sign flip, NaN/sNaN unquieted.        --
+-- The corresponding pre-2019 file cases are vector-filtered            --
+-- (RosettaDectestSkips).                                               --
+------------------------------------------------------------------------
+
+extended:    1
+precision:   34
+rounding:    half_even
+maxExponent: 6144
+minExponent: -6143
+
+-- abs
+dqabs523_2019 abs  sNaN    ->  sNaN
+dqabs525_2019 abs  sNaN33  ->  sNaN33
+dqabs527_2019 abs -sNaN33  ->  sNaN33
+dqabs526_2019 abs  -NaN22  ->  NaN22
+
+-- min
+dqmin161_2019 min  sNaN -Inf   ->  -Inf  Invalid_operation
+dqmin162_2019 min  sNaN -1000  ->  -1000  Invalid_operation
+dqmin163_2019 min  sNaN -1     ->  -1  Invalid_operation
+dqmin164_2019 min  sNaN -0     ->  -0  Invalid_operation
+dqmin165_2019 min -sNaN  0     ->  0  Invalid_operation
+dqmin166_2019 min -sNaN  1     ->  1  Invalid_operation
+dqmin167_2019 min  sNaN  1000  ->  1000  Invalid_operation
+dqmin171_2019 min -Inf  sNaN   ->  -Inf  Invalid_operation
+dqmin172_2019 min -1000 sNaN   ->  -1000  Invalid_operation
+dqmin173_2019 min -1    sNaN   ->  -1  Invalid_operation
+dqmin174_2019 min -0    sNaN   ->  -0  Invalid_operation
+dqmin175_2019 min  0    sNaN   ->  0  Invalid_operation
+dqmin176_2019 min  1    sNaN   ->  1  Invalid_operation
+dqmin177_2019 min  1000 sNaN   ->  1000  Invalid_operation
+dqmin178_2019 min  Inf  sNaN   ->  Inf  Invalid_operation
+dqmin191_2019 min  sNaN99 -Inf    ->  -Inf Invalid_operation
+dqmin192_2019 min  sNaN98 -11     ->  -11 Invalid_operation
+dqmin196_2019 min -Inf    sNaN92  ->  -Inf Invalid_operation
+dqmin197_2019 min  088    sNaN91  ->  088 Invalid_operation
+dqmin198_2019 min  Inf   -sNaN90  ->  Inf Invalid_operation
+
+-- maxmag
+dqmxg161_2019 maxmag  sNaN -Inf   ->  -Inf  Invalid_operation
+dqmxg162_2019 maxmag  sNaN -1000  ->  -1000  Invalid_operation
+dqmxg163_2019 maxmag  sNaN -1     ->  -1  Invalid_operation
+dqmxg164_2019 maxmag  sNaN -0     ->  -0  Invalid_operation
+dqmxg165_2019 maxmag  sNaN  0     ->  0  Invalid_operation
+dqmxg166_2019 maxmag  sNaN  1     ->  1  Invalid_operation
+dqmxg167_2019 maxmag  sNaN  1000  ->  1000  Invalid_operation
+dqmxg171_2019 maxmag -Inf  sNaN   ->  -Inf  Invalid_operation
+dqmxg172_2019 maxmag -1000 sNaN   ->  -1000  Invalid_operation
+dqmxg173_2019 maxmag -1    sNaN   ->  -1  Invalid_operation
+dqmxg174_2019 maxmag -0    sNaN   ->  -0  Invalid_operation
+dqmxg175_2019 maxmag  0    sNaN   ->  0  Invalid_operation
+dqmxg176_2019 maxmag  1    sNaN   ->  1  Invalid_operation
+dqmxg177_2019 maxmag  1000 sNaN   ->  1000  Invalid_operation
+dqmxg178_2019 maxmag  Inf  sNaN   ->  Inf  Invalid_operation
+dqmxg191_2019 maxmag  sNaN99 -Inf    ->  -Inf Invalid_operation
+dqmxg192_2019 maxmag  sNaN98 -1      ->  -1 Invalid_operation
+dqmxg196_2019 maxmag -Inf    sNaN92  ->  -Inf Invalid_operation
+dqmxg197_2019 maxmag  0      sNaN91  ->  0 Invalid_operation
+dqmxg198_2019 maxmag  Inf   -sNaN90  ->  Inf Invalid_operation
+
+-- max
+dqmax161_2019 max  sNaN -Inf   ->  -Inf  Invalid_operation
+dqmax162_2019 max  sNaN -1000  ->  -1000  Invalid_operation
+dqmax163_2019 max  sNaN -1     ->  -1  Invalid_operation
+dqmax164_2019 max  sNaN -0     ->  -0  Invalid_operation
+dqmax165_2019 max  sNaN  0     ->  0  Invalid_operation
+dqmax166_2019 max  sNaN  1     ->  1  Invalid_operation
+dqmax167_2019 max  sNaN  1000  ->  1000  Invalid_operation
+dqmax171_2019 max -Inf  sNaN   ->  -Inf  Invalid_operation
+dqmax172_2019 max -1000 sNaN   ->  -1000  Invalid_operation
+dqmax173_2019 max -1    sNaN   ->  -1  Invalid_operation
+dqmax174_2019 max -0    sNaN   ->  -0  Invalid_operation
+dqmax175_2019 max  0    sNaN   ->  0  Invalid_operation
+dqmax176_2019 max  1    sNaN   ->  1  Invalid_operation
+dqmax177_2019 max  1000 sNaN   ->  1000  Invalid_operation
+dqmax178_2019 max  Inf  sNaN   ->  Inf  Invalid_operation
+dqmax191_2019 max  sNaN99 -Inf    ->  -Inf Invalid_operation
+dqmax192_2019 max  sNaN98 -1      ->  -1 Invalid_operation
+dqmax196_2019 max -Inf    sNaN92  ->  -Inf Invalid_operation
+dqmax197_2019 max  0      sNaN91  ->  0 Invalid_operation
+dqmax198_2019 max  Inf   -sNaN90  ->  Inf Invalid_operation
+
+-- minus
+dqmns021_2019 minus         NaN  -> -NaN
+dqmns022_2019 minus        -NaN  ->  NaN
+dqmns023_2019 minus        sNaN  -> -sNaN
+dqmns024_2019 minus       -sNaN  ->  sNaN
+dqmns031_2019 minus       NaN13  -> -NaN13
+dqmns032_2019 minus      -NaN13  ->  NaN13
+dqmns033_2019 minus      sNaN13  -> -sNaN13
+dqmns034_2019 minus     -sNaN13  ->  sNaN13
+dqmns035_2019 minus       NaN70  -> -NaN70
+dqmns036_2019 minus      -NaN70  ->  NaN70
+dqmns037_2019 minus      sNaN101 -> -sNaN101
+dqmns038_2019 minus     -sNaN101 ->  sNaN101
+dqmns111_2019 minus          0   -> -0
+dqmns113_2019 minus       0E+4   -> -0E+4
+dqmns115_2019 minus     0.0000   -> -0.0000
+dqmns117_2019 minus      0E-141  -> -0E-141
+
+-- minmag
+dqmng161_2019 minmag  sNaN -Inf   ->  -Inf  Invalid_operation
+dqmng162_2019 minmag  sNaN -1000  ->  -1000  Invalid_operation
+dqmng163_2019 minmag  sNaN -1     ->  -1  Invalid_operation
+dqmng164_2019 minmag  sNaN -0     ->  -0  Invalid_operation
+dqmng165_2019 minmag -sNaN  0     ->  0  Invalid_operation
+dqmng166_2019 minmag -sNaN  1     ->  1  Invalid_operation
+dqmng167_2019 minmag  sNaN  1000  ->  1000  Invalid_operation
+dqmng171_2019 minmag -Inf  sNaN   ->  -Inf  Invalid_operation
+dqmng172_2019 minmag -1000 sNaN   ->  -1000  Invalid_operation
+dqmng173_2019 minmag -1    sNaN   ->  -1  Invalid_operation
+dqmng174_2019 minmag -0    sNaN   ->  -0  Invalid_operation
+dqmng175_2019 minmag  0    sNaN   ->  0  Invalid_operation
+dqmng176_2019 minmag  1    sNaN   ->  1  Invalid_operation
+dqmng177_2019 minmag  1000 sNaN   ->  1000  Invalid_operation
+dqmng178_2019 minmag  Inf  sNaN   ->  Inf  Invalid_operation
+dqmng191_2019 minmag  sNaN99 -Inf    ->  -Inf Invalid_operation
+dqmng192_2019 minmag  sNaN98 -11     ->  -11 Invalid_operation
+dqmng196_2019 minmag -Inf    sNaN92  ->  -Inf Invalid_operation
+dqmng197_2019 minmag  088    sNaN91  ->  088 Invalid_operation
+dqmng198_2019 minmag  Inf   -sNaN90  ->  Inf Invalid_operation
+

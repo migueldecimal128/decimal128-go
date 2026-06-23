@@ -1,0 +1,116 @@
+// pow(x, y) — ported from Kotlin-legacy TestDecimalPow.kt (two D128 operands).
+// Native dialect: <op> TIES_TO_EVEN <x> <y> -> <result> [flags].
+// Flags (xuozi): x inexact, u underflow, o overflow, z divideByZero, i invalid.
+// Integer exponents delegate to pown; non-integer to exp10(y·log10(x)). The
+// three transcendental cases the legacy compared numerically (sqrt2, sqrt10,
+// 2^2.5) match the Swift output bitwise at 34 digits, so they're exact here.
+
+d128_pow_ctx TIES_TO_EVEN 1 9999999999999999999999999999999999 -> 1
+d128_pow_ctx TIES_TO_EVEN 1.00 2 -> 1.0000
+d128_pow_ctx TIES_TO_EVEN -1 Infinity -> 1
+
+// power == 0
+d128_pow_ctx TIES_TO_EVEN 3.7 0 -> 1E+0
+d128_pow_ctx TIES_TO_EVEN -3.7 0 -> 1E+0
+d128_pow_ctx TIES_TO_EVEN 0 0 -> 1E+0
+d128_pow_ctx TIES_TO_EVEN -0 0 -> 1E+0
+d128_pow_ctx TIES_TO_EVEN Infinity 0 -> 1E+0
+d128_pow_ctx TIES_TO_EVEN -Infinity 0 -> 1E+0
+d128_pow_ctx TIES_TO_EVEN NaN 0 -> 1E+0
+
+// power == 1
+d128_pow_ctx TIES_TO_EVEN 3.7 1 -> 3.7
+d128_pow_ctx TIES_TO_EVEN -3.7 1 -> -3.7
+
+// integer powers (delegate to pown)
+d128_pow_ctx TIES_TO_EVEN 2 3 -> 8
+d128_pow_ctx TIES_TO_EVEN 2 -1 -> 0.5
+d128_pow_ctx TIES_TO_EVEN -3 4 -> 81
+d128_pow_ctx TIES_TO_EVEN -3 3 -> -27
+d128_pow_ctx TIES_TO_EVEN 10 3 -> 1000
+d128_pow_ctx TIES_TO_EVEN 10 -3 -> 0.001
+
+// non-integer powers
+d128_pow_ctx TIES_TO_EVEN 100 0.5 -> 10
+d128_pow_ctx TIES_TO_EVEN 2 0.5 -> 1.414213562373095048801688724209698 x
+d128_pow_ctx TIES_TO_EVEN 10 0.5 -> 3.162277660168379331998893544432719 x
+d128_pow_ctx TIES_TO_EVEN 2 2.5 -> 5.656854249492380195206754896838792 x
+
+// negative base, non-integer power -> invalid
+d128_pow_ctx TIES_TO_EVEN -2 0.5 -> NaN i
+d128_pow_ctx TIES_TO_EVEN -3.7 1.5 -> NaN i
+
+// zero base
+d128_pow_ctx TIES_TO_EVEN 0 0.5 -> 0
+d128_pow_ctx TIES_TO_EVEN 0 -1 -> Infinity z
+d128_pow_ctx TIES_TO_EVEN 0 -0.5 -> Infinity z
+d128_pow_ctx TIES_TO_EVEN -0 0.5 -> 0
+d128_pow_ctx TIES_TO_EVEN -0 -1 -> -Infinity z
+
+// pow(+-0, y) for various y
+d128_pow_ctx TIES_TO_EVEN 0 2 -> 0
+d128_pow_ctx TIES_TO_EVEN -0 2 -> 0
+d128_pow_ctx TIES_TO_EVEN -0 3 -> -0
+d128_pow_ctx TIES_TO_EVEN 0 -2 -> Infinity z
+d128_pow_ctx TIES_TO_EVEN -0 -2 -> Infinity z
+d128_pow_ctx TIES_TO_EVEN -0 -3 -> -Infinity z
+d128_pow_ctx TIES_TO_EVEN 0 Infinity -> 0
+d128_pow_ctx TIES_TO_EVEN -0 Infinity -> 0
+d128_pow_ctx TIES_TO_EVEN 0 -Infinity -> Infinity
+d128_pow_ctx TIES_TO_EVEN -0 -Infinity -> Infinity
+d128_pow_ctx TIES_TO_EVEN 0 -0.5 -> Infinity z
+d128_pow_ctx TIES_TO_EVEN -0 -0.5 -> Infinity z
+
+// infinity base
+d128_pow_ctx TIES_TO_EVEN Infinity 0.5 -> Infinity
+d128_pow_ctx TIES_TO_EVEN Infinity -0.5 -> 0
+d128_pow_ctx TIES_TO_EVEN Infinity 2 -> Infinity
+d128_pow_ctx TIES_TO_EVEN Infinity -2 -> 0
+d128_pow_ctx TIES_TO_EVEN -Infinity 3 -> -Infinity
+d128_pow_ctx TIES_TO_EVEN -Infinity 4 -> Infinity
+d128_pow_ctx TIES_TO_EVEN -Infinity -1 -> -0
+d128_pow_ctx TIES_TO_EVEN -Infinity -2 -> 0
+
+// special base values
+d128_pow_ctx TIES_TO_EVEN 1 99999 -> 1
+d128_pow_ctx TIES_TO_EVEN 1 0.12345 -> 1
+d128_pow_ctx TIES_TO_EVEN -1 Infinity -> 1
+d128_pow_ctx TIES_TO_EVEN -1 -Infinity -> 1
+
+// power == infinity
+d128_pow_ctx TIES_TO_EVEN 0.5 Infinity -> 0
+d128_pow_ctx TIES_TO_EVEN 0.5 -Infinity -> Infinity
+d128_pow_ctx TIES_TO_EVEN 2 Infinity -> Infinity
+d128_pow_ctx TIES_TO_EVEN 2 -Infinity -> 0
+d128_pow_ctx TIES_TO_EVEN 1.5 Infinity -> Infinity
+d128_pow_ctx TIES_TO_EVEN 0.9999 Infinity -> 0
+d128_pow_ctx TIES_TO_EVEN 1.0001 -Infinity -> 0
+
+// overflow / underflow
+d128_pow_ctx TIES_TO_EVEN 1E+100 1000 -> Infinity xo
+d128_pow_ctx TIES_TO_EVEN 1E-100 1000 -> 0E-6176 xu
+
+// NaN
+d128_pow_ctx TIES_TO_EVEN NaN 2 -> NaN
+d128_pow_ctx TIES_TO_EVEN 2 NaN -> NaN
+d128_pow_ctx TIES_TO_EVEN NaN NaN -> NaN
+d128_pow_ctx TIES_TO_EVEN sNaN 2 -> NaN i
+d128_pow_ctx TIES_TO_EVEN 2 sNaN -> NaN i
+
+// pow(+1, y) = 1 for any y
+d128_pow_ctx TIES_TO_EVEN 1 0 -> 1
+d128_pow_ctx TIES_TO_EVEN 1 1 -> 1
+d128_pow_ctx TIES_TO_EVEN 1 2 -> 1
+d128_pow_ctx TIES_TO_EVEN 1 -1 -> 1
+d128_pow_ctx TIES_TO_EVEN 1 0.5 -> 1
+d128_pow_ctx TIES_TO_EVEN 1 -0.5 -> 1
+d128_pow_ctx TIES_TO_EVEN 1 Infinity -> 1
+d128_pow_ctx TIES_TO_EVEN 1 -Infinity -> 1
+d128_pow_ctx TIES_TO_EVEN 1 NaN -> 1
+d128_pow_ctx TIES_TO_EVEN 1 9999999999999999999999999999999999 -> 1
+d128_pow_ctx TIES_TO_EVEN 1 -9999999999999999999999999999999999 -> 1
+
+// cohort variants of 1
+d128_pow_ctx TIES_TO_EVEN 1.0 0.5 -> 1.0
+d128_pow_ctx TIES_TO_EVEN 1.00 2 -> 1.0000
+d128_pow_ctx TIES_TO_EVEN 1E+0 Infinity -> 1

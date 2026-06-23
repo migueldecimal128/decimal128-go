@@ -1,0 +1,9 @@
+// from TestPrintNAN.swift — NaN/sNaN payload formatting round-trip — 8 cases
+d128_toString TIES_TO_EVEN NaN -> NaN
+d128_toString TIES_TO_EVEN -NaN -> -NaN
+d128_toString TIES_TO_EVEN sNaN -> sNaN
+d128_toString TIES_TO_EVEN -sNaN -> -sNaN
+d128_toString TIES_TO_EVEN NaN123 -> NaN123
+d128_toString TIES_TO_EVEN -NaN123 -> -NaN123
+d128_toString TIES_TO_EVEN sNaN456 -> sNaN456
+d128_toString TIES_TO_EVEN -sNaN456 -> -sNaN456

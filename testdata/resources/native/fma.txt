@@ -1,0 +1,27 @@
+// generated from TestCtxFma.swift — 26 cases
+d128_fma_ctx TIES_TO_EVEN 2 3 4 -> 10
+d128_fma_ctx TIES_TO_EVEN -2 3 10 -> 4
+d128_fma_ctx TIES_TO_EVEN 0 5 7 -> 7
+d128_fma_ctx TIES_TO_EVEN 5 0 7 -> 7
+d128_fma_ctx TIES_TO_EVEN 3 4 0 -> 12
+d128_fma_ctx TIES_TO_EVEN 1.00000000000000001 1.00000000000000001 -1 -> 2.00000000000000001E-17
+d128_fma_ctx TIES_TO_EVEN 1.00000000000000001 1.00000000000000001 0 -> 1.000000000000000020000000000000000 x
+d128_fma_ctx TIES_TO_EVEN Infinity 5 10 -> Infinity
+d128_fma_ctx TIES_TO_EVEN 3 4 Infinity -> Infinity
+d128_fma_ctx TIES_TO_EVEN -Infinity -5 10 -> Infinity
+d128_fma_ctx TIES_TO_EVEN Infinity Infinity 5 -> Infinity
+d128_fma_ctx TIES_TO_EVEN Infinity Infinity Infinity -> Infinity
+d128_fma_ctx TIES_TO_EVEN 0 Infinity 5 -> NaN i
+d128_fma_ctx TIES_TO_EVEN Infinity 0 5 -> NaN i
+d128_fma_ctx TIES_TO_EVEN 0 Infinity Infinity -> NaN i
+d128_fma_ctx TIES_TO_EVEN Infinity 5 -Infinity -> NaN i
+d128_fma_ctx TIES_TO_EVEN -Infinity 5 Infinity -> NaN i
+d128_fma_ctx TIES_TO_EVEN NaN 5 10 -> NaN
+d128_fma_ctx TIES_TO_EVEN 5 NaN 10 -> NaN
+d128_fma_ctx TIES_TO_EVEN 5 10 NaN -> NaN
+d128_fma_ctx TIES_TO_EVEN 0 Infinity NaN -> NaN i
+d128_fma_ctx TIES_TO_EVEN sNaN 5 10 -> NaN i
+d128_fma_ctx TIES_TO_EVEN 5 sNaN 10 -> NaN i
+d128_fma_ctx TIES_TO_EVEN 5 10 sNaN -> NaN i
+d128_fma_ctx TIES_TO_EVEN NaN 5 sNaN -> NaN i
+d128_fma_ctx TIES_TO_EVEN 1e6144 1e6144 0 -> Infinity xo
