@@ -169,10 +169,15 @@ arm on the native corpus is a compile error, never a silent skip).
   via `math/bits`. **Gate met:** 41 tests validate every op against a `math/big` oracle
   (incl. RRMP10's 67 records / ~6300 cases, quotient+residue bit-exact); green under
   `-race`, `gofmt`/`vet` clean. No decimal semantics yet (that's Phase 2).
-- **Phase 2 — Core foundation.** `D128`, `D38`, context/flags/round/residue/exception754,
-  `finalize_128_ctx` / `finalize_256_ctx` + the FE fast-path entries (`finalizeAddSubFnz`,
-  `finalizeSwampedFnz` — §2.4.6/§2.4.7), BID/DPD serde, parse, print. **Gate:** dectest
-  encode/decode + parse/print vectors green (serde and parse are exercised early).
+- **Phase 2 — Core foundation. ✅ DONE 2026-06-23.** Six increments (commits
+  0ab1ed9…fac79bf): `D128`/`D38` value types; rounding decision logic + flags + core
+  residue; the finalize/rounding engine (`finalize_128_ctx`/`finalize_256_ctx` + the FE
+  fast-paths `finalizeAddSubFnz`/`finalizeSwampedFnz`) + divPow10 dispatch + D38 finalize;
+  BID/DPD serde; parse + print; and the Rosetta harness wired to real corpora. **Gate
+  met:** TestRosettaNative (263 native serde/parse/print/predicate cases pass, 0 fail) and
+  TestRosettaDectestEncode (**367/368 IBM dectest dqEncode DPD vectors pass**, 0 fail) —
+  the first validation against IBM/Intel conformance data — plus ~30 unit tests vs
+  `math/big`. Arithmetic ops remain Unsupported (Phase 3). Green under `-race`.
 - **Phase 3 — Required arithmetic (§5).** add/sub (with the unaligned FE helpers),
   multiply/square, divide/divideInteger/remainder, fma, sqrt, compare/compareSignaling,
   roundToIntegral, scaleB/logB, quantize, min/max, nextUp/nextDown, non-computational.
