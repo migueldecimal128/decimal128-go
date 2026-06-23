@@ -53,5 +53,7 @@ const (
 	causeInfNumeratorInRemainderOp
 	causeDivIntOverflowsCoefficient
 	causeConvertNonFiniteToInteger
+	causeSquareRootOfNegFiniteNonZero
+	causeSquareRootOfNegInfinity
 	causeOther
 )
