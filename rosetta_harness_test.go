@@ -9,6 +9,7 @@ package decimal128
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 )
@@ -95,11 +96,100 @@ func flagLettersCanonical(s string) string {
 	return b.String()
 }
 
-// dispatch runs one case against the engine. Per-operation arms (keyed on
-// operation) are added as operators land. Phase 1: every case is Unsupported.
+// decodeOperand decodes a corpus operand token into a d128: "#…" is DPD hex,
+// "[…]" is Intel BID hex, anything else is a decimal/Infinity/NaN string.
+func decodeOperand(s string) d128 {
+	if len(s) > 0 {
+		if s[0] == '#' {
+			if u, ok := dpd128ParseDecTestHex(s); ok {
+				return d128_fromDPD(u)
+			}
+		} else if s[0] == '[' {
+			if u, ok := bid128ParseIntelHex(s); ok {
+				return d128_fromBID(u)
+			}
+		}
+	}
+	return d128_parseOrNaN(s)
+}
+
+// dispatch runs one case against the engine and reports its Outcome. Arms are
+// added as operators land; unsupported operations report outUnsupported (not a
+// failure). Currently wired: the serde/parse/print/predicate ops.
 func dispatch(c *rosettaCase) (outcome, string) {
-	_ = c
-	return outUnsupported, "no dispatch arm wired"
+	switch c.operation {
+	case "d128_toString":
+		return checkFormat(c, FORMAT_AUTO)
+	case "d128_toExpString":
+		return checkFormat(c, FORMAT_EXPONENTIAL)
+	case "d128_toEngString":
+		return checkFormat(c, FORMAT_ENGINEERING)
+	case "d128_toRawString":
+		return checkFormat(c, FORMAT_COEFFICIENT_QEXP)
+	case "d128_isSigned":
+		return checkPredicate(c, d128_isNegative)
+	case "d128_isInf":
+		return checkPredicate(c, d128_isINF)
+	case "d128_isFinite":
+		return checkPredicate(c, d128_isFinite)
+	case "d128_isNaN":
+		return checkPredicate(c, d128_isNAN)
+	case "d128_isSignaling":
+		return checkPredicate(c, d128_isSNAN)
+	case "d128_isQNaN":
+		return checkPredicate(c, d128_isQNAN)
+	case "apply":
+		return dispatchApply(c)
+	default:
+		return outUnsupported, "no dispatch arm for " + c.operation
+	}
+}
+
+func checkFormat(c *rosettaCase, style int) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	got := d128_format(decodeOperand(c.operands[0]), style)
+	if got == c.result && c.expectedFlags == "" {
+		return outPass, ""
+	}
+	return outFail, "got " + got + " want " + c.result
+}
+
+func checkPredicate(c *rosettaCase, pred func(d128) bool) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	got := "0"
+	if pred(decodeOperand(c.operands[0])) {
+		got = "1"
+	}
+	if got == c.result {
+		return outPass, ""
+	}
+	return outFail, "got " + got + " want " + c.result
+}
+
+// dispatchApply handles the dectest serde round-trip op: a "#…" result means
+// encode (decimal -> DPD hex); otherwise decode (DPD hex -> decimal string).
+func dispatchApply(c *rosettaCase) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	val := decodeOperand(c.operands[0])
+	if strings.HasPrefix(c.result, "#") {
+		dpd := d128_toDPD(val)
+		got := fmt.Sprintf("#%016X%016X", uint64(dpd.dw1), uint64(dpd.dw0))
+		if strings.EqualFold(got, c.result) {
+			return outPass, ""
+		}
+		return outFail, "encode got " + got + " want " + c.result
+	}
+	got := d128_format(val, FORMAT_AUTO)
+	if got == c.result {
+		return outPass, ""
+	}
+	return outFail, "decode got " + got + " want " + c.result
 }
 
 // rosettaResult tallies a harness run.
@@ -156,6 +246,65 @@ func loadNativeFile(path string) ([]rosettaCase, error) {
 	sc.Buffer(make([]byte, 0, 1<<20), 1<<20)
 	for sc.Scan() {
 		if c, ok := parseNativeLine(sc.Text()); ok {
+			cases = append(cases, c)
+		}
+	}
+	if err := sc.Err(); err != nil {
+		return nil, err
+	}
+	return cases, nil
+}
+
+// parseDectestLine parses an IBM dectest line "id op operand... -> result
+// [conditions]". Returns ok=false for comments ("--"), directives (no "->"),
+// and blank lines.
+func parseDectestLine(line string) (rosettaCase, bool) {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "--") {
+		return rosettaCase{}, false
+	}
+	arrow := strings.Index(line, "->")
+	if arrow < 0 {
+		return rosettaCase{}, false // directive
+	}
+	left := strings.Fields(line[:arrow])
+	right := strings.Fields(line[arrow+len("->"):])
+	if len(left) < 3 || len(right) < 1 {
+		return rosettaCase{}, false
+	}
+	c := rosettaCase{
+		src:       srcDectest,
+		text:      line,
+		operation: left[1],
+		operands:  append([]string(nil), left[2:]...),
+		result:    unquoteDectest(right[0]),
+	}
+	if len(right) > 1 {
+		c.expectedFlags = flagLettersCanonical(strings.Join(right[1:], ""))
+	}
+	return c, true
+}
+
+// unquoteDectest strips the surrounding single quotes dectest uses for string
+// results/operands.
+func unquoteDectest(s string) string {
+	if len(s) >= 2 && s[0] == '\'' && s[len(s)-1] == '\'' {
+		return s[1 : len(s)-1]
+	}
+	return s
+}
+
+func loadDectestFile(path string) ([]rosettaCase, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	var cases []rosettaCase
+	sc := bufio.NewScanner(f)
+	sc.Buffer(make([]byte, 0, 1<<20), 1<<20)
+	for sc.Scan() {
+		if c, ok := parseDectestLine(sc.Text()); ok {
 			cases = append(cases, c)
 		}
 	}

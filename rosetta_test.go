@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+func resourcesDir() string {
+	return filepath.Join("testdata", "resources")
+}
+
 func nativeCorpusPath(name string) string {
 	return filepath.Join("testdata", "resources", "native", name)
 }
@@ -51,28 +55,55 @@ func TestFlagLettersCanonical(t *testing.T) {
 	}
 }
 
-// TestRosettaSkeleton is the Phase 1 gate for the harness: it loads real native
-// cases, dispatches them, and reports zero FAILURES. Every operation is
-// Unsupported until its dispatch arm lands, so 0 vectors execute while the
-// load→dispatch→tally pipeline runs end-to-end over real corpus data.
-func TestRosettaSkeleton(t *testing.T) {
-	cases, err := loadNativeFile(nativeCorpusPath("add.txt"))
-	if err != nil {
-		t.Fatalf("load native add.txt: %v", err)
+func sampleFailures(r rosettaResult) []string {
+	return r.failures[:min(len(r.failures), 10)]
+}
+
+// TestRosettaNative runs every native-corpus file through the harness. Wired ops
+// (serde/parse/print/predicate) must pass; arithmetic ops are still Unsupported
+// (Phase 3) and are counted, not failed.
+func TestRosettaNative(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join(resourcesDir(), "native", "*.txt"))
+	if err != nil || len(files) == 0 {
+		t.Fatalf("glob native: %v (%d files)", err, len(files))
 	}
-	if len(cases) == 0 {
-		t.Fatal("expected to parse native cases, got 0")
+	var total rosettaResult
+	for _, f := range files {
+		cases, err := loadNativeFile(f)
+		if err != nil {
+			t.Fatalf("load %s: %v", f, err)
+		}
+		r := runRosetta(cases)
+		total.total += r.total
+		total.passed += r.passed
+		total.failed += r.failed
+		total.unsupported += r.unsupported
+		total.failures = append(total.failures, r.failures...)
+	}
+	if total.failed != 0 {
+		t.Fatalf("native corpus: %d/%d failed: %v", total.failed, total.total, sampleFailures(total))
+	}
+	if total.passed == 0 {
+		t.Fatal("expected some supported native cases to pass")
+	}
+	t.Logf("native corpus: %d cases — %d passed, %d unsupported (arithmetic awaits Phase 3)",
+		total.total, total.passed, total.unsupported)
+}
+
+// TestRosettaDectestEncode runs the IBM dectest DPD encode/decode vectors
+// (dqEncode.decTest) through the serde dispatch — the first validation against
+// real IBM conformance data.
+func TestRosettaDectestEncode(t *testing.T) {
+	cases, err := loadDectestFile(filepath.Join(resourcesDir(), "dectest", "dqEncode.decTest"))
+	if err != nil {
+		t.Fatalf("load dqEncode: %v", err)
 	}
 	r := runRosetta(cases)
 	if r.failed != 0 {
-		t.Fatalf("expected 0 failures, got %d: %v", r.failed, r.failures)
+		t.Fatalf("dqEncode: %d/%d failed: %v", r.failed, r.total, sampleFailures(r))
 	}
-	if r.passed != 0 {
-		t.Fatalf("expected 0 passes (no arms wired), got %d", r.passed)
+	if r.passed == 0 {
+		t.Fatal("expected dqEncode apply cases to pass")
 	}
-	if r.unsupported != r.total {
-		t.Fatalf("expected all %d cases unsupported, got %d", r.total, r.unsupported)
-	}
-	t.Logf("rosetta skeleton OK: %d native cases parsed, %d unsupported, %d failed",
-		r.total, r.unsupported, r.failed)
+	t.Logf("dqEncode: %d cases — %d passed, %d unsupported", r.total, r.passed, r.unsupported)
 }
