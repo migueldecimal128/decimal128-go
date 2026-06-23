@@ -68,3 +68,14 @@ func signalDivByZero_quiet(resultSign bool) d128 {
 
 func signalInexactOverflow_quiet(dec d128) d128  { return dec }
 func signalInexactUnderflow_quiet(dec d128) d128 { return dec }
+
+// ctxSignalInvalidOperation sets the invalid-operation flag and returns a quiet
+// NaN. (The NaN-operand propagation helpers land in Phase 3.) The cause is
+// diagnostic and currently unused.
+func ctxSignalInvalidOperation(ctxnull *context, cause invalidCause) d128 {
+	_ = cause
+	if ctxnull != nil {
+		ctxnull.flags.set(INVALID_OPERATION)
+	}
+	return D128_QNAN0
+}

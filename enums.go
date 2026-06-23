@@ -18,3 +18,29 @@ const (
 )
 
 func exc754Mask(e exception754) int64 { return int64(1) << uint(e) }
+
+// parseStatus is the internal parse outcome. Not load-bearing or boundary-
+// crossing, so (unlike the SCREAMING boundary enums) it is unexported camelCase.
+type parseStatus int
+
+const (
+	psEmptyString parseStatus = iota
+	psFailureParsingInfinity
+	psFailureParsingNan
+	psDoubleDot
+	psNoCoefficientDigit
+	psNoExponentDigit
+	psUnexpectedChar
+	psInvalidUnderscoreLocation
+	psInvalidFormat
+	psSuccess
+)
+
+// invalidCause tags an invalid-operation signal (diagnostic; not load-bearing).
+// The full set lands with the arithmetic operations in Phase 3; parse needs only
+// causeParseMalformed.
+type invalidCause int
+
+const (
+	causeParseMalformed invalidCause = iota
+)

@@ -1,0 +1,281 @@
+// String → decimal128 parsing. Builds and correctly-rounds a finite value
+// (needs core finalize), or recognizes Infinity/NaN. d128_parse returns ok=false
+// on syntactic failure (Swift's nil); d128_parseOrNaN is best-effort.
+
+package decimal128
+
+type d128ParseResult struct {
+	status parseStatus
+	value  d128
+}
+
+func parseSuccess(value d128) d128ParseResult { return d128ParseResult{psSuccess, value} }
+func parseFailure(status parseStatus) d128ParseResult {
+	return d128ParseResult{status, D128_QNAN0}
+}
+
+type finiteParseResult struct {
+	status  parseStatus
+	sign    bool
+	qExp    int
+	coeff   u128
+	residue residue
+}
+
+func finiteFailure(status parseStatus) finiteParseResult {
+	return finiteParseResult{status, false, 0, u128{0, 0}, RESIDUE_EXACT}
+}
+
+// --- parse (boundary API) ---
+
+func d128_parse_ctxnull(s string, ctxnull *context) (d128, bool) {
+	t := newTxt(s)
+	r := parseDec34(&t, ctxnull)
+	if r.status == psSuccess {
+		return r.value, true
+	}
+	verify("", d128_isNAN(r.value))
+	ctxSignalInvalidOperation(ctxnull, causeParseMalformed)
+	return D128_QNAN0, false
+}
+
+func d128_parse(s string) (d128, bool)                   { return d128_parse_ctxnull(s, nil) }
+func d128_parse_ctx(s string, ctx *context) (d128, bool) { return d128_parse_ctxnull(s, ctx) }
+
+func d128_parseOrNaN(s string) d128 {
+	d, ok := d128_parse(s)
+	if ok {
+		return d
+	}
+	return D128_QNAN0
+}
+
+func d38_parse(s string) d38 {
+	t := newTxt(s)
+	ch := t.nextChar()
+	sign := ch == ascii_minus
+	if ch == ascii_plus || ch == ascii_minus {
+		ch = t.nextChar()
+	}
+	r := parseFiniteValueText(sign, ch, &t, 38)
+	if r.status == psSuccess && r.residue == RESIDUE_EXACT {
+		return d38Pack(r.sign, r.qExp, r.coeff.dw0, r.coeff.dw1)
+	}
+	impossible("D38 parse error")
+	return D38_ZERO
+}
+
+type txt struct {
+	b   []byte
+	pos int
+}
+
+func newTxt(s string) txt { return txt{b: []byte(s)} }
+
+func (t *txt) nextChar() byte {
+	if t.pos < len(t.b) {
+		ch := t.b[t.pos]
+		t.pos++
+		return ch
+	}
+	return 0
+}
+
+func (t *txt) nextCharLowercase() byte {
+	if t.pos < len(t.b) {
+		ch := t.b[t.pos]
+		t.pos++
+		return ch | 0x20
+	}
+	return 0
+}
+
+func parseDec34(t *txt, ctxnull *context) d128ParseResult {
+	chFirst := t.nextChar()
+	ch := chFirst
+	sign := ch == ascii_minus
+	if ch == ascii_plus || ch == ascii_minus {
+		ch = t.nextChar()
+	}
+	if (ch >= ascii_0 && ch <= ascii_9) || ch == ascii_dot {
+		r := parseFiniteValueText(sign, ch, t, 34)
+		if r.status == psSuccess {
+			rounding := TIES_TO_EVEN
+			if ctxnull != nil {
+				rounding = ctxnull.round
+			}
+			value := finalize_128_ctx(r.sign, r.qExp, r.coeff, r.residue, rounding, ctxnull)
+			return parseSuccess(value)
+		}
+		return parseFailure(r.status)
+	}
+	chLower := ch | 0x20
+	if chLower == ascii_i {
+		return parseInfinityText(sign, ch, t)
+	}
+	if chLower == ascii_n || chLower == ascii_s || chLower == ascii_q {
+		return parseNanText(sign, ch, t)
+	}
+	if chFirst == 0 {
+		return parseFailure(psEmptyString)
+	}
+	return parseFailure(psInvalidFormat)
+}
+
+var infinityBytes = int64(ascii_i) | (int64(ascii_n) << 8) | (int64(ascii_f) << 16) | (int64(ascii_i) << 24) |
+	(int64(ascii_n) << 32) | (int64(ascii_i) << 40) | (int64(ascii_t) << 48) | (int64(ascii_y) << 56)
+
+func parseInfinityText(sign bool, chFirst byte, t *txt) d128ParseResult {
+	ch := chFirst | 0x20
+	var chPrev byte = 0
+	i := 0
+	for i < 8 {
+		target := byte(ushr_64_64(infinityBytes, i<<3) & 0x7F)
+		if ch != target {
+			if ch == 0 {
+				break
+			}
+			return parseFailure(psFailureParsingInfinity)
+		}
+		chPrev = ch
+		ch = t.nextCharLowercase()
+		i++
+	}
+	if ch != 0 || (chPrev != ascii_f && chPrev != ascii_y) {
+		return parseFailure(psFailureParsingInfinity)
+	}
+	return parseSuccess(d128_infinity(sign))
+}
+
+func parseNanText(sign bool, chFirst byte, t *txt) d128ParseResult {
+	ch := chFirst | 0x20
+	hasS := ch == ascii_s
+	hasQ := ch == ascii_q
+	if hasS || hasQ {
+		ch = t.nextCharLowercase()
+	}
+	if ch != ascii_n || t.nextCharLowercase() != ascii_a || t.nextCharLowercase() != ascii_n {
+		return parseFailure(psFailureParsingNan)
+	}
+	payload := u128{0, 0}
+	ch = t.nextChar()
+	payloadDigitCount := 0
+	for ch != 0 {
+		if ch < ascii_0 || ch > ascii_9 {
+			return parseFailure(psFailureParsingNan)
+		}
+		if payloadDigitCount < 33 {
+			d := ch - ascii_0
+			p10 := mul_128_128x128(payload.dw0, payload.dw1, 10, 0)
+			payload = add_128_128x128(p10.dw0, p10.dw1, int64(d), 0)
+		} else {
+			payload = u128{0, 0}
+		}
+		payloadDigitCount++
+		ch = t.nextChar()
+	}
+	return parseSuccess(d128_nan_64x64(sign, hasS, payload.dw0, payload.dw1))
+}
+
+func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) finiteParseResult {
+	res := RESIDUE_EXACT
+	hasCoefficientDigit := false
+	significantDigitCount := 0
+	hasDot := false
+	expSign := false
+
+	ch := chFirst
+	verify("", ch != 0)
+
+	var chPrev byte = 0
+	fractionalDigitCount := 0
+	exp := 0
+	coeff := u128{0, 0}
+
+	for (ch >= ascii_0 && ch <= ascii_9) || ch == ascii_dot || ch == ascii_underbar {
+		if ch >= ascii_0 && ch <= ascii_9 {
+			d := ch - ascii_0
+			hasCoefficientDigit = true
+			inc := 1
+			if significantDigitCount+int(d) == 0 {
+				inc = 0
+			}
+			significantDigitCount += inc
+			if significantDigitCount < maxDigitLen+1 {
+				c10 := mul_128_128x128(coeff.dw0, coeff.dw1, 10, 0)
+				coeff = add_128_128x128(c10.dw0, c10.dw1, int64(d), 0)
+			} else if significantDigitCount == maxDigitLen+1 {
+				res = residueFromDecimalDigit(int(d))
+			} else {
+				res = residueMerge(res, residueFromDecimalDigit(int(d)))
+			}
+			if hasDot {
+				fractionalDigitCount++
+			}
+		} else if ch == ascii_dot {
+			if hasDot {
+				return finiteFailure(psDoubleDot)
+			}
+			hasDot = true
+		} else if ch == ascii_underbar {
+			if chPrev < ascii_0 || chPrev > ascii_9 {
+				return finiteFailure(psInvalidUnderscoreLocation)
+			}
+		} else {
+			impossible("cannot be here")
+		}
+		chPrev = ch
+		ch = t.nextChar()
+	}
+	if !hasCoefficientDigit {
+		return finiteFailure(psNoCoefficientDigit)
+	}
+	if (ch | 0x20) == ascii_e {
+		if chPrev == ascii_underbar {
+			return finiteFailure(psInvalidUnderscoreLocation)
+		}
+		chPrev = ch
+		ch = t.nextChar()
+		if ch == ascii_minus || ch == ascii_plus {
+			expSign = ch == ascii_minus
+			ch = t.nextChar()
+		}
+		hasExpDigit := false
+		var expSignificantDigitCount int64 = 0
+		for (ch >= ascii_0 && ch <= ascii_9) || ch == ascii_underbar {
+			if ch >= ascii_0 && ch <= ascii_9 {
+				hasExpDigit = true
+				eDigit := ch - ascii_0
+				if (expSignificantDigitCount | int64(eDigit)) != 0 {
+					expSignificantDigitCount++
+				}
+				exp = exp*10 + int(ch-ascii_0)
+			} else {
+				if chPrev < ascii_0 || chPrev > ascii_9 {
+					return finiteFailure(psInvalidUnderscoreLocation)
+				}
+			}
+			chPrev = ch
+			ch = t.nextChar()
+		}
+		if chPrev == ascii_underbar {
+			return finiteFailure(psInvalidUnderscoreLocation)
+		}
+		if !hasExpDigit {
+			return finiteFailure(psNoExponentDigit)
+		}
+		if expSignificantDigitCount > 4 {
+			exp = 9999
+		}
+	}
+	if ch != 0 {
+		return finiteFailure(psUnexpectedChar)
+	}
+
+	signedExp := exp
+	if expSign {
+		signedExp = -exp
+	}
+	qExp := signedExp - fractionalDigitCount + max(0, significantDigitCount-maxDigitLen)
+	return finiteParseResult{psSuccess, sign, qExp, coeff, res}
+}

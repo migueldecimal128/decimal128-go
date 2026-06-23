@@ -37,3 +37,22 @@ func d38_negated(x d38) d38 { return d38{x.coeffLo64, x.coeffHi64, x.qExpAndSign
 func d38_digitLen(x d38) int { return digitLen_int_128(x.coeffLo64, x.coeffHi64) }
 
 func d38_u128(x d38) u128 { return fromLoHi_128_64x64(x.coeffLo64, x.coeffHi64) }
+
+func d38_multiply(x, y d38) d38 {
+	zSign := d38_signFlag(x) != d38_signFlag(y)
+	zExp := d38_qExp(x) + d38_qExp(y)
+	prod := mul_256_128x128(x.coeffLo64, x.coeffHi64, y.coeffLo64, y.coeffHi64)
+	return finalize38_256(zSign, zExp, prod, RESIDUE_EXACT)
+}
+
+func d38_square(x d38) d38 {
+	zExp := d38_qExp(x) + d38_qExp(x)
+	prod := mul_256_128x128(x.coeffLo64, x.coeffHi64, x.coeffLo64, x.coeffHi64)
+	return finalize38_256(false, zExp, prod, RESIDUE_EXACT)
+}
+
+func d38_format(x d38) string {
+	var ascii asciiBuffer
+	ascii[0] = ascii_minus
+	return toFiniteString(d38_signFlag(x), d38_qExp(x), d38_u128(x), FORMAT_AUTO, &ascii)
+}
