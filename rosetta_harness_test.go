@@ -11,6 +11,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -151,6 +152,14 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkBinaryCtx(c, d128_multiply_ctx)
 	case "d128_divide_ctx", "divide":
 		return checkBinaryCtx(c, d128_divide_ctx)
+	case "d128_compare_ctx", "compare":
+		return checkCompareCtx(c, false)
+	case "d128_compareSignaling_ctx", "comparesig":
+		return checkCompareCtx(c, true)
+	case "d128_isEqual_ctx":
+		return checkBinaryBoolCtx(c, d128_isEqual_ctx)
+	case "d128_isLess_ctx":
+		return checkBinaryBoolCtx(c, d128_isLess_ctx)
 	case "apply":
 		return dispatchApply(c)
 	default:
@@ -218,6 +227,61 @@ func checkPredicate(c *rosettaCase, pred func(d128) bool) (outcome, string) {
 		return outPass, ""
 	}
 	return outFail, "got " + got + " want " + c.result
+}
+
+// checkCompareCtx runs the tri-state compare and maps the CMP754 code to the
+// corpus's -1/0/1 (or NaN for unordered), checking flags.
+func checkCompareCtx(c *rosettaCase, signaling bool) (outcome, string) {
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	if c.rounding == roundingUnsupported {
+		return outUnsupported, "rounding mode not representable"
+	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	x := decodeOperand(c.operands[0])
+	y := decodeOperand(c.operands[1])
+	var code int
+	if signaling {
+		code = d128_compareSignaling_ctx(x, y, ctx)
+	} else {
+		code = d128_compare_ctx(x, y, ctx)
+	}
+	var match bool
+	var got string
+	if code == CMP754_UNORDERED {
+		// Unordered (a NaN operand): the op result is the propagated NaN value
+		// (selected/quieted without re-signaling — compare already raised flags).
+		gotNaN := ctxNanOperand2(nil, x, y)
+		match = d128_bitwiseEQ(gotNaN, decodeOperand(c.result))
+		got = d128_format(gotNaN, FORMAT_AUTO)
+	} else {
+		got = strconv.Itoa(code - 1) // LT->-1, EQ->0, GT->1
+		match = got == c.result
+	}
+	if match && ctx.exceptionLetters() == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q", got, ctx.exceptionLetters(), c.result, c.expectedFlags)
+}
+
+// checkBinaryBoolCtx runs a two-operand boolean predicate, comparing 0/1.
+func checkBinaryBoolCtx(c *rosettaCase, op func(x, y d128, ctx *context) bool) (outcome, string) {
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	if c.rounding == roundingUnsupported {
+		return outUnsupported, "rounding mode not representable"
+	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	got := "0"
+	if op(decodeOperand(c.operands[0]), decodeOperand(c.operands[1]), ctx) {
+		got = "1"
+	}
+	if got == c.result && ctx.exceptionLetters() == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q", got, ctx.exceptionLetters(), c.result, c.expectedFlags)
 }
 
 // dispatchApply handles the dectest serde round-trip op: a "#…" result means
