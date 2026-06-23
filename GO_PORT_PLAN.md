@@ -160,12 +160,15 @@ arm on the native corpus is a compile error, never a silent skip).
   `Run` tally). **Gate met:** `gofmt`/`go build`/`go vet`/`go test ./...` all green; the
   harness parses 22 native `add.txt` cases → 22 Unsupported, 0 Failed (0 vectors executed,
   as expected with no arms wired).
-- **Phase 1 — Primitive layer.** Port tier0 → U128/U256 types → arith → divrem → the
-  divPow10 families (Barrett, recipmul, RRMP10, Möller–Granlund) → mulPow10 → bit/digit-len
-  → residue classify → tables. **Reference: Java/Kotlin primitive bodies** (limb synthesis)
-  for shape, **Swift** for names/signatures; use `math/bits`. **Gate:** port the primitive
-  unit tests (the Rust/Java primitive test suites — U128/U256 divrem, strip, pow10, residue);
-  all green. No decimal semantics yet.
+- **Phase 1 — Primitive layer. ✅ DONE 2026-06-23.** All 33 non-prototype Swift
+  Primitive files ported across 8 increments (commits c380966…7c49924): tier0; u128/u256
+  types + arith + shifts; result aggregates; residue; u256 mul; Möller–Granlund (Alg.3/4/5);
+  128÷64 / 128÷128 / 256÷64 divrem (full kernel set); pow10/pow5 tables; mulPow10; bit/digit
+  length; double bridges; Barrett divPow10 + strip; magic divide; recipmul128; and the
+  RRMP10 range-reciprocal engine + tables. Signed int64 dwords (D-G2); uint64 limb bodies
+  via `math/bits`. **Gate met:** 41 tests validate every op against a `math/big` oracle
+  (incl. RRMP10's 67 records / ~6300 cases, quotient+residue bit-exact); green under
+  `-race`, `gofmt`/`vet` clean. No decimal semantics yet (that's Phase 2).
 - **Phase 2 — Core foundation.** `D128`, `D38`, context/flags/round/residue/exception754,
   `finalize_128_ctx` / `finalize_256_ctx` + the FE fast-path entries (`finalizeAddSubFnz`,
   `finalizeSwampedFnz` — §2.4.6/§2.4.7), BID/DPD serde, parse, print. **Gate:** dectest
