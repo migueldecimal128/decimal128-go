@@ -149,6 +149,8 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkBinaryCtx(c, d128_subtract_ctx)
 	case "d128_multiply_ctx", "multiply":
 		return checkBinaryCtx(c, d128_multiply_ctx)
+	case "d128_divide_ctx", "divide":
+		return checkBinaryCtx(c, d128_divide_ctx)
 	case "apply":
 		return dispatchApply(c)
 	default:
@@ -351,7 +353,8 @@ func dectestConditionsToFlags(words []string) string {
 			letters.WriteByte('o')
 		case "division_by_zero":
 			letters.WriteByte('z')
-		case "invalid_operation":
+		case "invalid_operation", "division_undefined", "division_impossible", "conversion_syntax":
+			// dectest names the invalid-operation exception several ways.
 			letters.WriteByte('i')
 		}
 	}
