@@ -147,6 +147,8 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkBinaryCtx(c, d128_add_ctx)
 	case "d128_subtract_ctx", "subtract":
 		return checkBinaryCtx(c, d128_subtract_ctx)
+	case "d128_multiply_ctx", "multiply":
+		return checkBinaryCtx(c, d128_multiply_ctx)
 	case "apply":
 		return dispatchApply(c)
 	default:
