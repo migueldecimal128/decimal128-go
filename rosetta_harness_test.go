@@ -186,6 +186,10 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkUnaryCtx(c, func(x d128, ctx *context) d128 { return d128_stripTrailingZeros_ctx(x, 6176, ctx) })
 	case "d128_quantize", "quantize":
 		return checkBinaryCtx(c, d128_quantize)
+	case "d128_logB", "logb":
+		return checkUnaryCtx(c, d128_logB)
+	case "d128_scaleB", "scaleb":
+		return checkScaleB(c)
 	case "apply":
 		return dispatchApply(c)
 	default:
@@ -228,6 +232,48 @@ func checkBinaryCtx(c *rosettaCase, op func(x, y d128, ctx *context) d128) (outc
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
 		d128_format(z, FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
 		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+}
+
+// checkScaleB adapts decNumber's scaleb — whose second operand is a decimal
+// integer argument — to the IEEE d128_scaleB(x, int). decNumber requires that
+// argument to be NaN (propagated), or a finite integer with exponent 0 whose
+// magnitude is at most 2*(emax+digits)=12356; anything else signals invalid.
+func checkScaleB(c *rosettaCase) (outcome, string) {
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	if c.rounding == roundingUnsupported {
+		return outUnsupported, "rounding mode not representable"
+	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	x := decodeOperand(c.operands[0])
+	y := decodeOperand(c.operands[1])
+	z := scaleBFromDecimalArg(x, y, ctx)
+	expected := decodeOperand(c.result)
+	if d128_bitwiseEQ(z, expected) && ctx.exceptionLetters() == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
+		d128_format(z, FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
+		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+}
+
+func scaleBFromDecimalArg(x, y d128, ctx *context) d128 {
+	if d128_isNAN(x) || d128_isNAN(y) {
+		return ctxNanOperand2(ctx, x, y)
+	}
+	if d128_isINF(y) || d128_qExp(y) != 0 {
+		return ctxSignalInvalidOperation(ctx, causeOther)
+	}
+	coeff := d128_u128(y)
+	if coeff.dw1 != 0 || coeff.dw0 > 12356 {
+		return ctxSignalInvalidOperation(ctx, causeOther)
+	}
+	n := int(coeff.dw0)
+	if d128_signFlag(y) {
+		n = -n
+	}
+	return d128_scaleB(x, n, ctx)
 }
 
 func checkFormat(c *rosettaCase, style int) (outcome, string) {
