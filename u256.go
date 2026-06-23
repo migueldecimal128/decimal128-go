@@ -5,6 +5,8 @@
 
 package decimal128
 
+import "math/bits"
+
 type u256 struct {
 	dw0 int64
 	dw1 int64
@@ -15,6 +17,21 @@ type u256 struct {
 // lo and hi are the low/high 128-bit halves (primitive-interior, §3.4).
 func (x u256) lo() u128 { return u128{dw0: x.dw0, dw1: x.dw1} }
 func (x u256) hi() u128 { return u128{dw0: x.dw2, dw1: x.dw3} }
+
+// bitLen is the bit length of the magnitude (primitive-interior sugar, §3.4;
+// core uses bitLen_int_256). bitLen(0) == 0.
+func (x u256) bitLen() int {
+	if x.dw3 != 0 {
+		return 256 - bits.LeadingZeros64(uint64(x.dw3))
+	}
+	if x.dw2 != 0 {
+		return 192 - bits.LeadingZeros64(uint64(x.dw2))
+	}
+	if x.dw1 != 0 {
+		return 128 - bits.LeadingZeros64(uint64(x.dw1))
+	}
+	return 64 - bits.LeadingZeros64(uint64(x.dw0))
+}
 
 // u256FromHiLo composes a u256 from its high and low 128-bit halves.
 func u256FromHiLo(hi, lo u128) u256 {
