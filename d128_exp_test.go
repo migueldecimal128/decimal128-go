@@ -56,3 +56,29 @@ func TestExp10VsFloat(t *testing.T) {
 		checkRelErr(t, "exp10", f, got, math.Pow(10, f))
 	}
 }
+
+// randPositiveFloat returns a positive float64 spanning ~10^-150 .. 10^150 so
+// the log argument reduction (leading-digit + √-reduction) is well exercised.
+func randPositiveFloat(rng *rand.Rand) float64 {
+	return math.Pow(10, (rng.Float64()*2-1)*150) * (1 + rng.Float64()*9)
+}
+
+func TestLnVsFloat(t *testing.T) {
+	ctx := newContextRound(TIES_TO_EVEN)
+	rng := rand.New(rand.NewSource(0x1A))
+	for i := 0; i < 50000; i++ {
+		f := randPositiveFloat(rng)
+		got := d128ToFloat(t, d128_ln_ctx(d128FromFloat(f), ctx))
+		checkRelErr(t, "ln", f, got, math.Log(f))
+	}
+}
+
+func TestLog10VsFloat(t *testing.T) {
+	ctx := newContextRound(TIES_TO_EVEN)
+	rng := rand.New(rand.NewSource(0x1A10))
+	for i := 0; i < 50000; i++ {
+		f := randPositiveFloat(rng)
+		got := d128ToFloat(t, d128_log10_ctx(d128FromFloat(f), ctx))
+		checkRelErr(t, "log10", f, got, math.Log10(f))
+	}
+}

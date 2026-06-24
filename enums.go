@@ -58,5 +58,6 @@ const (
 	causeQuantizeExactlyOneOperandIsInfinite
 	causeQuantizeResultWouldExceedPrecision
 	causeQuantumOfNonFinite
+	causeLogOfNegNumber
 	causeOther
 )

@@ -8,6 +8,22 @@
 package decimal128
 
 func cmpMagD38(x, y d38) int {
+	// The bExp pre-check below requires non-zero operands (digitLen > 0); the
+	// ln/log10 √-reduction compares a possibly-zero z = c'−1, so resolve zeros
+	// first. |0| < |nonzero|.
+	xZero := d38_isZero(x)
+	yZero := d38_isZero(y)
+	if xZero || yZero {
+		switch {
+		case xZero && yZero:
+			return 0
+		case xZero:
+			return -1
+		default:
+			return 1
+		}
+	}
+
 	xBitLen := bitLen_int_128(x.coeffLo64, x.coeffHi64)
 	yBitLen := bitLen_int_128(y.coeffLo64, y.coeffHi64)
 	xDigitLen := digitLen_int_128_withBitLen(x.coeffLo64, x.coeffHi64, xBitLen)
