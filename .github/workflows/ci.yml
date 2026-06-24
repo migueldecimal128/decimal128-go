@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false # pure stdlib, no go.sum — nothing to cache
 
       - name: Format check
         run: |
