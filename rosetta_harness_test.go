@@ -206,6 +206,10 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkCompareInt(c, compareTotalOrder)
 	case "comparetotmag":
 		return checkCompareInt(c, compareTotalOrderMag)
+	case "d128_nextUp", "nextplus":
+		return checkUnaryCtx(c, d128_nextUp)
+	case "d128_nextDown", "nextminus":
+		return checkUnaryCtx(c, d128_nextDown)
 	case "apply":
 		return dispatchApply(c)
 	default:
