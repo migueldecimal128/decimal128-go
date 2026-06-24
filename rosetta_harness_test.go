@@ -218,6 +218,12 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkUnaryQuiet(c, d128_negate)
 	case "d128_copySign", "copysign":
 		return checkBinaryQuiet(c, d128_copySign)
+	case "d128_ieeeClass", "class":
+		return checkClass(c)
+	case "d128_canonical", "canonical":
+		// All UBD encodings are canonical; the DPD decoder normalises any
+		// non-canonical declets, so canonical(x) is the identity on the value.
+		return checkUnaryQuiet(c, d128_copy)
 	case "apply":
 		return dispatchApply(c)
 	default:
@@ -384,6 +390,33 @@ func checkBinaryQuiet(c *rosettaCase, op func(x, y d128) d128) (outcome, string)
 		d128_format(decodeOperand(c.result), FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
+// decNumber class strings indexed by d128_ieeeClass code (0..9).
+var classStrings = [...]string{
+	CLASS_SIGNALING_NAN:      "sNaN",
+	CLASS_QUIET_NAN:          "NaN",
+	CLASS_NEGATIVE_INFINITY:  "-Infinity",
+	CLASS_NEGATIVE_NORMAL:    "-Normal",
+	CLASS_NEGATIVE_SUBNORMAL: "-Subnormal",
+	CLASS_NEGATIVE_ZERO:      "-Zero",
+	CLASS_POSITIVE_ZERO:      "+Zero",
+	CLASS_POSITIVE_SUBNORMAL: "+Subnormal",
+	CLASS_POSITIVE_NORMAL:    "+Normal",
+	CLASS_POSITIVE_INFINITY:  "+Infinity",
+}
+
+// checkClass runs §5.7.2 class: maps the ieeeClass code to decNumber's class
+// string. Non-computational — never signals, so expected flags must be empty.
+func checkClass(c *rosettaCase) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	got := classStrings[d128_ieeeClass(decodeOperand(c.operands[0]))]
+	if got == c.result && c.expectedFlags == "" {
+		return outPass, ""
+	}
+	return outFail, "got " + got + " want " + c.result
+}
+
 func checkFormat(c *rosettaCase, style int) (outcome, string) {
 	if len(c.operands) != 1 {
 		return outUnsupported, "bad operand count"
@@ -476,8 +509,16 @@ func checkCompareCtx(c *rosettaCase, signaling bool) (outcome, string) {
 		match = d128_bitwiseEQ(gotNaN, decodeOperand(c.result))
 		got = d128_format(gotNaN, FORMAT_AUTO)
 	} else {
-		got = strconv.Itoa(code - 1) // LT->-1, EQ->0, GT->1
-		match = got == c.result
+		n := code - 1 // LT->-1, EQ->0, GT->1
+		if len(c.result) > 0 && (c.result[0] == '#' || c.result[0] == '[') {
+			// dqCanonical gives the result as a canonical encoding of the
+			// -1/0/1 code rather than its decimal text — compare bitwise.
+			got = d128_format(d128_fromInt(n), FORMAT_COEFFICIENT_QEXP)
+			match = d128_bitwiseEQ(d128_fromInt(n), decodeOperand(c.result))
+		} else {
+			got = strconv.Itoa(n)
+			match = got == c.result
+		}
 	}
 	if match && ctx.exceptionLetters() == c.expectedFlags {
 		return outPass, ""
