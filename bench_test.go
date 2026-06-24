@@ -59,9 +59,21 @@ func BenchmarkAdd(b *testing.B) {
 }
 
 func BenchmarkSub(b *testing.B) {
-	for b.Loop() {
-		benchSink = benchA.Sub(benchB)
-	}
+	b.Run("SE", func(b *testing.B) {
+		for b.Loop() {
+			benchSink = benchSEa.Sub(benchSEb)
+		}
+	})
+	b.Run("NE", func(b *testing.B) {
+		for b.Loop() {
+			benchSink = benchNEa.Sub(benchNEb)
+		}
+	})
+	b.Run("FE", func(b *testing.B) {
+		for b.Loop() {
+			benchSink = benchFEa.Sub(benchFEb)
+		}
+	})
 }
 
 func BenchmarkMul(b *testing.B) {
