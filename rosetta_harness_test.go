@@ -192,6 +192,14 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkScaleB(c)
 	case "d128_isSameQuantum", "samequantum":
 		return checkBinaryBoolCtx(c, func(x, y d128, _ *context) bool { return d128_isSameQuantum(x, y) })
+	case "d128_minimumNumber_ctx", "min":
+		return checkMinMaxNumber(c, d128_minimumNumber_ctx)
+	case "d128_maximumNumber_ctx", "max":
+		return checkMinMaxNumber(c, d128_maximumNumber_ctx)
+	case "d128_minimumMagnitudeNumber_ctx", "minmag":
+		return checkMinMaxNumber(c, d128_minimumMagnitudeNumber_ctx)
+	case "d128_maximumMagnitudeNumber_ctx", "maxmag":
+		return checkMinMaxNumber(c, d128_maximumMagnitudeNumber_ctx)
 	case "apply":
 		return dispatchApply(c)
 	default:
@@ -276,6 +284,35 @@ func scaleBFromDecimalArg(x, y d128, ctx *context) d128 {
 		n = -n
 	}
 	return d128_scaleB(x, n, ctx)
+}
+
+// checkMinMaxNumber runs a decNumber min/max (the NaN-as-missing "Number"
+// variant) corpus case. decNumber implements 754-2008 minNum, which propagates
+// a signaling NaN as a quiet NaN; our 754-2019 minimumNumber instead treats a
+// signaling NaN as a missing operand and returns the number (still signalling
+// invalid). They agree on quiet NaN, so only the sNaN-versus-number cases
+// diverge — those are skipped as unsupported.
+func checkMinMaxNumber(c *rosettaCase, op func(x, y d128, ctx *context) d128) (outcome, string) {
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	if c.rounding == roundingUnsupported {
+		return outUnsupported, "rounding mode not representable"
+	}
+	x := decodeOperand(c.operands[0])
+	y := decodeOperand(c.operands[1])
+	if (d128_isSNAN(x) && !d128_isNAN(y)) || (d128_isSNAN(y) && !d128_isNAN(x)) {
+		return outUnsupported, "sNaN handling diverges: 754-2019 minimumNumber vs decNumber minNum"
+	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	z := op(x, y, ctx)
+	expected := decodeOperand(c.result)
+	if d128_bitwiseEQ(z, expected) && ctx.exceptionLetters() == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
+		d128_format(z, FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
+		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 func checkFormat(c *rosettaCase, style int) (outcome, string) {
