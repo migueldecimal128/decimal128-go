@@ -210,6 +210,14 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkUnaryCtx(c, d128_nextUp)
 	case "d128_nextDown", "nextminus":
 		return checkUnaryCtx(c, d128_nextDown)
+	case "d128_copy", "copy":
+		return checkUnaryQuiet(c, d128_copy)
+	case "d128_abs", "copyabs":
+		return checkUnaryQuiet(c, d128_abs)
+	case "d128_negate", "copynegate":
+		return checkUnaryQuiet(c, d128_negate)
+	case "d128_copySign", "copysign":
+		return checkBinaryQuiet(c, d128_copySign)
 	case "apply":
 		return dispatchApply(c)
 	default:
@@ -343,6 +351,37 @@ func checkCompareInt(c *rosettaCase, op func(x, y d128) int) (outcome, string) {
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q", got, "", c.result, c.expectedFlags)
+}
+
+// checkUnaryQuiet runs a non-computational unary op (copy / copyAbs /
+// copyNegate) that only moves bits — it never signals, so the result is
+// compared bitwise and the expected flags must be empty.
+func checkUnaryQuiet(c *rosettaCase, op func(x d128) d128) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	z := op(decodeOperand(c.operands[0]))
+	if d128_bitwiseEQ(z, decodeOperand(c.result)) && c.expectedFlags == "" {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
+		d128_format(z, FORMAT_COEFFICIENT_QEXP), "",
+		d128_format(decodeOperand(c.result), FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+}
+
+// checkBinaryQuiet runs a non-computational binary op (copySign) — bitwise
+// compare, no flags.
+func checkBinaryQuiet(c *rosettaCase, op func(x, y d128) d128) (outcome, string) {
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	z := op(decodeOperand(c.operands[0]), decodeOperand(c.operands[1]))
+	if d128_bitwiseEQ(z, decodeOperand(c.result)) && c.expectedFlags == "" {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
+		d128_format(z, FORMAT_COEFFICIENT_QEXP), "",
+		d128_format(decodeOperand(c.result), FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 func checkFormat(c *rosettaCase, style int) (outcome, string) {
