@@ -111,7 +111,7 @@ func TestRosettaDectestEncode(t *testing.T) {
 // TestRosettaDectestAddSub runs the IBM dectest add/subtract corpora through the
 // arithmetic dispatch (value + exception flags).
 func TestRosettaDectestAddSub(t *testing.T) {
-	for _, name := range []string{"dqAdd.decTest", "dqSubtract.decTest", "dqMultiply.decTest", "dqDivide.decTest", "dqCompare.decTest", "dqCompareSig.decTest", "dqToIntegral.decTest", "dqDivideInt.decTest", "dqFMA.decTest", "dqRemainder.decTest", "dqRemainderNear.decTest", "dqReduce.decTest", "dqQuantize.decTest", "dqLogB.decTest", "dqScaleB.decTest", "dqSameQuantum.decTest", "dqMin.decTest", "dqMax.decTest", "dqMinMag.decTest", "dqMaxMag.decTest"} {
+	for _, name := range []string{"dqAdd.decTest", "dqSubtract.decTest", "dqMultiply.decTest", "dqDivide.decTest", "dqCompare.decTest", "dqCompareSig.decTest", "dqToIntegral.decTest", "dqDivideInt.decTest", "dqFMA.decTest", "dqRemainder.decTest", "dqRemainderNear.decTest", "dqReduce.decTest", "dqQuantize.decTest", "dqLogB.decTest", "dqScaleB.decTest", "dqSameQuantum.decTest", "dqMin.decTest", "dqMax.decTest", "dqMinMag.decTest", "dqMaxMag.decTest", "dqCompareTotal.decTest", "dqCompareTotalMag.decTest"} {
 		cases, err := loadDectestFile(filepath.Join(resourcesDir(), "dectest", name))
 		if err != nil {
 			t.Fatalf("load %s: %v", name, err)

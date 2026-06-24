@@ -200,6 +200,12 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkMinMaxNumber(c, d128_minimumMagnitudeNumber_ctx)
 	case "d128_maximumMagnitudeNumber_ctx", "maxmag":
 		return checkMinMaxNumber(c, d128_maximumMagnitudeNumber_ctx)
+	case "d128_totalOrder":
+		return checkBinaryBoolCtx(c, func(x, y d128, _ *context) bool { return d128_isTotallyOrdered(x, y) })
+	case "comparetotal":
+		return checkCompareInt(c, compareTotalOrder)
+	case "comparetotmag":
+		return checkCompareInt(c, compareTotalOrderMag)
 	case "apply":
 		return dispatchApply(c)
 	default:
@@ -313,6 +319,26 @@ func checkMinMaxNumber(c *rosettaCase, op func(x, y d128, ctx *context) d128) (o
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
 		d128_format(z, FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
 		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+}
+
+// checkCompareInt runs a two-operand op returning a memcmp-style -1/0/1 code
+// (totalOrder comparison). totalOrder never signals — even on sNaN — so the
+// expected flags must be empty.
+func checkCompareInt(c *rosettaCase, op func(x, y d128) int) (outcome, string) {
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	if c.operands[0] == "#" || c.operands[1] == "#" {
+		// Bare "#" is a conversion-syntax error injected by the test front-end
+		// (result NaN + invalidOperation). totalOrder never signals and runs on
+		// already-decoded operands, so this case is outside its domain.
+		return outUnsupported, "conversion-syntax operand outside totalOrder domain"
+	}
+	got := strconv.Itoa(op(decodeOperand(c.operands[0]), decodeOperand(c.operands[1])))
+	if got == c.result && c.expectedFlags == "" {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q", got, "", c.result, c.expectedFlags)
 }
 
 func checkFormat(c *rosettaCase, style int) (outcome, string) {
