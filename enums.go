@@ -57,5 +57,6 @@ const (
 	causeSquareRootOfNegInfinity
 	causeQuantizeExactlyOneOperandIsInfinite
 	causeQuantizeResultWouldExceedPrecision
+	causeQuantumOfNonFinite
 	causeOther
 )

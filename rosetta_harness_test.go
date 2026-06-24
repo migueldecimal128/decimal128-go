@@ -190,6 +190,8 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkUnaryCtx(c, d128_logB)
 	case "d128_scaleB", "scaleb":
 		return checkScaleB(c)
+	case "d128_isSameQuantum", "samequantum":
+		return checkBinaryBoolCtx(c, func(x, y d128, _ *context) bool { return d128_isSameQuantum(x, y) })
 	case "apply":
 		return dispatchApply(c)
 	default:
