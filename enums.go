@@ -59,5 +59,6 @@ const (
 	causeQuantizeResultWouldExceedPrecision
 	causeQuantumOfNonFinite
 	causeLogOfNegNumber
+	causePowerOfNegBaseNonIntegerExponent
 	causeOther
 )

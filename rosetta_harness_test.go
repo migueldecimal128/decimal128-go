@@ -228,6 +228,10 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkUnaryCtx(c, d128_ln_ctx)
 	case "d128_log10_ctx":
 		return checkUnaryCtx(c, d128_log10_ctx)
+	case "d128_pow_ctx":
+		return checkBinaryCtx(c, d128_pow_ctx)
+	case "d128_pown_ctx":
+		return checkPown(c)
 	case "d128_canonical", "canonical":
 		// All UBD encodings are canonical; the DPD decoder normalises any
 		// non-canonical declets, so canonical(x) is the identity on the value.
@@ -370,6 +374,30 @@ func checkCompareInt(c *rosettaCase, op func(x, y d128) int) (outcome, string) {
 // checkUnaryQuiet runs a non-computational unary op (copy / copyAbs /
 // copyNegate) that only moves bits — it never signals, so the result is
 // compared bitwise and the expected flags must be empty.
+// checkPown runs a pown corpus case: the second operand is a plain integer
+// exponent (the IEEE pown's logBFormat argument), not a decimal.
+func checkPown(c *rosettaCase) (outcome, string) {
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	if c.rounding == roundingUnsupported {
+		return outUnsupported, "rounding mode not representable"
+	}
+	n, err := strconv.Atoi(c.operands[1])
+	if err != nil {
+		return outUnsupported, "non-integer pown exponent"
+	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	z := d128_pown_ctx(decodeOperand(c.operands[0]), n, ctx)
+	expected := decodeOperand(c.result)
+	if d128_bitwiseEQ(z, expected) && ctx.exceptionLetters() == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
+		d128_format(z, FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
+		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+}
+
 func checkUnaryQuiet(c *rosettaCase, op func(x d128) d128) (outcome, string) {
 	if len(c.operands) != 1 {
 		return outUnsupported, "bad operand count"
