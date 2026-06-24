@@ -26,13 +26,17 @@ func d128ToFloat(t *testing.T, x d128) float64 {
 }
 
 func checkRelErr(t *testing.T, name string, arg, got, want float64) {
+	checkRelErrTol(t, name, arg, got, want, 1e-13)
+}
+
+func checkRelErrTol(t *testing.T, name string, arg, got, want, tol float64) {
 	if want == 0 {
 		if got != 0 {
 			t.Fatalf("%s(%v) = %v want 0", name, arg, got)
 		}
 		return
 	}
-	if rel := math.Abs(got-want) / math.Abs(want); rel > 1e-13 {
+	if rel := math.Abs(got-want) / math.Abs(want); rel > tol {
 		t.Fatalf("%s(%v) = %v want %v (rel err %g)", name, arg, got, want, rel)
 	}
 }

@@ -192,6 +192,14 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkScaleB(c)
 	case "d128_isSameQuantum", "samequantum":
 		return checkBinaryBoolCtx(c, func(x, y d128, _ *context) bool { return d128_isSameQuantum(x, y) })
+	case "d128_minimum_ctx":
+		return checkBinaryCtx(c, d128_minimum_ctx)
+	case "d128_maximum_ctx":
+		return checkBinaryCtx(c, d128_maximum_ctx)
+	case "d128_minimumMagnitude_ctx":
+		return checkBinaryCtx(c, d128_minimumMagnitude_ctx)
+	case "d128_maximumMagnitude_ctx":
+		return checkBinaryCtx(c, d128_maximumMagnitude_ctx)
 	case "d128_minimumNumber_ctx", "min":
 		return checkMinMaxNumber(c, d128_minimumNumber_ctx)
 	case "d128_maximumNumber_ctx", "max":
@@ -231,7 +239,11 @@ func dispatch(c *rosettaCase) (outcome, string) {
 	case "d128_pow_ctx":
 		return checkBinaryCtx(c, d128_pow_ctx)
 	case "d128_pown_ctx":
-		return checkPown(c)
+		return checkIntExpOp(c, d128_pown_ctx)
+	case "d128_rootn_ctx":
+		return checkIntExpOp(c, d128_rootn_ctx)
+	case "d128_compound_ctx":
+		return checkIntExpOp(c, d128_compound_ctx)
 	case "d128_canonical", "canonical":
 		// All UBD encodings are canonical; the DPD decoder normalises any
 		// non-canonical declets, so canonical(x) is the identity on the value.
@@ -374,9 +386,9 @@ func checkCompareInt(c *rosettaCase, op func(x, y d128) int) (outcome, string) {
 // checkUnaryQuiet runs a non-computational unary op (copy / copyAbs /
 // copyNegate) that only moves bits — it never signals, so the result is
 // compared bitwise and the expected flags must be empty.
-// checkPown runs a pown corpus case: the second operand is a plain integer
-// exponent (the IEEE pown's logBFormat argument), not a decimal.
-func checkPown(c *rosettaCase) (outcome, string) {
+// checkIntExpOp runs a corpus case whose second operand is a plain integer (the
+// logBFormat argument of pown / rootn / compound), not a decimal.
+func checkIntExpOp(c *rosettaCase, op func(x d128, n int, ctx *context) d128) (outcome, string) {
 	if len(c.operands) != 2 {
 		return outUnsupported, "bad operand count"
 	}
@@ -385,10 +397,10 @@ func checkPown(c *rosettaCase) (outcome, string) {
 	}
 	n, err := strconv.Atoi(c.operands[1])
 	if err != nil {
-		return outUnsupported, "non-integer pown exponent"
+		return outUnsupported, "non-integer exponent operand"
 	}
 	ctx := newContextRound(roundingFromToken(c.rounding))
-	z := d128_pown_ctx(decodeOperand(c.operands[0]), n, ctx)
+	z := op(decodeOperand(c.operands[0]), n, ctx)
 	expected := decodeOperand(c.result)
 	if d128_bitwiseEQ(z, expected) && ctx.exceptionLetters() == c.expectedFlags {
 		return outPass, ""

@@ -60,5 +60,7 @@ const (
 	causeQuantumOfNonFinite
 	causeLogOfNegNumber
 	causePowerOfNegBaseNonIntegerExponent
+	causeRootnBadArgs
+	causeCompoundXLtNegOne
 	causeOther
 )
