@@ -220,6 +220,10 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkBinaryQuiet(c, d128_copySign)
 	case "d128_ieeeClass", "class":
 		return checkClass(c)
+	case "d128_exp_ctx":
+		return checkUnaryCtx(c, d128_exp_ctx)
+	case "d128_exp10_ctx":
+		return checkUnaryCtx(c, d128_exp10_ctx)
 	case "d128_canonical", "canonical":
 		// All UBD encodings are canonical; the DPD decoder normalises any
 		// non-canonical declets, so canonical(x) is the identity on the value.
