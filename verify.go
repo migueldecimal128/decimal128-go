@@ -6,10 +6,9 @@
 package decimal128
 
 // verifyEnabled gates verify (§9.1) — the Go analogue of Swift's
-// #if VERIFY_ENABLED. With verifyEnabled == false the compiler eliminates the
-// verify body, and pure condition expressions at call sites become dead code the
-// optimizer drops.
-const verifyEnabled = false
+// #if VERIFY_ENABLED. Its value is set by the build tag in verify_off.go /
+// verify_on.go: false by default (the compiler eliminates the verify body and
+// the dead condition expressions), true under `-tags verify`. See those files.
 
 // impossible aborts unconditionally, marking unreachable code (§9.3). It never
 // returns; Go spells "does not return" as panic. An empty msg renders a default.
