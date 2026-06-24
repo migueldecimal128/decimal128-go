@@ -15,7 +15,7 @@
 //     its methods, Context, Rounding, Finance.
 //
 // Unexported engine identifiers keep the exact snake_case names the other ports
-// use (add_128_128x128, divPow10_q128res_256_barrett, d128_add_ctx), so the
+// use (add_128_128x128, divPow10_q128res_256_recipmul, d128_add_ctx), so the
 // cross-port locator is filename + symbol, unchanged. The Rosetta conformance
 // harness lives in white-box _test.go files so it can dispatch to the unexported
 // engine, mirroring the Rust in-crate harness.

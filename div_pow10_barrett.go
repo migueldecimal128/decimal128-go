@@ -2,7 +2,7 @@
 // or u256 by 10^k (k in 1..barrettPow10Max) returning the full quotient and the
 // exact 64-bit remainder. 10^k = 2^k · 5^k: the 2^k part is a shift, the 5^k part
 // is Barrett reduction over the tabulated reciprocals. The residue-classifying
-// entries (the rrmp10 shape) wrap the exact-remainder forms.
+// entries (the Quot*Residue shape, D17/D42) wrap the exact-remainder forms.
 
 package decimal128
 
@@ -72,15 +72,6 @@ func barrett_128_32_mu_q128r64(xDw0, xDw1, denom, mu int64) quot128Rem64 {
 
 func divPow10_q128res_128_barrett(xDw0, xDw1 int64, pow10 int) quot128Residue {
 	qr := divPow10_q128r64_128_barrett(xDw0, xDw1, pow10)
-	res := residueFromRemainderPow10_64(qr.remDw0, pow10)
-	return quot128Residue{qr.quotDw0, qr.quotDw1, res}
-}
-
-func divPow10_q128res_256_barrett(xDw0, xDw1, xDw2, xDw3 int64, pow10 int) quot128Residue {
-	qr := divPow10_q256r64_256_barrett(xDw0, xDw1, xDw2, xDw3, pow10)
-	if !isZero_bool_128(qr.quotDw2, qr.quotDw3) {
-		impossible("divPow10_q128res_256_barrett: quotient overflows U128")
-	}
 	res := residueFromRemainderPow10_64(qr.remDw0, pow10)
 	return quot128Residue{qr.quotDw0, qr.quotDw1, res}
 }

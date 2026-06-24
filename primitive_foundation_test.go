@@ -20,6 +20,17 @@ func newMask(bits uint) *big.Int {
 	return m.Sub(m, big.NewInt(1))
 }
 
+// randBigDigits returns a uniform random integer with exactly d decimal digits.
+func randBigDigits(r *rand.Rand, d int) *big.Int {
+	lo := pow10big(d - 1)
+	span := new(big.Int).Sub(pow10big(d), lo)
+	buf := make([]byte, 34)
+	r.Read(buf)
+	rnd := new(big.Int).SetBytes(buf)
+	rnd.Mod(rnd, span)
+	return rnd.Add(rnd, lo)
+}
+
 func bigU128(x u128) *big.Int {
 	b := new(big.Int).SetUint64(uint64(x.dw1))
 	b.Lsh(b, 64)

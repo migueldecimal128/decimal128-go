@@ -57,27 +57,6 @@ func TestDivPow10Barrett256(t *testing.T) {
 	}
 }
 
-func TestDivPow10Barrett128Res256(t *testing.T) {
-	r := rand.New(rand.NewSource(52))
-	for i := 0; i < oracleIters; i++ {
-		// 128-bit dividend (dw2=dw3=0) so the quotient is guaranteed < 2^128.
-		lo := randU128(r)
-		x := u256{lo.dw0, lo.dw1, 0, 0}
-		bx := bigU256(x)
-		p := r.Intn(barrettPow10Max) + 1
-		div := pow10big(p)
-		wantQ, wantR := new(big.Int).QuoRem(bx, div, new(big.Int))
-
-		res := divPow10_q128res_256_barrett(x.dw0, x.dw1, x.dw2, x.dw3, p)
-		if bigU128(u128{res.quotDw0, res.quotDw1}).Cmp(wantQ) != 0 {
-			t.Fatalf("q128res_256 quotient mismatch")
-		}
-		if res.residue != refResidue(wantR, div) {
-			t.Fatalf("q128res_256 residue mismatch")
-		}
-	}
-}
-
 func refStrip(c *big.Int, maxToStrip int) (*big.Int, int) {
 	v := new(big.Int).Set(c)
 	count := 0

@@ -1,7 +1,7 @@
 // Core composition over the primitive divPow10 kernels: the strategy dispatch
-// (D16) that picks magic/recipmul/barrett by exponent and width, and the chunked
-// Barrett loops for large exponents. (The rrmp10 path is not wired here — Swift
-// leaves it a FIXME; the magic+recipmul+barrett dispatch covers the engine.)
+// (D16) that picks magic/recipmul by exponent and width. The q256res FMA-
+// alignment path (only AddWide) stays on the chunked Barrett loop; the q128res
+// 128- and 256-bit-dividend paths are single reciprocal-multiply kernels (D45/D47).
 
 package decimal128
 
@@ -91,34 +91,10 @@ func div_256_pow10_q128res(x u256, pow10 int) quot128Residue {
 	if isZero_bool_128(x.dw2, x.dw3) {
 		return div_128_pow10_q128res(x.lo(), pow10)
 	}
-	if pow10 <= barrettPow10Max {
-		return divPow10_q128res_256_barrett(x.dw0, x.dw1, x.dw2, x.dw3, pow10)
-	}
-	return div_256_pow10_q128res_barrett_loop(x, pow10)
-}
-
-// div_256_pow10_q128res_barrett_loop chains barrettPow10Max-sized steps for pow10
-// up to 77, merging per-step residues (strategy D16).
-func div_256_pow10_q128res_barrett_loop(x u256, pow10 int) quot128Residue {
-	verify("", pow10 >= 0 && pow10 <= 77)
-	pow10Remaining := pow10
-	res := RESIDUE_EXACT
-	t256 := x
-	for !isZero_bool_128(t256.dw2, t256.dw3) && pow10Remaining > 0 {
-		pow10Step := min(pow10Remaining, barrettPow10Max)
-		qr := divPow10_q256res_256_barrett(t256.dw0, t256.dw1, t256.dw2, t256.dw3, pow10Step)
-		t256 = u256{qr.quotDw0, qr.quotDw1, qr.quotDw2, qr.quotDw3}
-		res = residueMerge(qr.residue, res)
-		pow10Remaining -= barrettPow10Max
-	}
-	demand("", isZero_bool_128(t256.dw2, t256.dw3))
-	t128 := t256.lo()
-	for pow10Remaining > 0 {
-		pow10Step := min(pow10Remaining, barrettPow10Max)
-		qr := divPow10_q128res_128_barrett(t128.dw0, t128.dw1, pow10Step)
-		t128 = fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1)
-		res = residueMerge(qr.residue, res)
-		pow10Remaining -= barrettPow10Max
-	}
-	return quot128Residue{t128.dw0, t128.dw1, res}
+	// A single reciprocal-multiply kernel (D47) covers the whole 256-bit-dividend
+	// q128res range pow10 1..77, replacing the former barrett(<=13)/barrett-loop(>13)
+	// split: it is flat in k where the barrett-loop grew with k, so it is a win
+	// across the range (and retires the rrmp10-256 machinery). Mirrors the 128-bit
+	// recipmul collapse (D45).
+	return divPow10_q128res_256_recipmul(x, pow10)
 }
