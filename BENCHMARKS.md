@@ -2,14 +2,16 @@
 
 A `testing.B` baseline for the public `Decimal128` API, established with
 kernel-only framing (operands prepared outside the timed loop; results returned
-into package sinks so nothing is optimised away). Input classes mirror the C /
-libbid harness:
+into package sinks so nothing is optimised away). Add/sub alignment bands follow
+the `decimal128-www/BenchmarkMatrix.md` taxonomy (consolidated cross-port results
+live in `decimal128-www/BenchmarkResults.md`):
 
-| Class | Meaning |
-|-------|---------|
-| SE | same exponent — no coefficient alignment |
-| NE | near exponent — small alignment shift |
-| FE | far exponent — full shift, one operand swamped |
+| Band | Meaning |
+|------|---------|
+| SQ | same qExp — no coefficient alignment |
+| NQ | near qExp, narrow operands — small shift, no rounding |
+| OQ | overlapping qExp — wide operands + small gap ⇒ align + round |
+| FQ | far qExp — full shift, one operand swamped |
 
 The Go port is a native, pure-Go implementation, so there is no in-process
 libbid to compare against (unlike `decimal128-c`); this measures the port's own
@@ -33,14 +35,15 @@ shape is the point.*
 | Operation              | ns/op | allocs/op | Notes |
 |------------------------|------:|----------:|-------|
 | Abs                    |   1.2 | 0 | sign-bit only |
-| Add (SE)               |   3.7 | 0 | no alignment |
-| Add (NE)               |   9.8 | 0 | small shift |
+| Add (SQ)               |   3.7 | 0 | same qExp, no alignment |
+| Add (NQ)               |   9.8 | 0 | near qExp, narrow, no round |
 | ContextAdd             |   4.9 | 0 | flag-tracking path |
 | BID encode             |   3.7 | 0 | binary-integer significand |
 | BID decode             |   4.1 | 0 | |
 | Sub                    |  13.2 | 0 | unlike-sign alignment |
 | Equal / Compare        | 17–18 | 0 | |
-| Add (FE)               |  22.0 | 0 | full shift + residue |
+| Add (OQ)               |   —   | 0 | overlap + round (new band; x86 measurement pending) |
+| Add (FQ)               |  22.0 | 0 | far qExp, full shift + residue |
 | ToInt64                |  31.5 | 0 | |
 | TotalOrder             |  37.3 | 0 | two-direction ≤ |
 | RoundToIntegral        |  60.3 | 0 | |
@@ -65,9 +68,10 @@ shape is the point.*
   (`Parse`, `String`) and slice-returning (`NPV`, `AmortizationSchedule`) APIs
   allocate; everything else is 0 alloc/op, as the value-return memory model (D-G3)
   intends.
-- **Add cost scales with exponent distance** (3.7 → 9.8 → 22 ns across SE/NE/FE),
+- **Add cost scales with exponent distance** (3.7 → 9.8 → 22 ns across SQ/NQ/FQ),
   exactly the alignment/residue work the binary-exponent pre-check is meant to
-  expose.
+  expose. (The new OQ band — wide operands + small gap — and the arm64 numbers are
+  in `decimal128-www/BenchmarkResults.md`.)
 - **`Mul` (195 ns) is slower than `Quo` (95 ns)** here — the full 34×34 → 68-digit
   product plus its scale-down-and-round finalize outweighs the Möller–Granlund
   divide on these operands.
@@ -78,5 +82,5 @@ shape is the point.*
   expected cost of the 38-digit Padé kernels with their square-root reduction and
   three reconstruction squarings; `pow`/`root` roughly double it by composing a
   log with an exp10.
-- **`ContextAdd` (4.9 ns) is within ~1 ns of bare `Add`** (3.7 ns SE), confirming
+- **`ContextAdd` (4.9 ns) is within ~1 ns of bare `Add`** (3.7 ns SQ), confirming
   the flag-tracking wrapper adds negligible overhead.

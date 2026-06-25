@@ -7,11 +7,11 @@ import "testing"
 // (kernel-only framing, the analog of the C harness's bridge.hpp), and each loop
 // body returns into a package sink so nothing is optimised away.
 //
-// Input classes mirror the C/libbid harness:
-//   SE — same exponent      (no coefficient alignment)
-//   NE — near exponent      (small alignment shift)
-//   FE — far exponent       (full shift / one operand swamped)
-//   N  — representative normal values
+// Add/sub alignment bands follow the BenchmarkMatrix.md taxonomy (SQ/NQ/OQ/FQ):
+//   SQ — same qExp           (Δ=0, no coefficient alignment)
+//   NQ — near qExp, no round (small shift, narrow operands, result fits 34 digits)
+//   OQ — overlapping qExp    (wide operands + small gap ⇒ align + round)
+//   FQ — far qExp            (full shift / one operand swamped)
 //
 // Run: go test -bench=. -benchmem -run='^$'
 
@@ -26,52 +26,66 @@ var (
 	benchFinRow []AmortizationRow
 )
 
-// representative operands per input class.
+// representative operands per alignment band.
 var (
 	benchA   = MustParse("12345.67890123456789012345678901234")
 	benchB   = MustParse("98765.43210987654321098765432109876")
-	benchSEa = MustParse("123456.789")     // same exponent as SEb
-	benchSEb = MustParse("987654.321")     //
-	benchNEa = MustParse("12345.678")      // exponent off by 3 from NEb
-	benchNEb = MustParse("9876.54321")     //
-	benchFEa = MustParse("1.23456789E+30") // operands far apart in magnitude
-	benchFEb = MustParse("9.87654321E-30") //
+	benchSQa = MustParse("123456.789") // SQ: same qExp (both 10^-3)
+	benchSQb = MustParse("987654.321") //
+	benchNQa = MustParse("12345.678")  // NQ: near qExp, narrow ⇒ no rounding
+	benchNQb = MustParse("9876.54321") //   (gap 2, ~8-9 digits, result fits 34)
+	// OQ: two 34-digit coefficients an exponent-gap of 4 apart ⇒ the aligned sum
+	// is ~38 digits and must round (trim 4), with the smaller operand overlapping.
+	benchOQa = MustParse("1234567890123456789012345678901234")     // 34 digits, exp 0
+	benchOQb = MustParse("9876543210987654321098765432109876E-4")  // 34 digits, exp -4
+	benchFQa = MustParse("1.23456789E+30")                          // FQ: far apart in magnitude
+	benchFQb = MustParse("9.87654321E-30")                          //   (gap 60 ⇒ swamped)
 	benchPos = MustParse("2.5")
 	benchBig = MustParse("123456789.987654321")
 )
 
 func BenchmarkAdd(b *testing.B) {
-	b.Run("SE", func(b *testing.B) {
+	b.Run("SQ", func(b *testing.B) {
 		for b.Loop() {
-			benchSink = benchSEa.Add(benchSEb)
+			benchSink = benchSQa.Add(benchSQb)
 		}
 	})
-	b.Run("NE", func(b *testing.B) {
+	b.Run("NQ", func(b *testing.B) {
 		for b.Loop() {
-			benchSink = benchNEa.Add(benchNEb)
+			benchSink = benchNQa.Add(benchNQb)
 		}
 	})
-	b.Run("FE", func(b *testing.B) {
+	b.Run("OQ", func(b *testing.B) {
 		for b.Loop() {
-			benchSink = benchFEa.Add(benchFEb)
+			benchSink = benchOQa.Add(benchOQb)
+		}
+	})
+	b.Run("FQ", func(b *testing.B) {
+		for b.Loop() {
+			benchSink = benchFQa.Add(benchFQb)
 		}
 	})
 }
 
 func BenchmarkSub(b *testing.B) {
-	b.Run("SE", func(b *testing.B) {
+	b.Run("SQ", func(b *testing.B) {
 		for b.Loop() {
-			benchSink = benchSEa.Sub(benchSEb)
+			benchSink = benchSQa.Sub(benchSQb)
 		}
 	})
-	b.Run("NE", func(b *testing.B) {
+	b.Run("NQ", func(b *testing.B) {
 		for b.Loop() {
-			benchSink = benchNEa.Sub(benchNEb)
+			benchSink = benchNQa.Sub(benchNQb)
 		}
 	})
-	b.Run("FE", func(b *testing.B) {
+	b.Run("OQ", func(b *testing.B) {
 		for b.Loop() {
-			benchSink = benchFEa.Sub(benchFEb)
+			benchSink = benchOQa.Sub(benchOQb)
+		}
+	})
+	b.Run("FQ", func(b *testing.B) {
+		for b.Loop() {
+			benchSink = benchFQa.Sub(benchFQb)
 		}
 	})
 }
@@ -224,7 +238,7 @@ func BenchmarkContextAdd(b *testing.B) {
 	ctx := NewContext()
 	b.ResetTimer()
 	for b.Loop() {
-		benchSink = ctx.Add(benchSEa, benchSEb)
+		benchSink = ctx.Add(benchSQa, benchSQb)
 	}
 }
 
