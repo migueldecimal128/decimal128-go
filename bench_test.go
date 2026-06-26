@@ -36,10 +36,10 @@ var (
 	benchNQb = MustParse("9876.54321") //   (gap 2, ~8-9 digits, result fits 34)
 	// OQ: two 34-digit coefficients an exponent-gap of 4 apart ⇒ the aligned sum
 	// is ~38 digits and must round (trim 4), with the smaller operand overlapping.
-	benchOQa = MustParse("1234567890123456789012345678901234")     // 34 digits, exp 0
-	benchOQb = MustParse("9876543210987654321098765432109876E-4")  // 34 digits, exp -4
-	benchFQa = MustParse("1.23456789E+30")                          // FQ: far apart in magnitude
-	benchFQb = MustParse("9.87654321E-30")                          //   (gap 60 ⇒ swamped)
+	benchOQa = MustParse("1234567890123456789012345678901234")    // 34 digits, exp 0
+	benchOQb = MustParse("9876543210987654321098765432109876E-4") // 34 digits, exp -4
+	benchFQa = MustParse("1.23456789E+30")                        // FQ: far apart in magnitude
+	benchFQb = MustParse("9.87654321E-30")                        //   (gap 60 ⇒ swamped)
 	benchPos = MustParse("2.5")
 	benchBig = MustParse("123456789.987654321")
 )
