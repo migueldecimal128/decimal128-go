@@ -203,7 +203,35 @@ func remainderNearFnzFnz(x, y d128, ctxnull *context) d128 {
 	return r1
 }
 
+// PROTOTYPE -- PT fast path: divide by a power of ten (value 10^(m + qExp(y))).
+// The result is exact and keeps the dividend's coefficient: Cx * 10^(qPreferred - m),
+// where qPreferred = qExp(x) - qExp(y). As in the general exact case the natural
+// exponent sits m below the preferred exponent, so strip up to m trailing zeros from
+// Cx back toward it (no-op when Cx has none), then let finalize apply the usual
+// range/clamp/subnormal handling. Never rounds.
+func divPow10Divisor_rnd_ctx(x d128, resultSign bool, qPreferred, m int, rounding round, ctxnull *context) d128 {
+	qZ := qPreferred - m
+	coefficient := d128_u128(x)
+	if m > 0 {
+		ss := strip_s128sc_128(coefficient.dw0, coefficient.dw1, m)
+		coefficient = u128{ss.strippedDw0, ss.strippedDw1}
+		qZ += int(ss.stripCount)
+	}
+	return finalize_128_ctx(resultSign, qZ, coefficient, RESIDUE_EXACT, rounding, ctxnull)
+}
+
 func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *context) d128 {
+	// PROTOTYPE -- power-of-ten divisor fast path (PT). When y is a power of ten,
+	// x / y = Cx * 10^(qExp(x) - qExp(y) - m) is exact and coefficient-preserving
+	// (m = digitLen(y) - 1), so skip the dividend scale + 256/128 divide and reuse
+	// the exact trailing-zero strip + finalize. "Divisor coefficient is a power of ten"
+	// is cohort-invariant, so one dword compare detects every representation of y.
+	m := d128_digitLen(y) - 1
+	yCoeff := d128_u128(y)
+	if yCoeff.dw0 == pow10_128_dw0(m) && yCoeff.dw1 == pow10_128_dw1(m) {
+		return divPow10Divisor_rnd_ctx(x, resultSign, d128_qExp(x)-d128_qExp(y), m, rounding, ctxnull)
+	}
+
 	digitLenDelta := d128_digitLen(x) - d128_digitLen(y)
 	numeratorScale := 34 - digitLenDelta
 	verify("", numeratorScale > 0)
