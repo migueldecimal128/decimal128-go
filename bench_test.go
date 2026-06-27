@@ -109,9 +109,21 @@ var (
 	benchPT1b = MustParse("1E3")   // power of ten, Cy=1 (m=0, trivial)
 )
 
-func BenchmarkQuoCD(b *testing.B)  { for b.Loop() { benchSink = benchA.Quo(benchCDb) } }
-func BenchmarkQuoPT(b *testing.B)  { for b.Loop() { benchSink = benchA.Quo(benchPTb) } }
-func BenchmarkQuoPT1(b *testing.B) { for b.Loop() { benchSink = benchA.Quo(benchPT1b) } }
+func BenchmarkQuoCD(b *testing.B) {
+	for b.Loop() {
+		benchSink = benchA.Quo(benchCDb)
+	}
+}
+func BenchmarkQuoPT(b *testing.B) {
+	for b.Loop() {
+		benchSink = benchA.Quo(benchPTb)
+	}
+}
+func BenchmarkQuoPT1(b *testing.B) {
+	for b.Loop() {
+		benchSink = benchA.Quo(benchPT1b)
+	}
+}
 
 func BenchmarkFMA(b *testing.B) {
 	for b.Loop() {
