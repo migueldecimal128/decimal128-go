@@ -220,6 +220,51 @@ func divPow10Divisor_rnd_ctx(x d128, resultSign bool, qPreferred, m int, roundin
 	return finalize_128_ctx(resultSign, qZ, coefficient, RESIDUE_EXACT, rounding, ctxnull)
 }
 
+// Quotient-first divide finish for a CD-width divisor (digitLen(y) <= 4; ET is drawn at
+// CD width). The caller has integer-divided the coefficients cx / cy -> (qr.quot = qI,
+// qr.remDw0 = R0) for single-dword divisor cy, with qI >= 1.
+//
+// qI supplies the high digitLen(qI) significant digits at the preferred exponent
+// qPreferred = qExp(x) - qExp(y); the remaining fracScale = 34 - digitLen(qI) low digits
+// come from the remainder alone: qF = (R0 * 10^fracScale) / cy. Since
+// cx*10^fracScale = cy*(qI*10^fracScale + qF) + remF, the combined coefficient and remF are
+// exactly the truncated quotient and residue a scale-by-fracScale divide would produce, so
+// finalize rounds identically -- but the dividend never widened to 256 bits.
+//
+// R0 == 0: integer-exact, already at the preferred exponent -> no strip. remF == 0 (residue
+// EXACT, fracScale > 0): terminating fraction sits fracScale digits below preferred with
+// trailing zeros -> strip back toward preferred.
+func divQuotientFirstFinish_rnd_ctx(qr quot128Rem64, cy int64, resultSign bool, qPreferred int, rounding round, ctxnull *context) d128 {
+	// Exact: qI is already at the preferred exponent -- no strip, no fraction.
+	if qr.remDw0 == 0 {
+		return finalize_128_ctx(resultSign, qPreferred, fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1), RESIDUE_EXACT, rounding, ctxnull)
+	}
+
+	qILen := digitLen_int_128(qr.quotDw0, qr.quotDw1)
+	fracScale := 34 - qILen
+	if fracScale == 0 {
+		// qI fills all 34 digits (cy is a single digit), so R0 < cy <= 9 -- within the
+		// 64-bit residue classifier's range. The integer remainder is the whole residue.
+		res := residueFromRemainderDivisor_64(qr.remDw0, cy)
+		return finalize_128_ctx(resultSign, qPreferred, fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1), res, rounding, ctxnull)
+	}
+
+	// Fractional digits from the remainder only: (R0 * 10^fracScale) / cy.
+	scaledRemainder := mulPow10_256_128(qr.remDw0, 0, fracScale)
+	frac := u256DivResidue_128(scaledRemainder, fromLoHi_128_64x64(cy, 0))
+	qIscaled := mulPow10_128_128(qr.quotDw0, qr.quotDw1, fracScale)
+	coefficient := add_128_128x128(qIscaled.dw0, qIscaled.dw1, frac.quotDw0, frac.quotDw1)
+	qZ := qPreferred - fracScale
+	// A terminating fraction (remF == 0) is exact but fracScale digits below the preferred
+	// exponent with trailing zeros -- strip them back toward preferred (capped at fracScale).
+	if frac.residue == RESIDUE_EXACT {
+		ss := strip_s128sc_128(coefficient.dw0, coefficient.dw1, fracScale)
+		coefficient = u128{ss.strippedDw0, ss.strippedDw1}
+		qZ += int(ss.stripCount)
+	}
+	return finalize_128_ctx(resultSign, qZ, coefficient, frac.residue, rounding, ctxnull)
+}
+
 func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *context) d128 {
 	// Power-of-ten divisor fast path (PT). When y is a power of ten,
 	// x / y = Cx * 10^(qExp(x) - qExp(y) - m) is exact and coefficient-preserving
@@ -230,6 +275,21 @@ func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *cont
 	yCoeff := d128_u128(y)
 	if yCoeff.dw0 == pow10_128_dw0(m) && yCoeff.dw1 == pow10_128_dw1(m) {
 		return divPow10Divisor_rnd_ctx(x, resultSign, d128_qExp(x)-d128_qExp(y), m, rounding, ctxnull)
+	}
+
+	// Quotient-first path for a CD-width divisor (digitLen(y) <= 4, so m <= 3; ET is
+	// drawn at CD width too): integer-divide the coefficients, then fill the fractional
+	// digits from the remainder only. The dividend stays 128 bits in the integer step,
+	// and an exact quotient (R0 == 0) terminates with no rounding and no strip. Wider
+	// divisors (WD/XD) keep the scaled-numerator divide below: there the extra integer
+	// divide is pure overhead (the result is rarely exact and the fractional divide is
+	// no cheaper). A sub-unit quotient (cx < cy) also falls through.
+	if m <= 3 {
+		cx := d128_u128(x)
+		qr := divRem_q128r64_128x64(cx.dw0, cx.dw1, yCoeff.dw0)
+		if !isZero_bool_128(qr.quotDw0, qr.quotDw1) {
+			return divQuotientFirstFinish_rnd_ctx(qr, yCoeff.dw0, resultSign, d128_qExp(x)-d128_qExp(y), rounding, ctxnull)
+		}
 	}
 
 	digitLenDelta := d128_digitLen(x) - d128_digitLen(y)
