@@ -102,7 +102,7 @@ func BenchmarkQuo(b *testing.B) {
 	}
 }
 
-// PROTOTYPE PT measurement: non-PT small divisor vs power-of-ten divisor (two encodings).
+// PT measurement: non-PT small divisor vs power-of-ten divisor (two encodings).
 var (
 	benchCDb  = MustParse("98.76") // non-PT general small divisor
 	benchPTb  = MustParse("1000")  // power of ten, Cy=1000 (m=3 + strip)

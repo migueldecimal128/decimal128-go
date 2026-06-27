@@ -203,7 +203,7 @@ func remainderNearFnzFnz(x, y d128, ctxnull *context) d128 {
 	return r1
 }
 
-// PROTOTYPE -- PT fast path: divide by a power of ten (value 10^(m + qExp(y))).
+// PT fast path: divide by a power of ten (value 10^(m + qExp(y))).
 // The result is exact and keeps the dividend's coefficient: Cx * 10^(qPreferred - m),
 // where qPreferred = qExp(x) - qExp(y). As in the general exact case the natural
 // exponent sits m below the preferred exponent, so strip up to m trailing zeros from
@@ -221,7 +221,7 @@ func divPow10Divisor_rnd_ctx(x d128, resultSign bool, qPreferred, m int, roundin
 }
 
 func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *context) d128 {
-	// PROTOTYPE -- power-of-ten divisor fast path (PT). When y is a power of ten,
+	// Power-of-ten divisor fast path (PT). When y is a power of ten,
 	// x / y = Cx * 10^(qExp(x) - qExp(y) - m) is exact and coefficient-preserving
 	// (m = digitLen(y) - 1), so skip the dividend scale + 256/128 divide and reuse
 	// the exact trailing-zero strip + finalize. "Divisor coefficient is a power of ten"
