@@ -114,7 +114,7 @@ func addFnzFnzUnalignedLikeSign_rnd_ctx(x, y d128, rounding round, ctxnull *cont
 	qAlign := mQ - shiftLeft
 	shiftRight := qAlign - nQ
 	// Swamped fast path: n lies strictly below the result's LSD (LT_HALF residue).
-	if shiftRight > d128_digitLen(n) {
+	if shiftRight >= 35 || shiftRight > d128_digitLen(n) {
 		return finalizeSwampedFnz_128_ctx(d128_signFlag(m), qAlign, zCoeff, RESIDUE_LT_HALF, rounding, ctxnull)
 	}
 	qr := div_128_pow10_checked_q128res(d128_u128(n), shiftRight)
@@ -179,7 +179,7 @@ func subMagUnalignedFnzFnz_rnd_ctx(zSign bool, m, s d128, rounding round, ctxnul
 	mDigitLen := digitLen_int_128(mCoeff.dw0, mCoeff.dw1)
 	sQ := d128_qExp(s)
 	sCoeff := d128_u128(s)
-	sDigitLen := digitLen_int_128(sCoeff.dw0, sCoeff.dw1)
+	sDigitLen := -1
 	gap := mQ - sQ
 	if gap < 0 {
 		prod := mulPow10_128_128(sCoeff.dw0, sCoeff.dw1, -gap)
@@ -187,18 +187,22 @@ func subMagUnalignedFnzFnz_rnd_ctx(zSign bool, m, s d128, rounding round, ctxnul
 		return finalize_128_ctx(zSign, mQ, diff, RESIDUE_EXACT, rounding, ctxnull)
 	}
 	verify("", mDigitLen <= 34)
-	verify("", sDigitLen <= 34)
 
 	// Fully/Borderline swamped fast path at 34-digit scale.
 	headroom := 34 - mDigitLen
 	shiftM34 := min(gap, headroom)
 	qAlign34 := mQ - shiftM34
 	shiftS34 := qAlign34 - sQ
-	if shiftS34 >= sDigitLen {
+	isSwamped := (shiftS34 >= 35)
+	if !isSwamped {
+		sDigitLen = digitLen_int_128(sCoeff.dw0, sCoeff.dw1)
+		isSwamped = (shiftS34 >= sDigitLen)
+	}
+	if isSwamped {
 		mScaled := mulPow10_128_128(mCoeff.dw0, mCoeff.dw1, shiftM34)
 		if cmp_int_128x128_pow10(mScaled.dw0, mScaled.dw1, 33) != 0 { // not 10^33
 			raw := RESIDUE_LT_HALF
-			if shiftS34 <= sDigitLen { // == sDigitLen (borderline)
+			if !(shiftS34 >= 35 || shiftS34 > sDigitLen) {
 				raw = residueFromDecadeWithDigitLen_128(sCoeff.dw0, sCoeff.dw1, sDigitLen)
 			}
 			z := sub_128_128x128(mScaled.dw0, mScaled.dw1, 1, 0)
@@ -215,6 +219,9 @@ func subMagUnalignedFnzFnz_rnd_ctx(zSign bool, m, s d128, rounding round, ctxnul
 	verify("", shiftSRight >= 0)
 
 	zCoeff := mulPow10_128_128(mCoeff.dw0, mCoeff.dw1, shiftMLeft)
+	if sDigitLen == -1 {
+		sDigitLen = digitLen_int_128(sCoeff.dw0, sCoeff.dw1)
+	}
 	if shiftSRight > sDigitLen {
 		borrowed := sub_128_128x128(zCoeff.dw0, zCoeff.dw1, 1, 0)
 		return finalizeAddSubFnz_128_ctx(zSign, qAlign, borrowed, residueSubtractionInverse(RESIDUE_LT_HALF), rounding, ctxnull)

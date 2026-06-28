@@ -27,6 +27,13 @@ func compareBExpMagnitudeFnzFnz(xQExp, xBitLen, xDigitLen, yQExp, yBitLen, yDigi
 
 func cmpMagFnzFnz(x, y d128) int {
 	verify("", d128_isFNZ(x) && d128_isFNZ(y))
+	qDelta := d128_qExp(x) - d128_qExp(y)
+	if qDelta >= 34 {
+		return 1
+	}
+	if qDelta <= -34 {
+		return -1
+	}
 	xCoeff := d128_u128(x)
 	yCoeff := d128_u128(y)
 	xBitLen := bitLen_int_128(xCoeff.dw0, xCoeff.dw1)
@@ -39,7 +46,7 @@ func cmpMagFnzFnz(x, y d128) int {
 	}
 	xAligned := xCoeff
 	yAligned := yCoeff
-	qDelta := d128_qExp(x) - d128_qExp(y)
+	qDelta = d128_qExp(x) - d128_qExp(y)
 	if qDelta > 0 {
 		xAligned = mulPow10_128_128(xAligned.dw0, xAligned.dw1, qDelta)
 	} else if qDelta < 0 {
