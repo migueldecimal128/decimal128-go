@@ -79,14 +79,15 @@ func divIntFnzFnz_rnd_ctx(x, y d128, ctxnull *context) d128 {
 	verify("", d128_isFIN(q1))
 	q2 := d128_roundToIntegralTowardZeroSignalInexact_ctxnull(q1, nil)
 	verify("", d128_isFIN(q2))
-	verify("", d128_qExp(q2) >= 0)
-	if d128_qExp(q2) == 0 {
+	q2Q := d128_qExp(q2)
+	verify("", q2Q >= 0)
+	if q2Q == 0 {
 		return q2
 	}
 	if d128_isZER(q2) {
 		return d128_zero(d128_signFlag(q2), 0)
 	}
-	zQ := d128_qExp(q2)
+	zQ := q2Q
 	headroom := 34 - d128_digitLen(q2)
 	if headroom < zQ {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivIntOverflowsCoefficient)
@@ -273,8 +274,9 @@ func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *cont
 	// is cohort-invariant, so one dword compare detects every representation of y.
 	m := d128_digitLen(y) - 1
 	yCoeff := d128_u128(y)
+	qPreferred := d128_qExp(x) - d128_qExp(y)
 	if yCoeff.dw0 == pow10_128_dw0(m) && yCoeff.dw1 == pow10_128_dw1(m) {
-		return divPow10Divisor_rnd_ctx(x, resultSign, d128_qExp(x)-d128_qExp(y), m, rounding, ctxnull)
+		return divPow10Divisor_rnd_ctx(x, resultSign, qPreferred, m, rounding, ctxnull)
 	}
 
 	// Quotient-first path for a CD-width divisor (digitLen(y) <= 4, so m <= 3; ET is
@@ -288,20 +290,19 @@ func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *cont
 		cx := d128_u128(x)
 		qr := divRem_q128r64_128x64(cx.dw0, cx.dw1, yCoeff.dw0)
 		if !isZero_bool_128(qr.quotDw0, qr.quotDw1) {
-			return divQuotientFirstFinish_rnd_ctx(qr, yCoeff.dw0, resultSign, d128_qExp(x)-d128_qExp(y), rounding, ctxnull)
+			return divQuotientFirstFinish_rnd_ctx(qr, yCoeff.dw0, resultSign, qPreferred, rounding, ctxnull)
 		}
 	}
 
-	digitLenDelta := d128_digitLen(x) - d128_digitLen(y)
+	digitLenDelta := d128_digitLen(x) - (m + 1)
 	numeratorScale := 34 - digitLenDelta
 	verify("", numeratorScale > 0)
 
 	scaledNumerator := mulPow10_256_128(x.ubdLo64, d128_hi49(x), numeratorScale)
-	qr := u256DivResidue_128(scaledNumerator, d128_u128(y))
+	qr := u256DivResidue_128(scaledNumerator, yCoeff)
 	coefficient := fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1)
 	res := qr.residue
 
-	qPreferred := d128_qExp(x) - d128_qExp(y)
 	qZ := qPreferred - numeratorScale
 
 	if res == RESIDUE_EXACT && qZ < qPreferred {
