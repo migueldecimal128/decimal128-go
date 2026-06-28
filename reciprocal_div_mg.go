@@ -18,11 +18,8 @@ import "math/bits"
 // i.e. floor((2^128-1)/d) - 2^64. One 128÷64 divide. Precondition: d >= 2^63.
 func vReciprocal_64_64_mg(d int64) int64 {
 	dd := uint64(d)
-	allOnes := ^uint64(0)
-	// floor((2^128-1)/dd): the quotient is in [2^64, 2^65); its low 64 bits are
-	// the low word of the two-step long division, which is what we return.
-	rh := allOnes % dd
-	qLo, _ := bits.Div64(rh, allOnes, dd)
+	x := (0 - dd) - 1
+	qLo, _ := bits.Div64(x, ^uint64(0), dd)
 	return int64(qLo)
 }
 
