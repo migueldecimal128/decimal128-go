@@ -29,7 +29,7 @@ func d128_pown_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d128
 		if n == 0 && d128_isQNAN(x) {
 			return d128_fromInt(1)
 		}
-		return ctxNanOperand1(ctxnull, x)
+		return ctxNanOperand1_ctxnull(ctxnull, x)
 	}
 	verify("", d128_isINF(x))
 	return pownINF(x, n)
@@ -57,7 +57,7 @@ func pownZER(x d128, n int, ctxnull *context) d128 {
 		return d128_zero(resultSign, d128_qExp(x)*pClamp)
 	}
 	if n < 0 {
-		return ctxSignalDivByZero(ctxnull, resultSign)
+		return ctxSignalDivByZero_ctxnull(ctxnull, resultSign)
 	}
 	return d128_fromInt(1)
 }
@@ -86,7 +86,7 @@ func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 	// |x| == 10: an exact power of ten, carrying the preferred cohort exponent.
 	if cmpMagFnzFnz(x, d128PownTen) == 0 {
 		if n > 6144 {
-			return finalizeOverflow_ctx(negative, rounding, ctxnull)
+			return finalizeOverflow_ctxnull(negative, rounding, ctxnull)
 		}
 		if n < -6176 {
 			return finalizeUnderflowFullySwamped(negative, rounding, ctxnull)
@@ -119,7 +119,7 @@ func pownFNZ_powGE3(x d128, n int, rounding round, ctxnull *context) d128 {
 	resultSign := d128_signFlag(x) && (n&1) != 0
 	estimatedResultExp := int64(d128_sciExp(x)) * int64(n)
 	if estimatedResultExp > 6200 {
-		return finalizeOverflow_ctx(resultSign, rounding, ctxnull)
+		return finalizeOverflow_ctxnull(resultSign, rounding, ctxnull)
 	}
 	if estimatedResultExp < -6250 {
 		return finalizeUnderflowFullySwamped(resultSign, rounding, ctxnull)
@@ -154,10 +154,10 @@ func tenPowN(sign bool, n, preferredQExp int, rounding round, ctxnull *context) 
 	coeffExp := n - preferredQExp
 	if coeffExp <= 0 || coeffExp > 33 {
 		// coefficient 1, qExp = n
-		return finalize_128_ctx(sign, n, u128{1, 0}, RESIDUE_EXACT, rounding, ctxnull)
+		return finalize_128_ctxnull(sign, n, u128{1, 0}, RESIDUE_EXACT, rounding, ctxnull)
 	}
 	coeff := fromLoHi_128_64x64(pow10_128_dw0(coeffExp), pow10_128_dw1(coeffExp))
-	return finalize_128_ctx(sign, preferredQExp, coeff, RESIDUE_EXACT, rounding, ctxnull)
+	return finalize_128_ctxnull(sign, preferredQExp, coeff, RESIDUE_EXACT, rounding, ctxnull)
 }
 
 func minI64(a, b int64) int64 {

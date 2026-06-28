@@ -19,19 +19,19 @@ func d128_divide_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 			return divFnzFnz_rnd_ctx(x, y, resultSign, rounding, ctxnull)
 		}
 		if d128_isZER(x) && d128_isZER(y) {
-			return ctxSignalInvalidOperation(ctxnull, causeDivZeroByZero)
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivZeroByZero)
 		}
 		if d128_isZER(x) {
 			return d128_zero(resultSign, d128_qExp(x)-d128_qExp(y))
 		}
-		return ctxSignalDivByZero(ctxnull, resultSign)
+		return ctxSignalDivByZero_ctxnull(ctxnull, resultSign)
 	}
 	if d128_isNAN(x) || d128_isNAN(y) {
-		return ctxNanOperand2(ctxnull, x, y)
+		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
 	verify("", d128_isINF(x) || d128_isINF(y))
 	if d128_isINF(x) && d128_isINF(y) {
-		return ctxSignalInvalidOperation(ctxnull, causeDivInfByInf)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivInfByInf)
 	}
 	if d128_isINF(y) {
 		return d128_zero(resultSign, -6176)
@@ -53,20 +53,20 @@ func d128_divideInteger_ctxnull(x, y d128, ctxnull *context) d128 {
 		}
 		resultSign := d128_signFlag(x) != d128_signFlag(y)
 		if d128_isZER(x) && d128_isZER(y) {
-			return ctxSignalInvalidOperation(ctxnull, causeDivZeroByZero)
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivZeroByZero)
 		}
 		if d128_isZER(x) {
 			return d128_zero(resultSign, 0)
 		}
-		return ctxSignalDivByZero(ctxnull, resultSign)
+		return ctxSignalDivByZero_ctxnull(ctxnull, resultSign)
 	}
 	if d128_isNAN(x) || d128_isNAN(y) {
-		return ctxNanOperand2(ctxnull, x, y)
+		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
 	resultSign := d128_signFlag(x) != d128_signFlag(y)
 	verify("", d128_isINF(x) || d128_isINF(y))
 	if d128_isINF(x) && d128_isINF(y) {
-		return ctxSignalInvalidOperation(ctxnull, causeDivInfByInf)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivInfByInf)
 	}
 	if d128_isINF(x) {
 		return d128_infinity(resultSign)
@@ -77,7 +77,7 @@ func d128_divideInteger_ctxnull(x, y d128, ctxnull *context) d128 {
 func divIntFnzFnz_rnd_ctx(x, y d128, ctxnull *context) d128 {
 	q1 := d128_divide_rnd_ctxnull(x, y, TOWARD_ZERO, nil) // quiet
 	verify("", d128_isFIN(q1))
-	q2 := d128_roundToIntegralTowardZeroSignalInexact(q1, nil)
+	q2 := d128_roundToIntegralTowardZeroSignalInexact_ctxnull(q1, nil)
 	verify("", d128_isFIN(q2))
 	verify("", d128_qExp(q2) >= 0)
 	if d128_qExp(q2) == 0 {
@@ -89,7 +89,7 @@ func divIntFnzFnz_rnd_ctx(x, y d128, ctxnull *context) d128 {
 	zQ := d128_qExp(q2)
 	headroom := 34 - d128_digitLen(q2)
 	if headroom < zQ {
-		return ctxSignalInvalidOperation(ctxnull, causeDivIntOverflowsCoefficient)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivIntOverflowsCoefficient)
 	}
 	scaled := mulPow10_128_128(q2.ubdLo64, d128_hi49(q2), zQ)
 	return decimalFNZ_128(d128_signFlag(q2), 0, scaled.dw0, scaled.dw1)
@@ -111,13 +111,13 @@ func d128_remainderTrunc_ctxnull(x, y d128, ctxnull *context) d128 {
 		if d128_isZER(x) && d128_isNotZER(y) {
 			return d128_zero(d128_signFlag(x), min(d128_qExp(x), d128_qExp(y)))
 		}
-		return ctxSignalInvalidOperation(ctxnull, causeDivByZeroInRemainderOp)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivByZeroInRemainderOp)
 	}
 	if d128_isNAN(x) || d128_isNAN(y) {
-		return ctxNanOperand2(ctxnull, x, y)
+		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
 	if d128_isINF(x) {
-		return ctxSignalInvalidOperation(ctxnull, causeInfNumeratorInRemainderOp)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeInfNumeratorInRemainderOp)
 	}
 	return x
 }
@@ -135,13 +135,13 @@ func d128_remainderNear_ctxnull(x, y d128, ctxnull *context) d128 {
 		if d128_isZER(x) && d128_isNotZER(y) {
 			return d128_zero(d128_signFlag(x), min(d128_qExp(x), d128_qExp(y)))
 		}
-		return ctxSignalInvalidOperation(ctxnull, causeDivByZeroInRemainderOp)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivByZeroInRemainderOp)
 	}
 	if d128_isNAN(x) || d128_isNAN(y) {
-		return ctxNanOperand2(ctxnull, x, y)
+		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
 	if d128_isINF(x) {
-		return ctxSignalInvalidOperation(ctxnull, causeInfNumeratorInRemainderOp)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeInfNumeratorInRemainderOp)
 	}
 	return x
 }
@@ -151,19 +151,19 @@ func remTruncFnzFnz(x, y d128, ctxnull *context) (d128, bool) {
 	truncCtx := newContextRound(TOWARD_ZERO) // scratch: discards flags
 	n1 := d128_divide_ctx(x, y, truncCtx)
 	if truncCtx.isOverflow() {
-		nan := ctxSignalInvalidOperation(ctxnull, causeDivIntOverflowsCoefficient)
+		nan := ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivIntOverflowsCoefficient)
 		return nan, false
 	}
 	verify("", d128_isFIN(n1))
 	n := n1
 	if d128_qExp(n1) < 0 {
-		n = d128_roundToIntegralTowardZeroSignalInexact(n1, truncCtx)
+		n = d128_roundToIntegralTowardZeroSignalInexact_ctxnull(n1, truncCtx)
 	}
 	verify("", d128_qExp(n) >= 0)
 	// If the integer quotient has more than 34 digits it cannot be represented
 	// exactly, so the remainder is undefined (dectest "Division_impossible").
 	if d128_digitLen(n)+d128_qExp(n) > 34 {
-		return ctxSignalInvalidOperation(ctxnull, causeDivIntOverflowsCoefficient), false
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivIntOverflowsCoefficient), false
 	}
 	truncIsOdd := false
 	if !d128_isZER(n) && d128_qExp(n) == 0 {
@@ -217,7 +217,7 @@ func divPow10Divisor_rnd_ctx(x d128, resultSign bool, qPreferred, m int, roundin
 		coefficient = u128{ss.strippedDw0, ss.strippedDw1}
 		qZ += int(ss.stripCount)
 	}
-	return finalize_128_ctx(resultSign, qZ, coefficient, RESIDUE_EXACT, rounding, ctxnull)
+	return finalize_128_ctxnull(resultSign, qZ, coefficient, RESIDUE_EXACT, rounding, ctxnull)
 }
 
 // Quotient-first divide finish for a CD-width divisor (digitLen(y) <= 4; ET is drawn at
@@ -237,7 +237,7 @@ func divPow10Divisor_rnd_ctx(x d128, resultSign bool, qPreferred, m int, roundin
 func divQuotientFirstFinish_rnd_ctx(qr quot128Rem64, cy int64, resultSign bool, qPreferred int, rounding round, ctxnull *context) d128 {
 	// Exact: qI is already at the preferred exponent -- no strip, no fraction.
 	if qr.remDw0 == 0 {
-		return finalize_128_ctx(resultSign, qPreferred, fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1), RESIDUE_EXACT, rounding, ctxnull)
+		return finalize_128_ctxnull(resultSign, qPreferred, fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1), RESIDUE_EXACT, rounding, ctxnull)
 	}
 
 	qILen := digitLen_int_128(qr.quotDw0, qr.quotDw1)
@@ -246,7 +246,7 @@ func divQuotientFirstFinish_rnd_ctx(qr quot128Rem64, cy int64, resultSign bool, 
 		// qI fills all 34 digits (cy is a single digit), so R0 < cy <= 9 -- within the
 		// 64-bit residue classifier's range. The integer remainder is the whole residue.
 		res := residueFromRemainderDivisor_64(qr.remDw0, cy)
-		return finalize_128_ctx(resultSign, qPreferred, fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1), res, rounding, ctxnull)
+		return finalize_128_ctxnull(resultSign, qPreferred, fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1), res, rounding, ctxnull)
 	}
 
 	// Fractional digits from the remainder only: (R0 * 10^fracScale) / cy.
@@ -262,7 +262,7 @@ func divQuotientFirstFinish_rnd_ctx(qr quot128Rem64, cy int64, resultSign bool, 
 		coefficient = u128{ss.strippedDw0, ss.strippedDw1}
 		qZ += int(ss.stripCount)
 	}
-	return finalize_128_ctx(resultSign, qZ, coefficient, frac.residue, rounding, ctxnull)
+	return finalize_128_ctxnull(resultSign, qZ, coefficient, frac.residue, rounding, ctxnull)
 }
 
 func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *context) d128 {
@@ -309,5 +309,5 @@ func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *cont
 		coefficient = u128{ss.strippedDw0, ss.strippedDw1}
 		qZ += int(ss.stripCount)
 	}
-	return finalize_128_ctx(resultSign, qZ, coefficient, res, rounding, ctxnull)
+	return finalize_128_ctxnull(resultSign, qZ, coefficient, res, rounding, ctxnull)
 }

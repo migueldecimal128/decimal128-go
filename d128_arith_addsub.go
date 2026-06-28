@@ -13,7 +13,7 @@ func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 		return d128FromQExpSignBit(d128_qExpAndSignBit(x), coeffSum.dw0, coeffSum.dw1)
 	}
 	if d128_isNonFinite(x) || d128_isNonFinite(y) {
-		return addNonFinite_rnd_ctx(x, y, ctxnull)
+		return addNonFinite_rnd_ctxnull(x, y, ctxnull)
 	}
 	if d128_isZER(x) {
 		if d128_isZER(y) {
@@ -26,7 +26,7 @@ func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	if d128_isZER(y) {
 		return preferMinimumQExp_exact(x, d128_qExp(y))
 	}
-	return addFnzFnz_rnd_ctx(x, y, rounding, ctxnull)
+	return addFnzFnz_rnd_ctxnull(x, y, rounding, ctxnull)
 }
 
 func d128_add_tte(x, y d128) d128            { return d128_add_rnd_ctxnull(x, y, TIES_TO_EVEN, nil) }
@@ -35,7 +35,7 @@ func d128_add_ctx(x, y d128, ctx *context) d128 {
 	return d128_add_rnd_ctxnull(x, y, ctx.round, ctx)
 }
 
-func addFnzFnz_rnd_ctx(x, y d128, rounding round, ctxnull *context) d128 {
+func addFnzFnz_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	qAligned := min(d128_qExp(x), d128_qExp(y))
 	absXShift := d128_qExp(x) - qAligned // one of these is zero
 	absYShift := d128_qExp(y) - qAligned
@@ -60,12 +60,12 @@ func addFnzFnz_rnd_ctx(x, y d128, rounding round, ctxnull *context) d128 {
 		if isLt_pow10_34_bool_128(resultCoeff.dw0, resultCoeff.dw1) {
 			return d128Pack(resultSign, qAligned, resultCoeff.dw0, resultCoeff.dw1)
 		}
-		return finalize_128_ctx(resultSign, qAligned, resultCoeff, RESIDUE_EXACT, rounding, ctxnull)
+		return finalize_128_ctxnull(resultSign, qAligned, resultCoeff, RESIDUE_EXACT, rounding, ctxnull)
 	}
 	if d128_signFlag(x) == d128_signFlag(y) {
-		return addFnzFnzUnalignedLikeSign_rnd_ctx(x, y, rounding, ctxnull)
+		return addFnzFnzUnalignedLikeSign_rnd_ctxnull(x, y, rounding, ctxnull)
 	}
-	return addFnzFnzUnalignedUnlikeSign_rnd_ctx(x, y, rounding, ctxnull)
+	return addFnzFnzUnalignedUnlikeSign_rnd_ctxnull(x, y, rounding, ctxnull)
 }
 
 func d128_subtract_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
@@ -82,7 +82,7 @@ func d128_subtract_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 		}
 	}
 	if d128_isNAN(x) || d128_isNAN(y) {
-		return ctxNanOperand2(ctxnull, x, y)
+		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
 	return d128_add_rnd_ctxnull(x, d128_negate(y), rounding, ctxnull)
 }
@@ -93,7 +93,7 @@ func d128_subtract_ctx(x, y d128, ctx *context) d128 {
 	return d128_subtract_rnd_ctxnull(x, y, ctx.round, ctx)
 }
 
-func addFnzFnzUnalignedLikeSign_rnd_ctx(x, y d128, rounding round, ctxnull *context) d128 {
+func addFnzFnzUnalignedLikeSign_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	verify("", d128_qExp(x) != d128_qExp(y))
 	verify("", d128_signFlag(x) == d128_signFlag(y))
 
@@ -115,30 +115,30 @@ func addFnzFnzUnalignedLikeSign_rnd_ctx(x, y d128, rounding round, ctxnull *cont
 	shiftRight := qAlign - nQ
 	// Swamped fast path: n lies strictly below the result's LSD (LT_HALF residue).
 	if shiftRight >= 35 || shiftRight > d128_digitLen(n) {
-		return finalizeSwampedFnz_128_ctx(d128_signFlag(m), qAlign, zCoeff, RESIDUE_LT_HALF, rounding, ctxnull)
+		return finalizeSwampedFnz_128_ctxnull(d128_signFlag(m), qAlign, zCoeff, RESIDUE_LT_HALF, rounding, ctxnull)
 	}
 	qr := div_128_pow10_checked_q128res(d128_u128(n), shiftRight)
 	res := qr.residue
 	zCoeff = add_128_128x128(zCoeff.dw0, zCoeff.dw1, qr.quotDw0, qr.quotDw1)
-	return finalizeAddSubFnz_128_ctx(d128_signFlag(m), qAlign, zCoeff, res, rounding, ctxnull)
+	return finalizeAddSubFnz_128_ctxnull(d128_signFlag(m), qAlign, zCoeff, res, rounding, ctxnull)
 }
 
-func addFnzFnzUnalignedUnlikeSign_rnd_ctx(x, y d128, rounding round, ctxnull *context) d128 {
+func addFnzFnzUnalignedUnlikeSign_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	verify("", d128_qExp(x) != d128_qExp(y))
 	verify("", d128_signFlag(x) != d128_signFlag(y))
 	cmp := cmpMagFnzFnz(x, y)
 	if cmp > 0 {
-		return subMagUnalignedFnzFnz_rnd_ctx(d128_signFlag(x), x, y, rounding, ctxnull)
+		return subMagUnalignedFnzFnz_rnd_ctxnull(d128_signFlag(x), x, y, rounding, ctxnull)
 	}
 	if cmp < 0 {
-		return subMagUnalignedFnzFnz_rnd_ctx(d128_signFlag(y), y, x, rounding, ctxnull)
+		return subMagUnalignedFnzFnz_rnd_ctxnull(d128_signFlag(y), y, x, rounding, ctxnull)
 	}
 	return d128_zero(rounding == TOWARD_NEGATIVE, min(d128_qExp(x), d128_qExp(y)))
 }
 
-func addNonFinite_rnd_ctx(x, y d128, ctxnull *context) d128 {
+func addNonFinite_rnd_ctxnull(x, y d128, ctxnull *context) d128 {
 	if d128_isNAN(x) || d128_isNAN(y) {
-		return ctxNanOperand2(ctxnull, x, y)
+		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
 	verify("", d128_isINF(x) || d128_isINF(y))
 	if d128_isFIN(x) {
@@ -150,7 +150,7 @@ func addNonFinite_rnd_ctx(x, y d128, ctxnull *context) d128 {
 	if d128_signFlag(x) == d128_signFlag(y) {
 		return x
 	}
-	return ctxSignalInvalidOperation(ctxnull, causeMagnitudeSubtractionOfInfinities)
+	return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMagnitudeSubtractionOfInfinities)
 }
 
 func preferMinimumQExp_exact(x d128, otherExp int) d128 {
@@ -170,7 +170,7 @@ func preferMinimumQExp_exact(x d128, otherExp int) d128 {
 	return d128Pack(xSign, zQ, zCoeff.dw0, zCoeff.dw1)
 }
 
-func subMagUnalignedFnzFnz_rnd_ctx(zSign bool, m, s d128, rounding round, ctxnull *context) d128 {
+func subMagUnalignedFnzFnz_rnd_ctxnull(zSign bool, m, s d128, rounding round, ctxnull *context) d128 {
 	verify("", d128_isFNZ(m) && d128_isFNZ(s))
 	verify("", d128_qExp(m) != d128_qExp(s))
 	verify("", cmpMagFnzFnz(m, s) > 0)
@@ -184,7 +184,7 @@ func subMagUnalignedFnzFnz_rnd_ctx(zSign bool, m, s d128, rounding round, ctxnul
 	if gap < 0 {
 		prod := mulPow10_128_128(sCoeff.dw0, sCoeff.dw1, -gap)
 		diff := sub_128_128x128(mCoeff.dw0, mCoeff.dw1, prod.dw0, prod.dw1)
-		return finalize_128_ctx(zSign, mQ, diff, RESIDUE_EXACT, rounding, ctxnull)
+		return finalize_128_ctxnull(zSign, mQ, diff, RESIDUE_EXACT, rounding, ctxnull)
 	}
 	verify("", mDigitLen <= 34)
 
@@ -206,7 +206,7 @@ func subMagUnalignedFnzFnz_rnd_ctx(zSign bool, m, s d128, rounding round, ctxnul
 				raw = residueFromDecadeWithDigitLen_128(sCoeff.dw0, sCoeff.dw1, sDigitLen)
 			}
 			z := sub_128_128x128(mScaled.dw0, mScaled.dw1, 1, 0)
-			return finalizeSwampedFnz_128_ctx(zSign, qAlign34, z, residueSubtractionInverse(raw), rounding, ctxnull)
+			return finalizeSwampedFnz_128_ctxnull(zSign, qAlign34, z, residueSubtractionInverse(raw), rounding, ctxnull)
 		}
 		// mScaled == 10^33: fall through to the guard path.
 	}
@@ -224,7 +224,7 @@ func subMagUnalignedFnzFnz_rnd_ctx(zSign bool, m, s d128, rounding round, ctxnul
 	}
 	if shiftSRight > sDigitLen {
 		borrowed := sub_128_128x128(zCoeff.dw0, zCoeff.dw1, 1, 0)
-		return finalizeAddSubFnz_128_ctx(zSign, qAlign, borrowed, residueSubtractionInverse(RESIDUE_LT_HALF), rounding, ctxnull)
+		return finalizeAddSubFnz_128_ctxnull(zSign, qAlign, borrowed, residueSubtractionInverse(RESIDUE_LT_HALF), rounding, ctxnull)
 	}
 	qr := div_128_pow10_checked_q128res(sCoeff, shiftSRight)
 	rawResidue := qr.residue
@@ -234,5 +234,5 @@ func subMagUnalignedFnzFnz_rnd_ctx(zSign bool, m, s d128, rounding round, ctxnul
 		res = residueSubtractionInverse(rawResidue)
 		zCoeff = sub_128_128x128(zCoeff.dw0, zCoeff.dw1, 1, 0)
 	}
-	return finalizeAddSubFnz_128_ctx(zSign, qAlign, zCoeff, res, rounding, ctxnull)
+	return finalizeAddSubFnz_128_ctxnull(zSign, qAlign, zCoeff, res, rounding, ctxnull)
 }

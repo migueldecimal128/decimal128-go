@@ -14,7 +14,7 @@ func d128_stripTrailingZeros_ctx(x d128, maxToStrip int, ctx *context) d128 {
 
 func stripTrailingZerosImpl(x d128, maxToStrip int, ctxnull *context) d128 {
 	if d128_isNAN(x) {
-		return ctxNanOperand1(ctxnull, x)
+		return ctxNanOperand1_ctxnull(ctxnull, x)
 	}
 	if d128_isINF(x) {
 		return x

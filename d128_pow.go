@@ -26,7 +26,7 @@ func d128_pow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	// Integer exponent → pown. Covers y = 0 (→ 1 for any x), every integer
 	// power, and zero/inf/nan bases with integer y (pown owns those classes).
 	if d128_isExactIntegral(y) {
-		n := d128_toInt64TowardZero(y, nil)
+		n := d128_toInt64TowardZero_ctxnull(y, nil)
 		if n > math.MinInt32 && n <= math.MaxInt32 {
 			return d128_pown_rnd_ctxnull(x, int(n), rounding, ctxnull)
 		}
@@ -46,7 +46,7 @@ func d128_pow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 		if d128_isFNZ(x) && !d128_signFlag(x) && d128_isQNAN(y) && cmpMagFnzFnz(x, d128PowOne) == 0 {
 			return d128_fromInt(1)
 		}
-		return ctxNanOperand2(ctxnull, x, y)
+		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
 
 	// x, y finite or infinite; y is non-integer (y may be ∞).
@@ -78,7 +78,7 @@ func d128_pow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 // powZerFnz: pow(±0, y), y finite non-integer. Sign is always positive.
 func powZerFnz(y d128, ctxnull *context) d128 {
 	if d128_signFlag(y) {
-		return ctxSignalDivByZero(ctxnull, false) // y < 0 → +∞, divideByZero
+		return ctxSignalDivByZero_ctxnull(ctxnull, false) // y < 0 → +∞, divideByZero
 	}
 	return d128_zero(false, 0) // y > 0 → +0
 }
@@ -109,7 +109,7 @@ func powFnzInf(x, y d128) d128 {
 func powFnzFnz(x, y d128, rounding round, ctxnull *context) d128 {
 	// Negative base with non-integer exponent → invalid.
 	if d128_signFlag(x) {
-		return ctxSignalInvalidOperation(ctxnull, causePowerOfNegBaseNonIntegerExponent)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causePowerOfNegBaseNonIntegerExponent)
 	}
 	xd := d38Pack(false, d128_qExp(x), x.ubdLo64, d128_hi49(x))
 	yd := d38Pack(d128_signFlag(y), d128_qExp(y), y.ubdLo64, d128_hi49(y))

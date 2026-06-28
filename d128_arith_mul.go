@@ -18,11 +18,11 @@ func d128_multiply_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 		return mulFnzFnz_rnd_ctxnull(x, y, rounding, ctxnull)
 	}
 	if d128_isNAN(x) || d128_isNAN(y) {
-		return ctxNanOperand2(ctxnull, x, y)
+		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
 	verify("", d128_isINF(x) || d128_isINF(y))
 	if (d128_isINF(x) && d128_isZER(y)) || (d128_isINF(y) && d128_isZER(x)) {
-		return ctxSignalInvalidOperation(ctxnull, causeMulZeroByInfinity)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMulZeroByInfinity)
 	}
 	return d128_infinity(prodSignFlag)
 }
@@ -72,5 +72,5 @@ func mulFnzFnz_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	prod := mul_256_128x128(x.ubdLo64, d128_hi49(x), y.ubdLo64, d128_hi49(y))
 	prodSign := d128_signFlag(x) != d128_signFlag(y)
 	prodQExp := d128_qExp(x) + d128_qExp(y)
-	return finalize_256_ctx(prodSign, prodQExp, prod, RESIDUE_EXACT, rounding, ctxnull)
+	return finalize_256_ctxnull(prodSign, prodQExp, prod, RESIDUE_EXACT, rounding, ctxnull)
 }

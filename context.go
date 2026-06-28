@@ -32,24 +32,24 @@ func (ctx *context) exceptionFlagsInt() int    { return int(ctx.flags.raw()) }
 func isRoundTowardNegative(ctx *context) bool { return ctx.round == TOWARD_NEGATIVE }
 func isRoundTowardNegative_quiet() bool       { return false }
 
-func ctxSignalInexact(ctx *context, d d128) d128 {
+func ctxSignalInexact_ctxnull(ctx *context, d d128) d128 {
 	ctx.flags.set(INEXACT)
 	return d
 }
 
-func ctxSignalInexactOverflow(ctx *context, d d128) d128 {
+func ctxSignalInexactOverflow_ctxnull(ctx *context, d d128) d128 {
 	ctx.flags.set(OVERFLOW)
 	ctx.flags.set(INEXACT)
 	return d
 }
 
-func ctxSignalInexactUnderflow(ctx *context, d d128) d128 {
+func ctxSignalInexactUnderflow_ctxnull(ctx *context, d d128) d128 {
 	ctx.flags.set(UNDERFLOW)
 	ctx.flags.set(INEXACT)
 	return d
 }
 
-func ctxSignalDivByZero(ctxnull *context, sign bool) d128 {
+func ctxSignalDivByZero_ctxnull(ctxnull *context, sign bool) d128 {
 	if ctxnull != nil {
 		ctxnull.flags.set(DIVISION_BY_ZERO)
 	}
@@ -69,9 +69,9 @@ func signalDivByZero_quiet(resultSign bool) d128 {
 func signalInexactOverflow_quiet(dec d128) d128  { return dec }
 func signalInexactUnderflow_quiet(dec d128) d128 { return dec }
 
-// ctxSignalInvalidOperation sets the invalid-operation flag and returns a quiet
+// ctxSignalInvalidOperation_ctxnull sets the invalid-operation flag and returns a quiet
 // NaN (the default result). The cause is diagnostic and currently unused.
-func ctxSignalInvalidOperation(ctxnull *context, cause invalidCause) d128 {
+func ctxSignalInvalidOperation_ctxnull(ctxnull *context, cause invalidCause) d128 {
 	_ = cause
 	if ctxnull != nil {
 		ctxnull.flags.set(INVALID_OPERATION)
@@ -79,7 +79,7 @@ func ctxSignalInvalidOperation(ctxnull *context, cause invalidCause) d128 {
 	return D128_QNAN0
 }
 
-// ctxSignalInvalidOperationResult is ctxSignalInvalidOperation with an explicit
+// ctxSignalInvalidOperationResult is ctxSignalInvalidOperation_ctxnull with an explicit
 // result (Swift's defaulted result parameter).
 func ctxSignalInvalidOperationResult(ctxnull *context, cause invalidCause, result d128) d128 {
 	_ = cause
@@ -89,8 +89,8 @@ func ctxSignalInvalidOperationResult(ctxnull *context, cause invalidCause, resul
 	return result
 }
 
-// ctxSignalSNanOperandFound quiets an sNaN operand and raises invalidOperation.
-func ctxSignalSNanOperandFound(ctxnull *context, nan d128) d128 {
+// ctxSignalSNanOperandFound_ctxnull quiets an sNaN operand and raises invalidOperation.
+func ctxSignalSNanOperandFound_ctxnull(ctxnull *context, nan d128) d128 {
 	verify("", d128_isNAN(nan))
 	quietedNaN := nan
 	if d128_isSNAN(nan) {
@@ -102,9 +102,9 @@ func ctxSignalSNanOperandFound(ctxnull *context, nan d128) d128 {
 	return quietedNaN
 }
 
-// ctxNanOperand2 selects and propagates the NaN of a two-operand op (sNaN takes
+// ctxNanOperand2_ctxnull selects and propagates the NaN of a two-operand op (sNaN takes
 // precedence; raises invalidOperation if any operand was signaling).
-func ctxNanOperand2(ctxnull *context, x, y d128) d128 {
+func ctxNanOperand2_ctxnull(ctxnull *context, x, y d128) d128 {
 	verify("", d128_isNAN(x) || d128_isNAN(y))
 	takeY := !d128_isNAN(x) || (d128_isSNAN(y) && !d128_isSNAN(x))
 	theNaN := x
@@ -116,14 +116,14 @@ func ctxNanOperand2(ctxnull *context, x, y d128) d128 {
 	if !isSignaling {
 		return theNaN
 	}
-	return ctxSignalSNanOperandFound(ctxnull, theNaN)
+	return ctxSignalSNanOperandFound_ctxnull(ctxnull, theNaN)
 }
 
-// ctxNanOperand1 propagates a single NaN operand (quieting an sNaN with a signal).
-func ctxNanOperand1(ctxnull *context, x d128) d128 {
+// ctxNanOperand1_ctxnull propagates a single NaN operand (quieting an sNaN with a signal).
+func ctxNanOperand1_ctxnull(ctxnull *context, x d128) d128 {
 	verify("", d128_isNAN(x))
 	if d128_isQNAN(x) {
 		return x
 	}
-	return ctxSignalSNanOperandFound(ctxnull, x)
+	return ctxSignalSNanOperandFound_ctxnull(ctxnull, x)
 }

@@ -15,7 +15,7 @@ func d128_fma_rnd_ctxnull(x, y, a d128, rounding round, ctxnull *context) d128 {
 		product := d128Pack(prodSignFlag, prodQExp, lo.dw0, lo.dw1)
 		return d128_add_rnd_ctxnull(product, a, rounding, ctxnull)
 	}
-	return fmaSlow_rnd_ctx(x, y, a, prod.hi(), prod.lo(), rounding, ctxnull)
+	return fmaSlow_rnd_ctxnull(x, y, a, prod.hi(), prod.lo(), rounding, ctxnull)
 }
 
 func d128_fma_tte(x, y, a d128) d128            { return d128_fma_rnd_ctxnull(x, y, a, TIES_TO_EVEN, nil) }
@@ -24,27 +24,27 @@ func d128_fma_ctx(x, y, a d128, ctx *context) d128 {
 	return d128_fma_rnd_ctxnull(x, y, a, ctx.round, ctx)
 }
 
-func fmaSlow_rnd_ctx(x, y, a d128, prodHi, prodLo u128, rounding round, ctxnull *context) d128 {
+func fmaSlow_rnd_ctxnull(x, y, a d128, prodHi, prodLo u128, rounding round, ctxnull *context) d128 {
 	if d128_isNAN(x) || d128_isNAN(y) || d128_isNAN(a) {
-		return fmaNanOperand_ctx(x, y, a, ctxnull)
+		return fmaNanOperand_ctxnull(x, y, a, ctxnull)
 	}
 	if d128_isINF(a) {
 		if (d128_isZER(x) && d128_isINF(y)) || (d128_isINF(x) && d128_isZER(y)) {
-			return ctxSignalInvalidOperation(ctxnull, causeMulZeroByInfinity)
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMulZeroByInfinity)
 		}
 		if d128_isINF(x) || d128_isINF(y) {
 			prodSign := d128_signFlag(x) != d128_signFlag(y)
 			if prodSign != d128_signFlag(a) {
-				return ctxSignalInvalidOperation(ctxnull, causeMagnitudeSubtractionOfInfinities)
+				return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMagnitudeSubtractionOfInfinities)
 			}
 		}
 		return a
 	}
 	if (d128_isZER(x) && d128_isINF(y)) || (d128_isINF(x) && d128_isZER(y)) {
-		return ctxSignalInvalidOperation(ctxnull, causeMulZeroByInfinity)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMulZeroByInfinity)
 	}
 	if d128_isZER(x) || d128_isZER(y) {
-		return fmaZeroProd_ctx(x, y, a, rounding, ctxnull)
+		return fmaZeroProd_ctxnull(x, y, a, rounding, ctxnull)
 	}
 	if d128_isINF(x) || d128_isINF(y) {
 		prodSign := d128_signFlag(x) != d128_signFlag(y)
@@ -54,19 +54,19 @@ func fmaSlow_rnd_ctx(x, y, a d128, prodHi, prodLo u128, rounding round, ctxnull 
 	prodSign := d128_signFlag(x) != d128_signFlag(y)
 	prodQ := d128_qExp(x) + d128_qExp(y)
 	if d128_isZER(a) {
-		return fmaFnzFnzZer_ctx(prodSign, prodQ, prodHi, prodLo, a, rounding, ctxnull)
+		return fmaFnzFnzZer_ctxnull(prodSign, prodQ, prodHi, prodLo, a, rounding, ctxnull)
 	}
 
 	prodU256 := u256FromHiLo(prodHi, prodLo)
 	aCoeff := d128_u128(a)
 	zeroSign := rounding == TOWARD_NEGATIVE
-	return addWideAndFinalize_rnd_ctx(
+	return addWideAndFinalize_rnd_ctxnull(
 		prodSign, prodQ, prodU256,
 		d128_signFlag(a), d128_qExp(a), u256{aCoeff.dw0, aCoeff.dw1, 0, 0},
 		zeroSign, rounding, ctxnull)
 }
 
-func fmaNanOperand_ctx(x, y, a d128, ctxnull *context) d128 {
+func fmaNanOperand_ctxnull(x, y, a d128, ctxnull *context) d128 {
 	hasSNAN := d128_isSNAN(x) || d128_isSNAN(y) || d128_isSNAN(a)
 	var pickedNaN d128
 	if hasSNAN {
@@ -99,7 +99,7 @@ func fmaNanOperand_ctx(x, y, a d128, ctxnull *context) d128 {
 	return quieted
 }
 
-func fmaZeroProd_ctx(x, y, a d128, rounding round, ctxnull *context) d128 {
+func fmaZeroProd_ctxnull(x, y, a d128, rounding round, ctxnull *context) d128 {
 	prodSign := d128_signFlag(x) != d128_signFlag(y)
 	prodQ := d128_qExp(x) + d128_qExp(y)
 	if d128_isZER(a) {
@@ -122,16 +122,16 @@ func fmaInfProdCtx(infSign bool, a d128) d128 {
 	return d128_infinity(infSign)
 }
 
-func fmaFnzFnzZer_ctx(prodSign bool, prodQ int, prodHi, prodLo u128, a d128, rounding round, ctxnull *context) d128 {
+func fmaFnzFnzZer_ctxnull(prodSign bool, prodQ int, prodHi, prodLo u128, a d128, rounding round, ctxnull *context) d128 {
 	prodU256 := u256FromHiLo(prodHi, prodLo)
-	productD128 := finalize_256_ctx(prodSign, prodQ, prodU256, RESIDUE_EXACT, rounding, ctxnull)
+	productD128 := finalize_256_ctxnull(prodSign, prodQ, prodU256, RESIDUE_EXACT, rounding, ctxnull)
 	if d128_isFIN(productD128) && !d128_isZER(productD128) {
 		return preferMinimumQExp_exact(productD128, d128_qExp(a))
 	}
 	return productD128
 }
 
-func addWideAndFinalize_rnd_ctx(prodSign bool, prodQ int, prodCoeff u256, aSign bool, aQ int, aCoeff u256, zeroSign bool, rounding round, ctxnull *context) d128 {
+func addWideAndFinalize_rnd_ctxnull(prodSign bool, prodQ int, prodCoeff u256, aSign bool, aQ int, aCoeff u256, zeroSign bool, rounding round, ctxnull *context) d128 {
 	var mSign, nSign bool
 	var mQ, nQ int
 	var mCoeff, nCoeff u256
@@ -143,12 +143,12 @@ func addWideAndFinalize_rnd_ctx(prodSign bool, prodQ int, prodCoeff u256, aSign 
 		nSign, nQ, nCoeff = prodSign, prodQ, prodCoeff
 	}
 	if mSign == nSign {
-		return addWideAndFinalizeLikeSign_rnd_ctx(mSign, mQ, mCoeff, nQ, nCoeff, rounding, ctxnull)
+		return addWideAndFinalizeLikeSign_rnd_ctxnull(mSign, mQ, mCoeff, nQ, nCoeff, rounding, ctxnull)
 	}
-	return addWideAndFinalizeUnlikeSign_rnd_ctx(mSign, mQ, mCoeff, nSign, nQ, nCoeff, zeroSign, rounding, ctxnull)
+	return addWideAndFinalizeUnlikeSign_rnd_ctxnull(mSign, mQ, mCoeff, nSign, nQ, nCoeff, zeroSign, rounding, ctxnull)
 }
 
-func addWideAndFinalizeLikeSign_rnd_ctx(sign bool, mQ int, mCoeff u256, nQ int, nCoeff u256, rounding round, ctxnull *context) d128 {
+func addWideAndFinalizeLikeSign_rnd_ctxnull(sign bool, mQ int, mCoeff u256, nQ int, nCoeff u256, rounding round, ctxnull *context) d128 {
 	qDelta := mQ - nQ
 	verify("", qDelta >= 0)
 	mDigitLen := digitLen_int_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3)
@@ -164,10 +164,10 @@ func addWideAndFinalizeLikeSign_rnd_ctx(sign bool, mQ int, mCoeff u256, nQ int, 
 	qr := div_256_pow10_checked_q256res(nCoeff, gap)
 	nAligned := u256{qr.quotDw0, qr.quotDw1, qr.quotDw2, qr.quotDw3}
 	coeffSum := add_256_256x256(mAligned.dw0, mAligned.dw1, mAligned.dw2, mAligned.dw3, nAligned.dw0, nAligned.dw1, nAligned.dw2, nAligned.dw3)
-	return finalize_256_ctx(sign, qAlign, coeffSum, qr.residue, rounding, ctxnull)
+	return finalize_256_ctxnull(sign, qAlign, coeffSum, qr.residue, rounding, ctxnull)
 }
 
-func addWideAndFinalizeUnlikeSign_rnd_ctx(mSign bool, mQ int, mCoeff u256, nSign bool, nQ int, nCoeff u256, zeroSign bool, rounding round, ctxnull *context) d128 {
+func addWideAndFinalizeUnlikeSign_rnd_ctxnull(mSign bool, mQ int, mCoeff u256, nSign bool, nQ int, nCoeff u256, zeroSign bool, rounding round, ctxnull *context) d128 {
 	qDelta := mQ - nQ
 	verify("", qDelta >= 0)
 	mDigitLen := digitLen_int_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3)
@@ -192,11 +192,11 @@ func addWideAndFinalizeUnlikeSign_rnd_ctx(mSign bool, mQ int, mCoeff u256, nSign
 		return d128_zero(zeroSign, qAlign)
 	}
 	if ds.swap {
-		return finalize_256_ctx(nSign, qAlign, diff, residue, rounding, ctxnull)
+		return finalize_256_ctxnull(nSign, qAlign, diff, residue, rounding, ctxnull)
 	}
 	if residue == RESIDUE_EXACT {
-		return finalize_256_ctx(mSign, qAlign, diff, RESIDUE_EXACT, rounding, ctxnull)
+		return finalize_256_ctxnull(mSign, qAlign, diff, RESIDUE_EXACT, rounding, ctxnull)
 	}
 	diffMinus1 := sub_256_256x256(diff.dw0, diff.dw1, diff.dw2, diff.dw3, 1, 0, 0, 0)
-	return finalize_256_ctx(mSign, qAlign, diffMinus1, residueSubtractionInverse(residue), rounding, ctxnull)
+	return finalize_256_ctxnull(mSign, qAlign, diffMinus1, residueSubtractionInverse(residue), rounding, ctxnull)
 }

@@ -6,9 +6,9 @@
 
 package decimal128
 
-func d128_quantize(x, y d128, ctxnull *context) d128 {
+func d128_quantize_ctxnull(x, y d128, ctxnull *context) d128 {
 	if d128_isNAN(x) || d128_isNAN(y) {
-		return ctxNanOperand2(ctxnull, x, y)
+		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
 	xInf := d128_isINF(x)
 	yInf := d128_isINF(y)
@@ -16,7 +16,7 @@ func d128_quantize(x, y d128, ctxnull *context) d128 {
 		if xInf && yInf {
 			return d128_infinity(d128_signFlag(x))
 		}
-		return ctxSignalInvalidOperation(ctxnull, causeQuantizeExactlyOneOperandIsInfinite)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeQuantizeExactlyOneOperandIsInfinite)
 	}
 
 	// Both operands finite. The result takes its sign from x and its exponent
@@ -42,14 +42,14 @@ func d128_quantize(x, y d128, ctxnull *context) d128 {
 		// Finer quantum: append delta zeros. Exact, unless the coefficient
 		// would exceed 34 digits — which GDAS / IEEE 754 make invalid.
 		if digitLen_int_128(coeff.dw0, coeff.dw1)+delta > 34 {
-			return ctxSignalInvalidOperation(ctxnull, causeQuantizeResultWouldExceedPrecision)
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeQuantizeResultWouldExceedPrecision)
 		}
 		scaled := mulPow10_128_128(coeff.dw0, coeff.dw1, delta)
-		return finalize_128_ctx(sign, qTarget, scaled, RESIDUE_EXACT, rounding, ctxnull)
+		return finalize_128_ctxnull(sign, qTarget, scaled, RESIDUE_EXACT, rounding, ctxnull)
 	}
 	// Coarser quantum: drop -delta low digits, rounding via finalize (which
 	// raises inexact when the discarded digits are non-zero).
 	qr := div_128_pow10_checked_q128res(coeff, -delta)
 	reduced := fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1)
-	return finalize_128_ctx(sign, qTarget, reduced, qr.residue, rounding, ctxnull)
+	return finalize_128_ctxnull(sign, qTarget, reduced, qr.residue, rounding, ctxnull)
 }

@@ -170,7 +170,7 @@ func compareQuiet754_ctx(x, y d128, ctx *context) comparison754 {
 	}
 	if d128_isNAN(x) || d128_isNAN(y) {
 		if d128_isSNAN(x) || d128_isSNAN(y) {
-			ctxSignalInvalidOperation(ctx, causeSnanOperand)
+			ctxSignalInvalidOperation_ctxnull(ctx, causeSnanOperand)
 		}
 		return CMP754_UNORDERED
 	}
@@ -186,7 +186,7 @@ func compareSignaling754_ctx(x, y d128, ctx *context) comparison754 {
 		if d128_isSNAN(x) || d128_isSNAN(y) {
 			cause = causeSnanOperand
 		}
-		ctxSignalInvalidOperation(ctx, cause)
+		ctxSignalInvalidOperation_ctxnull(ctx, cause)
 		return CMP754_UNORDERED
 	}
 	return compareNonFinite(x, y)

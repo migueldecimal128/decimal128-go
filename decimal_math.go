@@ -67,7 +67,7 @@ func (d Decimal128) IntegerDivide(other Decimal128) Decimal128 {
 
 // LogB returns the adjusted (scientific) exponent of d as a Decimal128 (IEEE 754
 // logB): ⌊log₁₀|d|⌋ for finite nonzero values, -∞ for zero, +∞ for infinity.
-func (d Decimal128) LogB() Decimal128 { return Decimal128{d128_logB(d.core, nil)} }
+func (d Decimal128) LogB() Decimal128 { return Decimal128{d128_logB_ctxnull(d.core, nil)} }
 
 // --- context-receiver forms (rounded by the context, flag-tracked) ---
 
@@ -143,5 +143,5 @@ func (c *Context) IntegerDivide(a, b Decimal128) Decimal128 {
 // LogB returns the adjusted (scientific) exponent of x as a Decimal128 (IEEE 754
 // logB), flag-tracked.
 func (c *Context) LogB(x Decimal128) Decimal128 {
-	return Decimal128{d128_logB(x.core, c.core)}
+	return Decimal128{d128_logB_ctxnull(x.core, c.core)}
 }

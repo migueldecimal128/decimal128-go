@@ -184,11 +184,11 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkUnaryCtx(c, d128_sqrt_ctx)
 	case "d128_stripTrailingZeros", "reduce":
 		return checkUnaryCtx(c, func(x d128, ctx *context) d128 { return d128_stripTrailingZeros_ctx(x, 6176, ctx) })
-	case "d128_quantize", "quantize":
-		return checkBinaryCtx(c, d128_quantize)
-	case "d128_logB", "logb":
-		return checkUnaryCtx(c, d128_logB)
-	case "d128_scaleB", "scaleb":
+	case "d128_quantize_ctxnull", "quantize":
+		return checkBinaryCtx(c, d128_quantize_ctxnull)
+	case "d128_logB_ctxnull", "logb":
+		return checkUnaryCtx(c, d128_logB_ctxnull)
+	case "d128_scaleB_ctxnull", "scaleb":
 		return checkScaleB(c)
 	case "d128_isSameQuantum", "samequantum":
 		return checkBinaryBoolCtx(c, func(x, y d128, _ *context) bool { return d128_isSameQuantum(x, y) })
@@ -214,10 +214,10 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkCompareInt(c, compareTotalOrder)
 	case "comparetotmag":
 		return checkCompareInt(c, compareTotalOrderMag)
-	case "d128_nextUp", "nextplus":
-		return checkUnaryCtx(c, d128_nextUp)
-	case "d128_nextDown", "nextminus":
-		return checkUnaryCtx(c, d128_nextDown)
+	case "d128_nextUp_ctxnull", "nextplus":
+		return checkUnaryCtx(c, d128_nextUp_ctxnull)
+	case "d128_nextDown_ctxnull", "nextminus":
+		return checkUnaryCtx(c, d128_nextDown_ctxnull)
 	case "d128_copy", "copy":
 		return checkUnaryQuiet(c, d128_copy)
 	case "d128_abs", "copyabs":
@@ -293,7 +293,7 @@ func checkBinaryCtx(c *rosettaCase, op func(x, y d128, ctx *context) d128) (outc
 }
 
 // checkScaleB adapts decNumber's scaleb — whose second operand is a decimal
-// integer argument — to the IEEE d128_scaleB(x, int). decNumber requires that
+// integer argument — to the IEEE d128_scaleB_ctxnull(x, int). decNumber requires that
 // argument to be NaN (propagated), or a finite integer with exponent 0 whose
 // magnitude is at most 2*(emax+digits)=12356; anything else signals invalid.
 func checkScaleB(c *rosettaCase) (outcome, string) {
@@ -318,20 +318,20 @@ func checkScaleB(c *rosettaCase) (outcome, string) {
 
 func scaleBFromDecimalArg(x, y d128, ctx *context) d128 {
 	if d128_isNAN(x) || d128_isNAN(y) {
-		return ctxNanOperand2(ctx, x, y)
+		return ctxNanOperand2_ctxnull(ctx, x, y)
 	}
 	if d128_isINF(y) || d128_qExp(y) != 0 {
-		return ctxSignalInvalidOperation(ctx, causeOther)
+		return ctxSignalInvalidOperation_ctxnull(ctx, causeOther)
 	}
 	coeff := d128_u128(y)
 	if coeff.dw1 != 0 || coeff.dw0 > 12356 {
-		return ctxSignalInvalidOperation(ctx, causeOther)
+		return ctxSignalInvalidOperation_ctxnull(ctx, causeOther)
 	}
 	n := int(coeff.dw0)
 	if d128_signFlag(y) {
 		n = -n
 	}
-	return d128_scaleB(x, n, ctx)
+	return d128_scaleB_ctxnull(x, n, ctx)
 }
 
 // checkMinMaxNumber runs a decNumber min/max (the NaN-as-missing "Number"
@@ -553,7 +553,7 @@ func checkCompareCtx(c *rosettaCase, signaling bool) (outcome, string) {
 	if code == CMP754_UNORDERED {
 		// Unordered (a NaN operand): the op result is the propagated NaN value
 		// (selected/quieted without re-signaling — compare already raised flags).
-		gotNaN := ctxNanOperand2(nil, x, y)
+		gotNaN := ctxNanOperand2_ctxnull(nil, x, y)
 		match = d128_bitwiseEQ(gotNaN, decodeOperand(c.result))
 		got = d128_format(gotNaN, FORMAT_AUTO)
 	} else {

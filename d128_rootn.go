@@ -16,7 +16,7 @@ func d128_rootn_ctx(x d128, n int, ctx *context) d128 {
 
 func d128_rootn_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d128 {
 	if n == 0 {
-		return ctxSignalInvalidOperation(ctxnull, causeRootnBadArgs)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeRootnBadArgs)
 	}
 	xSign := d128_signFlag(x)
 	nIsOdd := (n & 1) != 0
@@ -27,18 +27,18 @@ func d128_rootn_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d12
 			// only for odd n.
 			resultSign := nIsOdd && xSign
 			if n < 0 {
-				return ctxSignalDivByZero(ctxnull, resultSign)
+				return ctxSignalDivByZero_ctxnull(ctxnull, resultSign)
 			}
 			return d128_zero(resultSign, 0)
 		}
 		// Finite non-zero.
 		if xSign && !nIsOdd {
-			return ctxSignalInvalidOperation(ctxnull, causeRootnBadArgs) // even root of a negative
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeRootnBadArgs) // even root of a negative
 		}
 		return rootnFNZ(x, n, rounding, ctxnull)
 	}
 	if d128_isNAN(x) {
-		return ctxNanOperand1(ctxnull, x)
+		return ctxNanOperand1_ctxnull(ctxnull, x)
 	}
 	verify("", d128_isINF(x))
 	// x = ±∞.
@@ -49,7 +49,7 @@ func d128_rootn_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d12
 		return D128_NEG_INFINITY // -∞, odd n
 	}
 	if xSign {
-		return ctxSignalInvalidOperation(ctxnull, causeRootnBadArgs) // -∞, even n
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeRootnBadArgs) // -∞, even n
 	}
 	if n < 0 {
 		return d128_zero(false, 0)

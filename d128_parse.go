@@ -30,12 +30,12 @@ func finiteFailure(status parseStatus) finiteParseResult {
 
 func d128_parse_ctxnull(s string, ctxnull *context) (d128, bool) {
 	t := newTxt(s)
-	r := parseDec34(&t, ctxnull)
+	r := parseDec34_ctxnull(&t, ctxnull)
 	if r.status == psSuccess {
 		return r.value, true
 	}
 	verify("", d128_isNAN(r.value))
-	ctxSignalInvalidOperation(ctxnull, causeParseMalformed)
+	ctxSignalInvalidOperation_ctxnull(ctxnull, causeParseMalformed)
 	return D128_QNAN0, false
 }
 
@@ -90,7 +90,7 @@ func (t *txt) nextCharLowercase() byte {
 	return 0
 }
 
-func parseDec34(t *txt, ctxnull *context) d128ParseResult {
+func parseDec34_ctxnull(t *txt, ctxnull *context) d128ParseResult {
 	chFirst := t.nextChar()
 	ch := chFirst
 	sign := ch == ascii_minus
@@ -104,7 +104,7 @@ func parseDec34(t *txt, ctxnull *context) d128ParseResult {
 			if ctxnull != nil {
 				rounding = ctxnull.round
 			}
-			value := finalize_128_ctx(r.sign, r.qExp, r.coeff, r.residue, rounding, ctxnull)
+			value := finalize_128_ctxnull(r.sign, r.qExp, r.coeff, r.residue, rounding, ctxnull)
 			return parseSuccess(value)
 		}
 		return parseFailure(r.status)

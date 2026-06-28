@@ -42,7 +42,7 @@ func expDispatch(x d128, isExp10 bool, rounding round, ctxnull *context) d128 {
 		return expImplFNZ(x, rounding, ctxnull)
 	}
 	if d128_isNAN(x) {
-		return ctxNanOperand1(ctxnull, x)
+		return ctxNanOperand1_ctxnull(ctxnull, x)
 	}
 	verify("", d128_isINF(x))
 	if d128_signFlag(x) {
@@ -87,7 +87,7 @@ func expImplFNZ(x d128, rounding round, ctxnull *context) d128 {
 	e = d38_square(e)
 
 	// exp(x) = exp(r) · 10^n — shift the exponent by n; finalize handles range.
-	result := finalize_128_ctx(false, d38_qExp(e)+n, d38_u128(e), RESIDUE_EXACT, rounding, ctxnull)
+	result := finalize_128_ctxnull(false, d38_qExp(e)+n, d38_u128(e), RESIDUE_EXACT, rounding, ctxnull)
 	return forceInexact(result, ctxnull)
 }
 
@@ -111,7 +111,7 @@ func exp10FromD38(xd d38, rounding round, ctxnull *context) d128 {
 		if l < -6176 {
 			return transcendentalUnderflow(rounding, ctxnull)
 		}
-		return finalize_128_ctx(false, int(l), u128{1, 0}, RESIDUE_EXACT, rounding, ctxnull)
+		return finalize_128_ctxnull(false, int(l), u128{1, 0}, RESIDUE_EXACT, rounding, ctxnull)
 	}
 
 	// Range reduction: n = round(x), r = x − n ∈ [−0.5, 0.5] (exact, no ln10).
@@ -139,7 +139,7 @@ func exp10FromD38(xd d38, rounding round, ctxnull *context) d128 {
 	z = d38_square(z)
 	z = d38_square(z)
 
-	result := finalize_128_ctx(false, d38_qExp(z)+n, d38_u128(z), RESIDUE_EXACT, rounding, ctxnull)
+	result := finalize_128_ctxnull(false, d38_qExp(z)+n, d38_u128(z), RESIDUE_EXACT, rounding, ctxnull)
 	return forceInexact(result, ctxnull)
 }
 
@@ -157,7 +157,7 @@ func absInt(n int) int {
 // 38-digit landing (same rationale as ln/log10).
 func forceInexact(d d128, ctxnull *context) d128 {
 	if ctxnull != nil {
-		return ctxSignalInexact(ctxnull, d)
+		return ctxSignalInexact_ctxnull(ctxnull, d)
 	}
 	return d
 }
@@ -165,7 +165,7 @@ func forceInexact(d d128, ctxnull *context) d128 {
 // transcendentalOverflow: positive overflow → +∞ under round-to-nearest /
 // toward-positive, else the largest finite value; OVERFLOW + INEXACT.
 func transcendentalOverflow(rounding round, ctxnull *context) d128 {
-	return finalizeOverflow_ctx(false, rounding, ctxnull)
+	return finalizeOverflow_ctxnull(false, rounding, ctxnull)
 }
 
 // transcendentalUnderflow: positive underflow swamped below subnormal → +0

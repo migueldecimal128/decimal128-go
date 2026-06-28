@@ -8,11 +8,11 @@ package decimal128
 
 import "math"
 
-// d128_logB returns logB(x): finite non-zero → D128 of its sciExp; ±0 → −∞ and
+// d128_logB_ctxnull returns logB(x): finite non-zero → D128 of its sciExp; ±0 → −∞ and
 // signals divisionByZero; ±∞ → +∞; qNaN propagates; sNaN signals invalid.
-func d128_logB(x d128, ctxnull *context) d128 {
+func d128_logB_ctxnull(x d128, ctxnull *context) d128 {
 	if d128_isZER(x) {
-		return ctxSignalDivByZero(ctxnull, true)
+		return ctxSignalDivByZero_ctxnull(ctxnull, true)
 	}
 	if d128_isFNZ(x) {
 		return d128_fromInt(d128_sciExp(x))
@@ -21,7 +21,7 @@ func d128_logB(x d128, ctxnull *context) d128 {
 		return D128_POS_INFINITY
 	}
 	// NaN: qNaN propagates, sNaN signals invalid_operation.
-	return ctxNanOperand1(ctxnull, x)
+	return ctxNanOperand1_ctxnull(ctxnull, x)
 }
 
 // d128_isSameQuantum reports whether x and other share the same quantum (the
@@ -38,20 +38,20 @@ func d128_isSameQuantum(x, other d128) bool {
 	return d128_isNAN(other)
 }
 
-// d128_quantumInt returns the encoded exponent qExp of a finite x; for a
+// d128_quantumInt_ctxnull returns the encoded exponent qExp of a finite x; for a
 // non-finite x it signals invalidOperation and returns the int sentinel
 // math.MinInt.
-func d128_quantumInt(x d128, ctxnull *context) int {
+func d128_quantumInt_ctxnull(x d128, ctxnull *context) int {
 	if d128_isFIN(x) {
 		return d128_qExp(x)
 	}
-	_ = ctxSignalInvalidOperation(ctxnull, causeQuantumOfNonFinite)
+	_ = ctxSignalInvalidOperation_ctxnull(ctxnull, causeQuantumOfNonFinite)
 	return math.MinInt
 }
 
-// d128_scaleB returns x × 10^pow10Delta, rounded as needed within ctx.
+// d128_scaleB_ctxnull returns x × 10^pow10Delta, rounded as needed within ctx.
 // Infinities pass through unchanged; sNaNs signal invalid_operation.
-func d128_scaleB(x d128, pow10Delta int, ctxnull *context) d128 {
+func d128_scaleB_ctxnull(x d128, pow10Delta int, ctxnull *context) d128 {
 	if d128_isFIN(x) {
 		pow10DeltaCapped := max(min(pow10Delta, 100_000), -100_000)
 		qNew := d128_qExp(x) + pow10DeltaCapped
@@ -59,10 +59,10 @@ func d128_scaleB(x d128, pow10Delta int, ctxnull *context) d128 {
 		if ctxnull != nil {
 			rounding = ctxnull.round
 		}
-		return finalize_128_ctx(d128_signFlag(x), qNew, d128_u128(x), RESIDUE_EXACT, rounding, ctxnull)
+		return finalize_128_ctxnull(d128_signFlag(x), qNew, d128_u128(x), RESIDUE_EXACT, rounding, ctxnull)
 	}
 	if d128_isINF(x) {
 		return x
 	}
-	return ctxNanOperand1(ctxnull, x)
+	return ctxNanOperand1_ctxnull(ctxnull, x)
 }

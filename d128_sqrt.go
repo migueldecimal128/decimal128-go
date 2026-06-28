@@ -17,23 +17,23 @@ func d128_sqrt_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 			return d128_zero(d128_signFlag(x), d128_qExp(x)>>1)
 		}
 		if d128_signFlag(x) {
-			return ctxSignalInvalidOperation(ctxnull, causeSquareRootOfNegFiniteNonZero)
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeSquareRootOfNegFiniteNonZero)
 		}
-		return sqrtMagnitudeFnz(x, rounding, ctxnull)
+		return sqrtMagnitudeFnz_ctxnull(x, rounding, ctxnull)
 	}
 	if d128_isNAN(x) {
-		return ctxNanOperand1(ctxnull, x)
+		return ctxNanOperand1_ctxnull(ctxnull, x)
 	}
 	verify("", d128_isINF(x))
 	if d128_signFlag(x) {
-		return ctxSignalInvalidOperation(ctxnull, causeSquareRootOfNegInfinity)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeSquareRootOfNegInfinity)
 	}
 	return D128_POS_INFINITY
 }
 
-func sqrtMagnitudeFnz(x d128, rounding round, ctxnull *context) d128 {
+func sqrtMagnitudeFnz_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 	f := sqrtFloorScaled(d128_u128(x), d128_qExp(x), d128_digitLen(x))
-	result := finalize_256_ctx(false, f.resultQExp, f.s, f.residue, rounding, ctxnull)
+	result := finalize_256_ctxnull(false, f.resultQExp, f.s, f.residue, rounding, ctxnull)
 
 	// GDAS ideal exponent floor(Q/2): reduce toward it ONLY for exact results
 	// (a perfect square whose root fits in <=34 digits). Inexact results keep

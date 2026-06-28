@@ -27,12 +27,12 @@ func d128_compound_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) 
 		if n == 0 && d128_isQNAN(x) {
 			return d128_fromInt(1)
 		}
-		return ctxNanOperand1(ctxnull, x)
+		return ctxNanOperand1_ctxnull(ctxnull, x)
 	}
 	verify("", d128_isINF(x))
 	if d128_signFlag(x) {
 		// -∞ is below -1 → invalid (even for n == 0).
-		return ctxSignalInvalidOperation(ctxnull, causeCompoundXLtNegOne)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne)
 	}
 	if n > 0 {
 		return D128_POS_INFINITY // (1 + ∞)^(n>0) = +∞
@@ -47,7 +47,7 @@ func compoundFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 	// t = 1 + x.
 	t := d128_add_rnd_ctxnull(d128CompoundOne, x, rounding, ctxnull)
 	if d128_signFlag(t) && !d128_isZER(t) {
-		return ctxSignalInvalidOperation(ctxnull, causeCompoundXLtNegOne) // x < -1
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne) // x < -1
 	}
 	if n == 0 {
 		return d128_fromInt(1)
@@ -55,7 +55,7 @@ func compoundFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 	if d128_isZER(t) {
 		// x = -1 exactly.
 		if n < 0 {
-			return ctxSignalDivByZero(ctxnull, false) // +∞
+			return ctxSignalDivByZero_ctxnull(ctxnull, false) // +∞
 		}
 		// n > 0 → +0 with the preferred exponent ⌊n·min(0, Q(x))⌋.
 		nCapped := min(n, 10_000) // keep the product inside int

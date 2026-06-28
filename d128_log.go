@@ -35,10 +35,10 @@ func logDispatch(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 	if d128_isFIN(x) {
 		if d128_isZER(x) {
 			// log(±0) = −∞, signalling division-by-zero.
-			return ctxSignalDivByZero(ctxnull, true)
+			return ctxSignalDivByZero_ctxnull(ctxnull, true)
 		}
 		if d128_signFlag(x) {
-			return ctxSignalInvalidOperation(ctxnull, causeLogOfNegNumber)
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeLogOfNegNumber)
 		}
 		if isLog10 && isExactPowerOf10(x) {
 			// log10(10^n) = n exactly — no rounding, no inexact flag.
@@ -47,11 +47,11 @@ func logDispatch(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 		return logImplFNZ(x, isLog10, rounding, ctxnull)
 	}
 	if d128_isNAN(x) {
-		return ctxNanOperand1(ctxnull, x)
+		return ctxNanOperand1_ctxnull(ctxnull, x)
 	}
 	verify("", d128_isINF(x))
 	if d128_signFlag(x) {
-		return ctxSignalInvalidOperation(ctxnull, causeLogOfNegNumber)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeLogOfNegNumber)
 	}
 	return D128_POS_INFINITY // log(+∞) = +∞
 }
@@ -62,7 +62,7 @@ func logImplFNZ(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 	xd := d38Pack(false, d128_qExp(x), x.ubdLo64, d128_hi49(x))
 	r := logMagnitudeD38(xd, isLog10)
 
-	result := finalize_128_ctx(d38_signFlag(r), d38_qExp(r), d38_u128(r), RESIDUE_EXACT, rounding, ctxnull)
+	result := finalize_128_ctxnull(d38_signFlag(r), d38_qExp(r), d38_u128(r), RESIDUE_EXACT, rounding, ctxnull)
 
 	// A non-zero ln/log10 of a finite value is irrational — always INEXACT. The
 	// final round usually sets it, but when the 38-digit intermediate lands on an
@@ -72,7 +72,7 @@ func logImplFNZ(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 		return result
 	}
 	if ctxnull != nil {
-		return ctxSignalInexact(ctxnull, result)
+		return ctxSignalInexact_ctxnull(ctxnull, result)
 	}
 	return result
 }

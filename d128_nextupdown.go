@@ -12,25 +12,25 @@
 
 package decimal128
 
-// d128_nextUp returns the smallest representable value greater than x.
+// d128_nextUp_ctxnull returns the smallest representable value greater than x.
 //   - finite: walks one ulp toward +∞.
 //   - +∞ → +∞; -∞ → the most-negative finite.
 //   - ±0 → the smallest positive subnormal.
 //   - qNaN returned unchanged; sNaN quieted (signalling invalid under a ctx).
-func d128_nextUp(x d128, ctxnull *context) d128 {
-	return nextUpOrDown(x, true, ctxnull)
+func d128_nextUp_ctxnull(x d128, ctxnull *context) d128 {
+	return nextUpOrDown_ctxnull(x, true, ctxnull)
 }
 
-// d128_nextDown returns the largest representable value smaller than x.
+// d128_nextDown_ctxnull returns the largest representable value smaller than x.
 //   - finite: walks one ulp toward -∞.
 //   - -∞ → -∞; +∞ → the most-positive finite.
 //   - ±0 → the smallest negative subnormal magnitude.
 //   - qNaN returned unchanged; sNaN quieted (signalling invalid under a ctx).
-func d128_nextDown(x d128, ctxnull *context) d128 {
-	return nextUpOrDown(x, false, ctxnull)
+func d128_nextDown_ctxnull(x d128, ctxnull *context) d128 {
+	return nextUpOrDown_ctxnull(x, false, ctxnull)
 }
 
-func nextUpOrDown(x d128, isUp bool, ctxnull *context) d128 {
+func nextUpOrDown_ctxnull(x d128, isUp bool, ctxnull *context) d128 {
 	signX := d128_signFlag(x)
 	if d128_isFIN(x) {
 		if d128_isZER(x) {
@@ -60,7 +60,7 @@ func nextUpOrDown(x d128, isUp bool, ctxnull *context) d128 {
 	if d128_isQNAN(x) {
 		return x
 	}
-	return ctxSignalSNanOperandFound(ctxnull, x)
+	return ctxSignalSNanOperandFound_ctxnull(ctxnull, x)
 }
 
 // nextFnzAwayFromZero walks one ulp away from zero (increases magnitude).
