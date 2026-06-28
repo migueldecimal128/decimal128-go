@@ -5,8 +5,10 @@
 package decimal128
 
 func d128_multiply_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
-	prod := mul_256_128x128(x.ubdLo64, d128_hi49(x), y.ubdLo64, d128_hi49(y))
-	hi49Sum := d128_hi49(x) + d128_hi49(y)
+	xHi49 := d128_hi49(x)
+	yHi49 := d128_hi49(y)
+	prod := mul_256_128x128(x.ubdLo64, xHi49, y.ubdLo64, yHi49)
+	hi49Sum := xHi49 + yHi49
 	prodQExp := d128_qExp(x) + d128_qExp(y)
 	prodSignFlag := d128_signFlag(x) != d128_signFlag(y)
 	if ushr_64_64(hi49Sum, 48) == 0 && prodQExp >= -6176 && prodQExp <= 6111 &&
@@ -53,7 +55,8 @@ func d128_square_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 
 func d128_square_tte(x d128) d128 {
 	x128 := d128_u128(x)
-	prodQExp := d128_qExp(x) + d128_qExp(x)
+	xQ := d128_qExp(x)
+	prodQExp := xQ + xQ
 	if x128.dw1 == 0 && prodQExp >= -6176 && prodQExp <= 6111 {
 		prod := mul_128_64x64(x128.dw0, x128.dw0)
 		if ushr_64_64(prod.dw1, 48) == 0 {
