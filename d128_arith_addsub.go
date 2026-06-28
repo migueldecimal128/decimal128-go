@@ -6,10 +6,12 @@
 package decimal128
 
 func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
-	hi49Sum := d128_hi49(x) + d128_hi49(y)
+	xHi49 := d128_hi49(x)
+	yHi49 := d128_hi49(y)
+	hi49Sum := xHi49 + yHi49
 	if ushr_64_64(hi49Sum, 48) == 0 && d128_qExpAndSignBit(x) == d128_qExpAndSignBit(y) {
 		// Fast path: same sign and exponent, sum fits in 112 bits. No rounding.
-		coeffSum := add_128_128x128(x.ubdLo64, d128_hi49(x), y.ubdLo64, d128_hi49(y))
+		coeffSum := add_128_128x128(x.ubdLo64, xHi49, y.ubdLo64, yHi49)
 		return d128FromQExpSignBit(d128_qExpAndSignBit(x), coeffSum.dw0, coeffSum.dw1)
 	}
 	if d128_isNonFinite(x) || d128_isNonFinite(y) {
@@ -79,13 +81,15 @@ func addFnzFnz_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 }
 
 func d128_subtract_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
-	hi49Sum := d128_hi49(x) + d128_hi49(y)
+	xHi49 := d128_hi49(x)
+	yHi49 := d128_hi49(y)
+	hi49Sum := xHi49 + yHi49
 	if ushr_64_64(hi49Sum, 48) == 0 && d128_qExp(x) == d128_qExp(y) {
 		if d128_qExpAndSignBit(x) != d128_qExpAndSignBit(y) {
-			coeffSum := add_128_128x128(x.ubdLo64, d128_hi49(x), y.ubdLo64, d128_hi49(y))
+			coeffSum := add_128_128x128(x.ubdLo64, xHi49, y.ubdLo64, yHi49)
 			return d128FromQExpSignBit(d128_qExpAndSignBit(x), coeffSum.dw0, coeffSum.dw1)
 		}
-		ds := subAbs_d128swap_128x128(x.ubdLo64, d128_hi49(x), y.ubdLo64, d128_hi49(y))
+		ds := subAbs_d128swap_128x128(x.ubdLo64, xHi49, y.ubdLo64, yHi49)
 		if !isZero_bool_128(ds.diffDw0, ds.diffDw1) {
 			resultQExpAndSignBit := d128_qExpAndSignBit(x) ^ boolToInt64(ds.swap)
 			return d128FromQExpSignBit(resultQExpAndSignBit, ds.diffDw0, ds.diffDw1)
@@ -104,17 +108,22 @@ func d128_subtract_ctx(x, y d128, ctx *context) d128 {
 }
 
 func addFnzFnzUnalignedLikeSign_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
-	verify("", d128_qExp(x) != d128_qExp(y))
+	xQ := d128_qExp(x)
+	yQ := d128_qExp(y)
+	verify("", xQ != yQ)
 	verify("", d128_signFlag(x) == d128_signFlag(y))
 
 	var m, n d128
-	if d128_qExp(x) > d128_qExp(y) {
+	var mQ, nQ int
+	if xQ > yQ {
 		m, n = x, y
+		mQ = xQ
+		nQ = yQ
 	} else {
 		m, n = y, x
+		mQ = yQ
+		nQ = xQ
 	}
-	mQ := d128_qExp(m)
-	nQ := d128_qExp(n)
 	mDigitLen := d128_digitLen(m)
 	qDelta := mQ - nQ
 	verify("", qDelta > 0)
