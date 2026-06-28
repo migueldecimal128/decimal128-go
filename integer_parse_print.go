@@ -1,17 +1,10 @@
-// Integer-to-ASCII digit rendering (the print substrate). AsciiBuffer is a
-// fixed 64-byte scratch buffer; the renderers fill decimal digits into it via
-// reciprocal-multiply digit extraction. Indices are masked with asciiBCE (0x3F)
-// — a bounds-check-elimination no-op for in-contract writes.
+// Integer-to-ASCII digit rendering (the print substrate). The renderers fill
+// decimal digits into a raw byte pointer via reciprocal-multiply digit extraction
+// without bounds checking.
 
 package decimal128
 
-type asciiBuffer [64]byte
-
-const asciiBCE = 0x3F
-
-func (b *asciiBuffer) toString(length int) string {
-	return string(b[:length])
-}
+import "unsafe"
 
 // Reciprocal-multiply magic constants for division by powers of 10.
 const (
@@ -27,14 +20,22 @@ const (
 	divisor1e8   int64 = 100_000_000
 )
 
-func uIntToASCII(digitPrintCount, u int, ascii *asciiBuffer, off int) {
+func writeByte(p unsafe.Pointer, off int, b byte) {
+	*(*byte)(unsafe.Pointer(uintptr(p) + uintptr(off))) = b
+}
+
+func readByte(p unsafe.Pointer, off int) byte {
+	return *(*byte)(unsafe.Pointer(uintptr(p) + uintptr(off)))
+}
+
+func uIntToASCII(digitPrintCount, u int, ascii unsafe.Pointer, off int) {
 	verify("", u >= 0)
 	u64ToASCII(digitPrintCount, int64(u), ascii, off)
 }
 
 // u64ToASCII renders the low digitPrintCount decimal digits of value into ascii
 // starting at off.
-func u64ToASCII(digitPrintCount int, value int64, ascii *asciiBuffer, off int) {
+func u64ToASCII(digitPrintCount int, value int64, ascii unsafe.Pointer, off int) {
 	digitsRemaining := digitPrintCount
 	ich := off + digitsRemaining
 	t := value
@@ -52,7 +53,7 @@ func u64ToASCII(digitPrintCount int, value int64, ascii *asciiBuffer, off int) {
 }
 
 // u128ToASCII renders the low digitPrintCount decimal digits of a 128-bit value.
-func u128ToASCII(digitPrintCount int, value u128, ascii *asciiBuffer, off int) {
+func u128ToASCII(digitPrintCount int, value u128, ascii unsafe.Pointer, off int) {
 	hi := value.dw1
 	lo := value.dw0
 	ich := off + digitPrintCount
@@ -89,7 +90,7 @@ func u128ToASCII(digitPrintCount int, value u128, ascii *asciiBuffer, off int) {
 	}
 }
 
-func render8DigitsBeforeIndex(dw int64, ascii *asciiBuffer, offMaxx int) {
+func render8DigitsBeforeIndex(dw int64, ascii unsafe.Pointer, offMaxx int) {
 	abcd := ushr_64_64(umulHi_64_64x64(dw, mU64Div1e4), sU64Div1e4Hi)
 	efgh := dw - (abcd * 10000)
 
@@ -107,17 +108,17 @@ func render8DigitsBeforeIndex(dw int64, ascii *asciiBuffer, offMaxx int) {
 	g := ushr_64_64(gh*mU32Div1e1, sU32Div1e1)
 	h := gh - (g * 10)
 
-	ascii[(offMaxx-8)&asciiBCE] = byte(a) + ascii_0
-	ascii[(offMaxx-7)&asciiBCE] = byte(b) + ascii_0
-	ascii[(offMaxx-6)&asciiBCE] = byte(c) + ascii_0
-	ascii[(offMaxx-5)&asciiBCE] = byte(d) + ascii_0
-	ascii[(offMaxx-4)&asciiBCE] = byte(e) + ascii_0
-	ascii[(offMaxx-3)&asciiBCE] = byte(f) + ascii_0
-	ascii[(offMaxx-2)&asciiBCE] = byte(g) + ascii_0
-	ascii[(offMaxx-1)&asciiBCE] = byte(h) + ascii_0
+	writeByte(ascii, offMaxx-8, byte(a)+ascii_0)
+	writeByte(ascii, offMaxx-7, byte(b)+ascii_0)
+	writeByte(ascii, offMaxx-6, byte(c)+ascii_0)
+	writeByte(ascii, offMaxx-5, byte(d)+ascii_0)
+	writeByte(ascii, offMaxx-4, byte(e)+ascii_0)
+	writeByte(ascii, offMaxx-3, byte(f)+ascii_0)
+	writeByte(ascii, offMaxx-2, byte(g)+ascii_0)
+	writeByte(ascii, offMaxx-1, byte(h)+ascii_0)
 }
 
-func renderTailDigitsBeforeIndex(renderDigitCount int, value int64, ascii *asciiBuffer, offMaxx int) {
+func renderTailDigitsBeforeIndex(renderDigitCount int, value int64, ascii unsafe.Pointer, offMaxx int) {
 	t := value
 	remainingDigitCount := renderDigitCount
 	ib := offMaxx
@@ -133,10 +134,10 @@ func renderTailDigitsBeforeIndex(renderDigitCount int, value int64, ascii *ascii
 		b := ab - (a * 10)
 		c := ushr_64_64(cd*mU32Div1e1, sU32Div1e1)
 		d := cd - (c * 10)
-		ascii[(ib-4)&asciiBCE] = byte(a) + zero
-		ascii[(ib-3)&asciiBCE] = byte(b) + zero
-		ascii[(ib-2)&asciiBCE] = byte(c) + zero
-		ascii[(ib-1)&asciiBCE] = byte(d) + zero
+		writeByte(ascii, ib-4, byte(a)+zero)
+		writeByte(ascii, ib-3, byte(b)+zero)
+		writeByte(ascii, ib-2, byte(c)+zero)
+		writeByte(ascii, ib-1, byte(d)+zero)
 		ib -= 4
 		remainingDigitCount -= 4
 	}
@@ -144,7 +145,7 @@ func renderTailDigitsBeforeIndex(renderDigitCount int, value int64, ascii *ascii
 		divTen := ushr_64_64(t*0xCCCCCCCD, 35)
 		digit := byte(t - (divTen * 10))
 		ib -= 1
-		ascii[ib&asciiBCE] = zero + digit
+		writeByte(ascii, ib, zero+digit)
 		t = divTen
 		remainingDigitCount -= 1
 	}

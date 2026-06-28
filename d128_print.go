@@ -1,7 +1,10 @@
 // decimal128 → string formatting (GDAS to-scientific/engineering/plain, plus the
 // coefficient×10^qExp debug form). d128_format is the boundary entry.
+// Renders directly into a heap-allocated String.
 
 package decimal128
+
+import "unsafe"
 
 // Format-style selector codes for d128_format.
 const (
@@ -11,23 +14,29 @@ const (
 	FORMAT_COEFFICIENT_QEXP = 3 // raw coefficient × 10^qExp
 )
 
+func withStringBuffer(length int, f func(p unsafe.Pointer)) string {
+	buf := make([]byte, length)
+	if length > 0 {
+		f(unsafe.Pointer(&buf[0]))
+	}
+	return unsafe.String(unsafe.SliceData(buf), length)
+}
+
 func d128_format(x d128, formatStyle int) string {
 	return d128ToString(x, formatStyle)
 }
 
 func d128ToString(x d128, formatStyle int) string {
-	var ascii asciiBuffer
-	ascii[0] = ascii_minus // overwritten for non-negative values
 	if d128_isFIN(x) {
-		return toFiniteString(d128_signFlag(x), d128_qExp(x), d128_u128(x), formatStyle, &ascii)
+		return toFiniteString(d128_signFlag(x), d128_qExp(x), d128_u128(x), formatStyle)
 	}
-	return toNonFiniteString(x, &ascii)
+	return toNonFiniteString(x)
 }
 
 // [Inf+, Inf-, NaN+, NaN-, sNaN+, sNaN-]
 var specialValueStrings = []string{"Infinity", "-Infinity", "NaN", "-NaN", "sNaN", "-sNaN"}
 
-func toNonFiniteString(x d128, ascii *asciiBuffer) string {
+func toNonFiniteString(x d128) string {
 	signBit := d128_signBit(x)
 	if d128_isINF(x) {
 		return specialValueStrings[signBit]
@@ -42,40 +51,52 @@ func toNonFiniteString(x d128, ascii *asciiBuffer) string {
 	if isZero_bool_128(nanPayload.dw0, nanPayload.dw1) {
 		return nanStr
 	}
-	// mixed-case: 's' lower, 'N' upper, 'a' lower, 'N' upper
-	i := signBit
-	ascii[i&asciiBCE] = ascii_s
-	i += snanBit
-	ascii[i&asciiBCE] = ascii_N
-	i++
-	ascii[i&asciiBCE] = ascii_a
-	i++
-	ascii[i&asciiBCE] = ascii_N
-	i++
+
+	nanPrefLen := 3
+	if snanBit == 1 {
+		nanPrefLen = 4
+	}
+	prefLen := int(signBit) + nanPrefLen
 	digitLen := digitLen_int_128(nanPayload.dw0, nanPayload.dw1)
-	totalLen := i + digitLen
-	u128ToASCII(digitLen, nanPayload, ascii, i)
-	return ascii.toString(totalLen)
+	totalLen := prefLen + digitLen
+
+	return withStringBuffer(totalLen, func(ascii unsafe.Pointer) {
+		if signBit == 1 {
+			writeByte(ascii, 0, ascii_minus)
+		}
+		i := int(signBit)
+		if snanBit == 1 {
+			writeByte(ascii, i, ascii_s)
+			i++
+		}
+		writeByte(ascii, i, ascii_N)
+		i++
+		writeByte(ascii, i, ascii_a)
+		i++
+		writeByte(ascii, i, ascii_N)
+		i++
+		u128ToASCII(digitLen, nanPayload, ascii, i)
+	})
 }
 
-func toFiniteString(sign bool, qExp int, coeff u128, formatStyle int, ascii *asciiBuffer) string {
+func toFiniteString(sign bool, qExp int, coeff u128, formatStyle int) string {
 	digitLen := digitLen_int_128(coeff.dw0, coeff.dw1)
 	eExp := qExp + digitLen + (-digitLen >> 63)
 	if formatStyle == FORMAT_COEFFICIENT_QEXP {
-		return toCoefficientQExpString(sign, qExp, coeff, digitLen, ascii)
+		return toCoefficientQExpString(sign, qExp, coeff, digitLen)
 	}
 	if formatStyle != FORMAT_EXPONENTIAL {
 		if qExp == 0 {
-			return toIntegerString(sign, coeff, ascii)
+			return toIntegerString(sign, coeff)
 		}
 		if qExp < 0 && eExp >= minPlainExponent {
-			return toDecimalPointString(sign, qExp, coeff, digitLen, ascii)
+			return toDecimalPointString(sign, qExp, coeff, digitLen)
 		}
 		if formatStyle == FORMAT_ENGINEERING {
-			return toEngineeringString(sign, qExp, eExp, coeff, digitLen, ascii)
+			return toEngineeringString(sign, qExp, eExp, coeff, digitLen)
 		}
 	}
-	return toExponentialString(sign, qExp, eExp, coeff, digitLen, ascii)
+	return toExponentialString(sign, qExp, eExp, coeff, digitLen)
 }
 
 const minPlainExponent = -6
@@ -91,22 +112,26 @@ const (
 	smallIntegerBCE            = (1 << (smallIntegerMaxxPow2 + 1)) - 1
 )
 
-func toIntegerString(sign bool, coeff u128, ascii *asciiBuffer) string {
+func toIntegerString(sign bool, coeff u128) string {
 	signBit := boolToInt64(sign)
 	if cmp_int_128x128(coeff.dw0, coeff.dw1, smallIntegerMaxx, 0) < 0 {
 		raw := (signBit << smallIntegerMaxxPow2) + coeff.dw0
 		i := int(raw & int64(smallIntegerBCE))
 		return smallIntegerStrings[i]
 	}
-	verify("", ascii[0] == ascii_minus)
 	digitLen := digitLen_int_128(coeff.dw0, coeff.dw1)
 	signLen := int(signBit)
-	u128ToASCII(digitLen, coeff, ascii, signLen)
 	totalLen := signLen + digitLen
-	return ascii.toString(totalLen)
+
+	return withStringBuffer(totalLen, func(ascii unsafe.Pointer) {
+		if sign {
+			writeByte(ascii, 0, ascii_minus)
+		}
+		u128ToASCII(digitLen, coeff, ascii, signLen)
+	})
 }
 
-func toDecimalPointString(sign bool, qExp int, coeff u128, digitLen int, ascii *asciiBuffer) string {
+func toDecimalPointString(sign bool, qExp int, coeff u128, digitLen int) string {
 	digitsRightOfDecimal := -qExp
 	leadingZeroCount := max(1+digitsRightOfDecimal-digitLen, 0)
 	signLen := 0
@@ -114,35 +139,32 @@ func toDecimalPointString(sign bool, qExp int, coeff u128, digitLen int, ascii *
 		signLen = 1
 	}
 	totalLen := signLen + leadingZeroCount + 1 + digitLen
-	verify("", ascii[0] == ascii_minus)
 
-	if leadingZeroCount > 0 {
-		ascii[signLen&asciiBCE] = ascii_0
-		ascii[(signLen+1)&asciiBCE] = ascii_dot
-		for idx := signLen + 2; idx < signLen+leadingZeroCount+1; idx++ {
-			ascii[idx&asciiBCE] = ascii_0
+	return withStringBuffer(totalLen, func(ascii unsafe.Pointer) {
+		if sign {
+			writeByte(ascii, 0, ascii_minus)
 		}
-		u128ToASCII(digitLen, coeff, ascii, signLen+leadingZeroCount+1)
-		return ascii.toString(totalLen)
-	}
-
-	i := signLen
-	for i <= leadingZeroCount { // one extra here
-		ascii[i&asciiBCE] = ascii_0
-		i++
-	}
-	u128ToASCII(digitLen, coeff, ascii, signLen+leadingZeroCount)
-	iDot := totalLen - digitsRightOfDecimal - 1
-	i = totalLen - 1
-	for i > iDot {
-		ascii[i&asciiBCE] = ascii[(i-1)&asciiBCE]
-		i--
-	}
-	ascii[iDot&asciiBCE] = ascii_dot
-	return ascii.toString(totalLen)
+		if leadingZeroCount > 0 {
+			writeByte(ascii, signLen, ascii_0)
+			writeByte(ascii, signLen+1, ascii_dot)
+			for idx := signLen + 2; idx < signLen+leadingZeroCount+1; idx++ {
+				writeByte(ascii, idx, ascii_0)
+			}
+			u128ToASCII(digitLen, coeff, ascii, signLen+leadingZeroCount+1)
+		} else {
+			u128ToASCII(digitLen, coeff, ascii, signLen)
+			iDot := totalLen - digitsRightOfDecimal - 1
+			i := totalLen - 1
+			for i > iDot {
+				writeByte(ascii, i, readByte(ascii, i-1))
+				i--
+			}
+			writeByte(ascii, iDot, ascii_dot)
+		}
+	})
 }
 
-func toExponentialString(sign bool, qExp, eExp int, coeff u128, digitLen int, ascii *asciiBuffer) string {
+func toExponentialString(sign bool, qExp, eExp int, coeff u128, digitLen int) string {
 	eExpMask := eExp >> 31
 	eExpAbs := (eExp ^ eExpMask) - eExpMask
 	signLen := 0
@@ -160,20 +182,24 @@ func toExponentialString(sign bool, qExp, eExp int, coeff u128, digitLen int, as
 	}
 	expDigitLen := max(digitLen_int_32(eExpAbs), 1)
 	totalLen := signLen + decimalPointLen + printedDigitLen + 1 + 1 + expDigitLen
-	verify("", ascii[0] == ascii_minus)
-	u128ToASCII(printedDigitLen, coeff, ascii, signLen+decimalPointLen)
-	if decimalPointLen > 0 {
-		ascii[signLen] = ascii[signLen+1]
-		ascii[signLen+1] = ascii_dot
-	}
-	iE := signLen + decimalPointLen + printedDigitLen
-	ascii[iE] = ascii_E
-	ascii[iE+1] = expSignByte
-	renderTailDigitsBeforeIndex(expDigitLen, int64(eExpAbs), ascii, totalLen)
-	return ascii.toString(totalLen)
+
+	return withStringBuffer(totalLen, func(ascii unsafe.Pointer) {
+		if sign {
+			writeByte(ascii, 0, ascii_minus)
+		}
+		u128ToASCII(printedDigitLen, coeff, ascii, signLen+decimalPointLen)
+		if decimalPointLen > 0 {
+			writeByte(ascii, signLen, readByte(ascii, signLen+1))
+			writeByte(ascii, signLen+1, ascii_dot)
+		}
+		iE := signLen + decimalPointLen + printedDigitLen
+		writeByte(ascii, iE, ascii_E)
+		writeByte(ascii, iE+1, expSignByte)
+		renderTailDigitsBeforeIndex(expDigitLen, int64(eExpAbs), ascii, totalLen)
+	})
 }
 
-func toEngineeringString(sign bool, qExp, eExp int, coeff u128, digitLen int, ascii *asciiBuffer) string {
+func toEngineeringString(sign bool, qExp, eExp int, coeff u128, digitLen int) string {
 	signLen := 0
 	if sign {
 		signLen = 1
@@ -199,17 +225,15 @@ func toEngineeringString(sign bool, qExp, eExp int, coeff u128, digitLen int, as
 		expSign = ascii_minus
 	}
 	expDigitLen := max(digitLen_int_32(adjustedExpAbs), 1)
+
 	var i int
 	if isZero {
-		ascii[(signLen+0)&asciiBCE] = ascii_0
-		ascii[(signLen+1)&asciiBCE] = ascii_dot
-		ascii[(signLen+2)&asciiBCE] = ascii_0
-		ascii[(signLen+3)&asciiBCE] = ascii_0
-		if zerExpAdjustment == 0 {
-			i = signLen + 1
-		} else {
-			i = signLen + 1 + 1 + zerExpAdjustment
-		}
+		i = signLen + 1 + (func() int {
+			if zerExpAdjustment == 0 {
+				return 0
+			}
+			return 1 + zerExpAdjustment
+		})()
 	} else {
 		expAlignZeroCount := min(max(0, 1+fnzExpAdjustment-digitLen), 2)
 		leftOfRadixPointCount := 1 + fnzExpAdjustment
@@ -217,37 +241,65 @@ func toEngineeringString(sign bool, qExp, eExp int, coeff u128, digitLen int, as
 		if digitLen > leftOfRadixPointCount {
 			decimalPointLen = 1
 		}
-		u128ToASCII(digitLen, coeff, ascii, signLen+decimalPointLen)
-		i = signLen + decimalPointLen + digitLen
-		if expAlignZeroCount >= 1 {
-			if expAlignZeroCount > 1 {
-				ascii[i&asciiBCE] = ascii_0
-				i++
-			}
-			ascii[i&asciiBCE] = ascii_0
-			i++
-		} else if digitLen > leftOfRadixPointCount {
-			j := 0
-			for j < leftOfRadixPointCount {
-				ascii[(signLen+j)&asciiBCE] = ascii[signLen+j+1]
-				j++
-			}
-			ascii[(signLen+leftOfRadixPointCount)&asciiBCE] = ascii_dot
+		i = signLen + decimalPointLen + digitLen + expAlignZeroCount
+	}
+
+	totalLen := i + (func() int {
+		if adjustedExp == 0 {
+			return 0
 		}
-	}
-	if adjustedExp == 0 {
-		return ascii.toString(i)
-	}
-	ascii[i&asciiBCE] = ascii_E
-	i++
-	ascii[i&asciiBCE] = expSign
-	i++
-	uIntToASCII(expDigitLen, adjustedExpAbs, ascii, i)
-	totalLen := i + expDigitLen
-	return ascii.toString(totalLen)
+		return 1 + 1 + expDigitLen
+	})()
+
+	return withStringBuffer(totalLen, func(ascii unsafe.Pointer) {
+		if sign {
+			writeByte(ascii, 0, ascii_minus)
+		}
+		if isZero {
+			writeByte(ascii, signLen, ascii_0)
+			if zerExpAdjustment > 0 {
+				writeByte(ascii, signLen+1, ascii_dot)
+				writeByte(ascii, signLen+2, ascii_0)
+				if zerExpAdjustment > 1 {
+					writeByte(ascii, signLen+3, ascii_0)
+				}
+			}
+		} else {
+			expAlignZeroCount := min(max(0, 1+fnzExpAdjustment-digitLen), 2)
+			leftOfRadixPointCount := 1 + fnzExpAdjustment
+			decimalPointLen := 0
+			if digitLen > leftOfRadixPointCount {
+				decimalPointLen = 1
+			}
+			u128ToASCII(digitLen, coeff, ascii, signLen+decimalPointLen)
+
+			if expAlignZeroCount >= 1 {
+				startZeroIdx := signLen + decimalPointLen + digitLen
+				if expAlignZeroCount > 1 {
+					writeByte(ascii, startZeroIdx, ascii_0)
+					writeByte(ascii, startZeroIdx+1, ascii_0)
+				} else {
+					writeByte(ascii, startZeroIdx, ascii_0)
+				}
+			} else if digitLen > leftOfRadixPointCount {
+				j := 0
+				for j < leftOfRadixPointCount {
+					writeByte(ascii, signLen+j, readByte(ascii, signLen+j+1))
+					j++
+				}
+				writeByte(ascii, signLen+leftOfRadixPointCount, ascii_dot)
+			}
+		}
+
+		if adjustedExp != 0 {
+			writeByte(ascii, i, ascii_E)
+			writeByte(ascii, i+1, expSign)
+			uIntToASCII(expDigitLen, adjustedExpAbs, ascii, i+2)
+		}
+	})
 }
 
-func toCoefficientQExpString(sign bool, qExp int, coeff u128, digitLen int, ascii *asciiBuffer) string {
+func toCoefficientQExpString(sign bool, qExp int, coeff u128, digitLen int) string {
 	signLen := 0
 	if sign {
 		signLen = 1
@@ -263,16 +315,15 @@ func toCoefficientQExpString(sign bool, qExp int, coeff u128, digitLen int, asci
 	}
 	expDigitLen := max(digitLen_int_32(qExpAbs), 1)
 	totalLen := signLen + printedDigitLen + 1 + 1 + expDigitLen
-	verify("", ascii[0] == ascii_minus)
-	i := signLen
-	u128ToASCII(printedDigitLen, coeff, ascii, signLen)
-	i += printedDigitLen
-	ascii[i&asciiBCE] = ascii_E
-	i++
-	ascii[i&asciiBCE] = expSignByte
-	i++
-	u64ToASCII(expDigitLen, int64(qExpAbs), ascii, i)
-	i += expDigitLen
-	verify("", i == totalLen)
-	return ascii.toString(totalLen)
+
+	return withStringBuffer(totalLen, func(ascii unsafe.Pointer) {
+		if sign {
+			writeByte(ascii, 0, ascii_minus)
+		}
+		u128ToASCII(printedDigitLen, coeff, ascii, signLen)
+		i := signLen + printedDigitLen
+		writeByte(ascii, i, ascii_E)
+		writeByte(ascii, i+1, expSignByte)
+		u64ToASCII(expDigitLen, int64(qExpAbs), ascii, i+2)
+	})
 }

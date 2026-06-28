@@ -52,7 +52,5 @@ func d38_square(x d38) d38 {
 }
 
 func d38_format(x d38) string {
-	var ascii asciiBuffer
-	ascii[0] = ascii_minus
-	return toFiniteString(d38_signFlag(x), d38_qExp(x), d38_u128(x), FORMAT_AUTO, &ascii)
+	return toFiniteString(d38_signFlag(x), d38_qExp(x), d38_u128(x), FORMAT_AUTO)
 }
