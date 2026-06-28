@@ -157,7 +157,9 @@ func parseNanText(sign bool, chFirst byte, t *txt) d128ParseResult {
 	if ch != ascii_n || t.nextCharLowercase() != ascii_a || t.nextCharLowercase() != ascii_n {
 		return parseFailure(psFailureParsingNan)
 	}
-	payload := u128{0, 0}
+	var accumulator int64 = 0
+	var first19accumulator int64 = 0
+	remainingDigitCount := 0
 	ch = t.nextChar()
 	payloadDigitCount := 0
 	for ch != 0 {
@@ -166,13 +168,31 @@ func parseNanText(sign bool, chFirst byte, t *txt) d128ParseResult {
 		}
 		if payloadDigitCount < 33 {
 			d := ch - ascii_0
-			p10 := mul_128_128x128(payload.dw0, payload.dw1, 10, 0)
-			payload = add_128_128x128(p10.dw0, p10.dw1, int64(d), 0)
+			if payloadDigitCount < 19 {
+				accumulator = accumulator*10 + int64(d)
+			} else if payloadDigitCount == 19 {
+				first19accumulator = accumulator
+				accumulator = int64(d)
+				remainingDigitCount = 1
+			} else {
+				accumulator = accumulator*10 + int64(d)
+				remainingDigitCount++
+			}
 		} else {
-			payload = u128{0, 0}
+			accumulator = 0
+			first19accumulator = 0
+			remainingDigitCount = 0
 		}
 		payloadDigitCount++
 		ch = t.nextChar()
+	}
+	payload := u128{0, 0}
+	if first19accumulator == 0 {
+		payload.dw0 = accumulator
+		payload.dw1 = 0
+	} else {
+		payload = mulPow10_128_128(first19accumulator, 0, remainingDigitCount)
+		payload = add_128_128x128(payload.dw0, payload.dw1, accumulator, 0)
 	}
 	return parseSuccess(d128_nan_64x64(sign, hasS, payload.dw0, payload.dw1))
 }
@@ -190,7 +210,9 @@ func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) fini
 	var chPrev byte = 0
 	fractionalDigitCount := 0
 	exp := 0
-	coeff := u128{0, 0}
+	var accumulator int64 = 0
+	var first19accumulator int64 = 0
+	remainingDigitCount := 0
 
 	for (ch >= ascii_0 && ch <= ascii_9) || ch == ascii_dot || ch == ascii_underbar {
 		if ch >= ascii_0 && ch <= ascii_9 {
@@ -202,8 +224,16 @@ func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) fini
 			}
 			significantDigitCount += inc
 			if significantDigitCount < maxDigitLen+1 {
-				c10 := mul_128_128x128(coeff.dw0, coeff.dw1, 10, 0)
-				coeff = add_128_128x128(c10.dw0, c10.dw1, int64(d), 0)
+				if significantDigitCount < 20 {
+					accumulator = accumulator*10 + int64(d)
+				} else if significantDigitCount == 20 {
+					first19accumulator = accumulator
+					accumulator = int64(d)
+					remainingDigitCount = 1
+				} else {
+					accumulator = accumulator*10 + int64(d)
+					remainingDigitCount++
+				}
 			} else if significantDigitCount == maxDigitLen+1 {
 				res = residueFromDecimalDigit(int(d))
 			} else {
@@ -277,5 +307,15 @@ func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) fini
 		signedExp = -exp
 	}
 	qExp := signedExp - fractionalDigitCount + max(0, significantDigitCount-maxDigitLen)
+
+	coeff := u128{0, 0}
+	if first19accumulator == 0 {
+		coeff.dw0 = accumulator
+		coeff.dw1 = 0
+	} else {
+		coeff = mulPow10_128_128(first19accumulator, 0, remainingDigitCount)
+		coeff = add_128_128x128(coeff.dw0, coeff.dw1, accumulator, 0)
+	}
+
 	return finiteParseResult{psSuccess, sign, qExp, coeff, res}
 }
