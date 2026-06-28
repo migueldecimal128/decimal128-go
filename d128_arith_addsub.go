@@ -98,7 +98,11 @@ func d128_subtract_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 	if d128_isNAN(x) || d128_isNAN(y) {
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
-	return d128_add_rnd_ctxnull(x, d128_negate(y), rounding, ctxnull)
+	yNeg := d128_negate(y)
+	if d128_isNonFinite(x) || d128_isNonFinite(yNeg) || d128_isZER(x) || d128_isZER(yNeg) {
+		return d128_add_rnd_ctxnull(x, yNeg, rounding, ctxnull)
+	}
+	return addFnzFnz_rnd_ctxnull(x, yNeg, rounding, ctxnull)
 }
 
 func d128_subtract_tte(x, y d128) d128            { return d128_subtract_rnd_ctxnull(x, y, TIES_TO_EVEN, nil) }
