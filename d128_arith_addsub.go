@@ -41,8 +41,18 @@ func addFnzFnz_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	absYShift := d128_qExp(y) - qAligned
 	if absXShift+absYShift <= 4 {
 		// Nearly aligned: align to qAligned without overflowing 128 bits.
-		xCoeffAligned := mulPow10_128_128(x.ubdLo64, d128_hi49(x), absXShift)
-		yCoeffAligned := mulPow10_128_128(y.ubdLo64, d128_hi49(y), absYShift)
+		var xCoeffAligned u128
+		if absXShift == 0 {
+			xCoeffAligned = d128_u128(x)
+		} else {
+			xCoeffAligned = mulPow10_128_128(x.ubdLo64, d128_hi49(x), absXShift)
+		}
+		var yCoeffAligned u128
+		if absYShift == 0 {
+			yCoeffAligned = d128_u128(y)
+		} else {
+			yCoeffAligned = mulPow10_128_128(y.ubdLo64, d128_hi49(y), absYShift)
+		}
 
 		var resultSign bool
 		var resultCoeff u128
@@ -110,7 +120,12 @@ func addFnzFnzUnalignedLikeSign_rnd_ctxnull(x, y d128, rounding round, ctxnull *
 	verify("", qDelta > 0)
 	headroom := 34 - mDigitLen
 	shiftLeft := min(max(headroom, 0), qDelta)
-	zCoeff := mulPow10_128_128(m.ubdLo64, d128_hi49(m), shiftLeft)
+	var zCoeff u128
+	if shiftLeft == 0 {
+		zCoeff = d128_u128(m)
+	} else {
+		zCoeff = mulPow10_128_128(m.ubdLo64, d128_hi49(m), shiftLeft)
+	}
 	qAlign := mQ - shiftLeft
 	shiftRight := qAlign - nQ
 	// Swamped fast path: n lies strictly below the result's LSD (LT_HALF residue).
@@ -158,13 +173,21 @@ func preferMinimumQExp_exact(x d128, otherExp int) d128 {
 	xQ := d128_qExp(x)
 	xCoeff := d128_u128(x)
 	delta := xQ - otherExp
+	if delta <= 0 {
+		return x
+	}
 	headroom := max(0, 34-d128_digitLen(x))
-	if delta <= 0 || headroom == 0 {
+	if headroom == 0 {
 		return x
 	}
 	expRoom := xQ + 6176
 	shiftLeft := min(min(headroom, delta), expRoom)
-	zCoeff := mulPow10_128_128(xCoeff.dw0, xCoeff.dw1, shiftLeft)
+	var zCoeff u128
+	if shiftLeft == 0 {
+		zCoeff = xCoeff
+	} else {
+		zCoeff = mulPow10_128_128(xCoeff.dw0, xCoeff.dw1, shiftLeft)
+	}
 	zQ := xQ - shiftLeft
 	verify("", isCanonical34_128(zQ, zCoeff))
 	return d128Pack(xSign, zQ, zCoeff.dw0, zCoeff.dw1)
@@ -199,7 +222,12 @@ func subMagUnalignedFnzFnz_rnd_ctxnull(zSign bool, m, s d128, rounding round, ct
 		isSwamped = (shiftS34 >= sDigitLen)
 	}
 	if isSwamped {
-		mScaled := mulPow10_128_128(mCoeff.dw0, mCoeff.dw1, shiftM34)
+		var mScaled u128
+		if shiftM34 == 0 {
+			mScaled = mCoeff
+		} else {
+			mScaled = mulPow10_128_128(mCoeff.dw0, mCoeff.dw1, shiftM34)
+		}
 		if cmp_int_128x128_pow10(mScaled.dw0, mScaled.dw1, 33) != 0 { // not 10^33
 			raw := RESIDUE_LT_HALF
 			if !(shiftS34 >= 35 || shiftS34 > sDigitLen) {
