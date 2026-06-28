@@ -115,6 +115,17 @@ func toDecimalPointString(sign bool, qExp int, coeff u128, digitLen int, ascii *
 	}
 	totalLen := signLen + leadingZeroCount + 1 + digitLen
 	verify("", ascii[0] == ascii_minus)
+
+	if leadingZeroCount > 0 {
+		ascii[signLen&asciiBCE] = ascii_0
+		ascii[(signLen+1)&asciiBCE] = ascii_dot
+		for idx := signLen + 2; idx < signLen+leadingZeroCount+1; idx++ {
+			ascii[idx&asciiBCE] = ascii_0
+		}
+		u128ToASCII(digitLen, coeff, ascii, signLen+leadingZeroCount+1)
+		return ascii.toString(totalLen)
+	}
+
 	i := signLen
 	for i <= leadingZeroCount { // one extra here
 		ascii[i&asciiBCE] = ascii_0
