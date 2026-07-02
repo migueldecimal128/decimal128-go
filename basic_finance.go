@@ -54,6 +54,7 @@ type amortizationRowCore struct {
 // balance is clamped to exactly zero when its magnitude is below half a cent (a
 // fixed-payment rounding artifact).
 func d128_amortizationSchedule_tte(principal, periodicRate d128, numPayments int) []amortizationRowCore {
+	demand("amortizationSchedule: numPayments exceeds 100000", numPayments <= 100000)
 	payment := d128_mortgagePayment_tte(principal, periodicRate, numPayments)
 	rows := make([]amortizationRowCore, 0, numPayments)
 	balance := principal
