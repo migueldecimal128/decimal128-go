@@ -9,7 +9,7 @@ import "math/bits"
 
 // strip_s128sc_128 strips up to maxToStrip trailing zero decimal digits from c.
 func strip_s128sc_128(cDw0, cDw1 int64, maxToStrip int) stripped128StripCount {
-	verify("", (cDw0|cDw1) != 0)
+	verify("", func() bool { return (cDw0 | cDw1) != 0 })
 	stripped := fromLoHi_128_64x64(cDw0, cDw1)
 	remaining := maxToStrip
 	stripCount128 := 0
@@ -37,8 +37,8 @@ func strip_s128sc_128(cDw0, cDw1 int64, maxToStrip int) stripped128StripCount {
 }
 
 func u64StripTrailingZeroDigits(dw uint64, maxToStrip int) (uint64, int) {
-	verify("", dw != 0)
-	verify("", dw < uint64(pow10_128_dw0(14)))
+	verify("", func() bool { return dw != 0 })
+	verify("", func() bool { return dw < uint64(pow10_128_dw0(14)) })
 	t := dw
 	ntzBits := bits.TrailingZeros64(dw)
 	limit := maxToStrip

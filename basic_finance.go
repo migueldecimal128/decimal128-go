@@ -105,8 +105,8 @@ func d128_futureValue_tte(presentValue, rate d128, numPeriods int) d128 {
 
 // d128_cagr_tte: (FV/PV)^(1/n) − 1. PV and FV must be positive.
 func d128_cagr_tte(presentValue, futureValue d128, numPeriods int) d128 {
-	verify("cagr: presentValue must be positive", d128_isGreater(presentValue, finZero))
-	verify("cagr: futureValue must be positive", d128_isGreater(futureValue, finZero))
+	verify("cagr: presentValue must be positive", func() bool { return d128_isGreater(presentValue, finZero) })
+	verify("cagr: futureValue must be positive", func() bool { return d128_isGreater(futureValue, finZero) })
 	ratio := d128_divide_tte(futureValue, presentValue)
 	return d128_subtract_tte(d128_rootn_tte(ratio, numPeriods), finOne)
 }
@@ -127,7 +127,7 @@ func d128_npv_tte(rate d128, cashFlows []d128) d128 {
 // analytic derivative. Returns NaN if the derivative vanishes or it fails to
 // converge within maxIter. Needs ≥ 2 cash flows.
 func d128_irr_tte(cashFlows []d128, guess, tolerance d128, maxIter int) d128 {
-	verify("irr: need at least 2 cash flows", len(cashFlows) >= 2)
+	verify("irr: need at least 2 cash flows", func() bool { return len(cashFlows) >= 2 })
 	rate := guess
 	for iter := 0; iter < maxIter; iter++ {
 		npvVal := finZero
@@ -171,7 +171,7 @@ func d128_mirr_tte(cashFlows []d128, financeRate, reinvestRate d128) d128 {
 			fvPos = d128_add_tte(fvPos, d128_multiply_tte(cf, d128_compound_tte(reinvestRate, n-1-t)))
 		}
 	}
-	verify("mirr: no negative cash flows found", !d128_isZER(pvNeg))
+	verify("mirr: no negative cash flows found", func() bool { return !d128_isZER(pvNeg) })
 	ratio := d128_divide_tte(fvPos, d128_negate(pvNeg))
 	return d128_subtract_tte(d128_rootn_tte(ratio, n-1), finOne)
 }

@@ -47,7 +47,7 @@ func residueName(r residue) string {
 const digitResidueMap = 0b11_11_11_11_10_01_01_01_01_00
 
 func residueFromDecimalDigit(digit int) residue {
-	verify("", digit < 10)
+	verify("", func() bool { return digit < 10 })
 	return (digitResidueMap >> (digit << 1)) & 3
 }
 
@@ -79,7 +79,7 @@ func residueFromRemainderPow10_64(remainder int64, pow10 int) residue {
 }
 
 func residueFromRemainderPow10_128(remDw0, remDw1 int64, pow10 int) residue {
-	verify("", pow10 >= 0 && pow10 <= 38)
+	verify("", func() bool { return pow10 >= 0 && pow10 <= 38 })
 	return residueFromRemainderDivisor_128(remDw0, remDw1, pow10_128_dw0(pow10), pow10_128_dw1(pow10))
 }
 

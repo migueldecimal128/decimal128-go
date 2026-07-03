@@ -11,7 +11,7 @@ func d38_sqrt(x d38) d38 {
 		// √(±0) = +0 with halved exponent; internal domain has no signed zero.
 		return d38Pack(false, d38_qExp(x)>>1, 0, 0)
 	}
-	verify("", !d38_signFlag(x))
+	verify("", func() bool { return !d38_signFlag(x) })
 
 	f := sqrtFloorScaled(d38_u128(x), d38_qExp(x), d38_digitLen(x))
 	return finalize38_256(false, f.resultQExp, f.s, f.residue)

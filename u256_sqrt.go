@@ -83,7 +83,7 @@ func shr1U(x u256) u256 {
 // divU computes R / x where x = floor(√R) is <= 38 digits < 2^127, so it always
 // fits U128 and takes the 256÷128 path.
 func divU(R, x u256) u256 {
-	verify("", isZero_bool_128(x.dw2, x.dw3))
+	verify("", func() bool { return isZero_bool_128(x.dw2, x.dw3) })
 	qr := u256DivRem128(R, x.lo())
 	return u256{qr.quotDw0, qr.quotDw1, qr.quotDw2, qr.quotDw3}
 }

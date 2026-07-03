@@ -42,7 +42,7 @@ func dpd128Decode(dpdHi, dpdLo int64) d128 {
 	} else if top5 == 0b11110 {
 		return d128_infinity(sign)
 	} else {
-		verify("", top5 == 0b11111)
+		verify("", func() bool { return top5 == 0b11111 })
 		isNaN = true
 		d0 = 0
 		qExp = 0
@@ -82,13 +82,13 @@ func dpd128Encode(d d128) u128 {
 	} else if d128_isNAN(d) {
 		coeff = d128_nanPayload(d)
 	} else {
-		verify("", d128_isINF(d))
+		verify("", func() bool { return d128_isINF(d) })
 		coeff = u128{0, 0}
 	}
-	verify("", isLt_pow10_34_bool_128(coeff.dw0, coeff.dw1))
+	verify("", func() bool { return isLt_pow10_34_bool_128(coeff.dw0, coeff.dw1) })
 
 	dlen := digitLen_int_128(coeff.dw0, coeff.dw1)
-	verify("", dlen <= 34)
+	verify("", func() bool { return dlen <= 34 })
 
 	mostSigBcd4 := 0
 	var declets5Hi int64 = 0
@@ -97,18 +97,18 @@ func dpd128Encode(d d128) u128 {
 	if dlen > 18 {
 		qr := divRem_q128r64_128x64(coeff.dw0, coeff.dw1, tenPow18U64)
 		binLo = qr.remDw0
-		verify("", qr.quotDw1 == 0)
+		verify("", func() bool { return qr.quotDw1 == 0 })
 		binHi := qr.quotDw0
 		if ucmp_int_64x64(binHi, tenPow15U64) >= 0 {
 			tt := udiv_64_64x64(binHi, tenPow15U64)
 			binHi = binHi - (tt * tenPow15U64)
 			mostSigBcd4 = int(tt)
-			verify("", mostSigBcd4 >= 0 && mostSigBcd4 <= 9)
+			verify("", func() bool { return mostSigBcd4 >= 0 && mostSigBcd4 <= 9 })
 		}
-		verify("", ucmp_int_64x64(binHi, tenPow15U64) < 0)
+		verify("", func() bool { return ucmp_int_64x64(binHi, tenPow15U64) < 0 })
 		declets5Hi = declets6FromBin(binHi)
 	} else {
-		verify("", coeff.dw1 == 0)
+		verify("", func() bool { return coeff.dw1 == 0 })
 		binLo = coeff.dw0
 	}
 
@@ -124,7 +124,7 @@ func encodeSignAndGCombinationFieldDpd128(d d128, mostSigBcd4 int) int {
 	var gField int
 
 	if d128_isFIN(d) {
-		verify("", mostSigBcd4 >= 0 && mostSigBcd4 <= 9)
+		verify("", func() bool { return mostSigBcd4 >= 0 && mostSigBcd4 <= 9 })
 		biasedQExp := d128_qExp(d) + 6176
 		expMSB := (biasedQExp >> 12) & 0x3
 		expLSB := biasedQExp & 0x0FFF
@@ -139,7 +139,7 @@ func encodeSignAndGCombinationFieldDpd128(d d128, mostSigBcd4 int) int {
 	} else if d128_isINF(d) {
 		gField = 0b11110 << 12
 	} else {
-		verify("", d128_isNAN(d))
+		verify("", func() bool { return d128_isNAN(d) })
 		isSignaling := 0
 		if d128_isSNAN(d) {
 			isSignaling = 1
@@ -166,7 +166,7 @@ func binFromDecletsUpTo7(declets7 int64) int64 {
 }
 
 func declets6FromBin(bin int64) int64 {
-	verify("", ucmp_int_64x64(bin, eighteenNines) <= 0)
+	verify("", func() bool { return ucmp_int_64x64(bin, eighteenNines) <= 0 })
 	t := bin
 	var declets6 int64 = 0
 	shift := 0
@@ -184,7 +184,7 @@ func declets6FromBin(bin int64) int64 {
 // --- declet codec (Cowlishaw's tables, branchless) ---
 
 func dpdDecodeDeclet(declet int64) int64 {
-	verify("", ucmp_int_64x64(declet, 1023) <= 0)
+	verify("", func() bool { return ucmp_int_64x64(declet, 1023) <= 0 })
 	if declet == 0 {
 		return 0
 	}
@@ -224,14 +224,14 @@ func dpdDecodeDeclet(declet int64) int64 {
 	d1 := (e << 3) | (f << 2) | (g << 1) | h
 	d0 := (i << 3) | (j << 2) | (k << 1) | m
 
-	verify("", d2 <= 9)
-	verify("", d1 <= 9)
-	verify("", d0 <= 9)
+	verify("", func() bool { return d2 <= 9 })
+	verify("", func() bool { return d1 <= 9 })
+	verify("", func() bool { return d0 <= 9 })
 	return d2*100 + d1*10 + d0
 }
 
 func dpdEncodeDeclet(n int64) int64 {
-	verify("", ucmp_int_64x64(n, 999) <= 0)
+	verify("", func() bool { return ucmp_int_64x64(n, 999) <= 0 })
 	if n == 0 {
 		return 0
 	}

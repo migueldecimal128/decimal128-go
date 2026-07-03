@@ -18,7 +18,7 @@ const (
 )
 
 func comparison754FromSignum(signum int) comparison754 {
-	verify("", signum >= -1 && signum <= 1)
+	verify("", func() bool { return signum >= -1 && signum <= 1 })
 	return signum + 1
 }
 
@@ -45,7 +45,7 @@ func compareSignaling754(x, y d128) comparison754 {
 }
 
 func compareFinFin(x, y d128) comparison754 {
-	verify("", bothFinite(x, y))
+	verify("", func() bool { return bothFinite(x, y) })
 	if d128_isZER(x) {
 		if d128_isZER(y) {
 			return CMP754_EQ
@@ -80,8 +80,8 @@ func compareFinFin(x, y d128) comparison754 {
 }
 
 func compareNonFinite(x, y d128) comparison754 {
-	verify("", !d128_isNAN(x) && !d128_isNAN(y))
-	verify("", d128_isINF(x) || d128_isINF(y))
+	verify("", func() bool { return !d128_isNAN(x) && !d128_isNAN(y) })
+	verify("", func() bool { return d128_isINF(x) || d128_isINF(y) })
 	if d128_isINF(x) && d128_isINF(y) {
 		if d128_signFlag(x) == d128_signFlag(y) {
 			return CMP754_EQ

@@ -61,7 +61,7 @@ func shr1_256_256(xDw0, xDw1, xDw2, xDw3 int64) u256 {
 
 // shr_256_256 returns x shifted right by n bits; n in 0..<256.
 func shr_256_256(xDw0, xDw1, xDw2, xDw3 int64, n int) u256 {
-	verify("", n >= 0 && n < 256)
+	verify("", func() bool { return n >= 0 && n < 256 })
 	lo := fromLoHi_128_64x64(xDw0, xDw1)
 	hi := fromLoHi_128_64x64(xDw2, xDw3)
 	if n == 0 {

@@ -56,7 +56,7 @@ func nextUpOrDown_ctxnull(x d128, isUp bool, ctxnull *context) d128 {
 		return x
 	}
 	// NaN: quiet returned as-is; signaling quieted (and signaled under a ctx).
-	verify("", d128_isNAN(x))
+	verify("", func() bool { return d128_isNAN(x) })
 	if d128_isQNAN(x) {
 		return x
 	}
@@ -65,7 +65,7 @@ func nextUpOrDown_ctxnull(x d128, isUp bool, ctxnull *context) d128 {
 
 // nextFnzAwayFromZero walks one ulp away from zero (increases magnitude).
 func nextFnzAwayFromZero(x d128) d128 {
-	verify("", d128_isFNZ(x))
+	verify("", func() bool { return d128_isFNZ(x) })
 	signX := d128_signFlag(x)
 	qExp := d128_qExp(x)
 	coeff := d128_u128(x)
@@ -93,7 +93,7 @@ func nextFnzAwayFromZero(x d128) d128 {
 
 // nextFnzTowardZero walks one ulp toward zero (decreases magnitude).
 func nextFnzTowardZero(x d128) d128 {
-	verify("", d128_isFNZ(x))
+	verify("", func() bool { return d128_isFNZ(x) })
 	signX := d128_signFlag(x)
 	qExp := d128_qExp(x)
 	coeff := d128_u128(x)

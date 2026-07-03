@@ -71,7 +71,7 @@ func fusedMulPow10Add_256_256x64(x u256, pow10 int, addend uint64) u256 {
 	h1, l1 := bits.Mul64(a1, y)
 	h2, l2 := bits.Mul64(a2, y)
 	h3, l3 := bits.Mul64(a3, y)
-	verify("", h3 == 0) // no high limb by the no-overflow precondition
+	verify("", func() bool { return h3 == 0 }) // no high limb by the no-overflow precondition
 
 	r0, c0 := bits.Add64(l0, addend, 0)
 
@@ -85,7 +85,7 @@ func fusedMulPow10Add_256_256x64(x u256, pow10 int, addend uint64) u256 {
 
 	r3t, c3a := bits.Add64(h2, l3, 0)
 	r3, c3b := bits.Add64(r3t, c2, 0)
-	verify("", c3a == 0 && c3b == 0)
+	verify("", func() bool { return c3a == 0 && c3b == 0 })
 
 	return u256{int64(r0), int64(r1), int64(r2), int64(r3)}
 }

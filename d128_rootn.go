@@ -40,7 +40,7 @@ func d128_rootn_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d12
 	if d128_isNAN(x) {
 		return ctxNanOperand1_ctxnull(ctxnull, x)
 	}
-	verify("", d128_isINF(x))
+	verify("", func() bool { return d128_isINF(x) })
 	// x = ±∞.
 	if xSign && nIsOdd {
 		if n < 0 {

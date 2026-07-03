@@ -118,7 +118,7 @@ func fmaZeroProd_ctxnull(x, y, a d128, rounding round, ctxnull *context) d128 {
 }
 
 func fmaInfProdCtx(infSign bool, a d128) d128 {
-	verify("", !d128_isNAN(a) && d128_isFIN(a))
+	verify("", func() bool { return !d128_isNAN(a) && d128_isFIN(a) })
 	return d128_infinity(infSign)
 }
 
@@ -150,7 +150,7 @@ func addWideAndFinalize_rnd_ctxnull(prodSign bool, prodQ int, prodCoeff u256, aS
 
 func addWideAndFinalizeLikeSign_rnd_ctxnull(sign bool, mQ int, mCoeff u256, nQ int, nCoeff u256, rounding round, ctxnull *context) d128 {
 	qDelta := mQ - nQ
-	verify("", qDelta >= 0)
+	verify("", func() bool { return qDelta >= 0 })
 	mDigitLen := digitLen_int_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3)
 	headroom := max(0, 34-mDigitLen)
 	shiftLeft := min(qDelta, headroom)
@@ -160,7 +160,7 @@ func addWideAndFinalizeLikeSign_rnd_ctxnull(sign bool, mQ int, mCoeff u256, nQ i
 	}
 	qAlign := mQ - shiftLeft
 	gap := qAlign - nQ
-	verify("", gap >= 0)
+	verify("", func() bool { return gap >= 0 })
 	qr := div_256_pow10_checked_q256res(nCoeff, gap)
 	nAligned := u256{qr.quotDw0, qr.quotDw1, qr.quotDw2, qr.quotDw3}
 	coeffSum := add_256_256x256(mAligned.dw0, mAligned.dw1, mAligned.dw2, mAligned.dw3, nAligned.dw0, nAligned.dw1, nAligned.dw2, nAligned.dw3)
@@ -169,7 +169,7 @@ func addWideAndFinalizeLikeSign_rnd_ctxnull(sign bool, mQ int, mCoeff u256, nQ i
 
 func addWideAndFinalizeUnlikeSign_rnd_ctxnull(mSign bool, mQ int, mCoeff u256, nSign bool, nQ int, nCoeff u256, zeroSign bool, rounding round, ctxnull *context) d128 {
 	qDelta := mQ - nQ
-	verify("", qDelta >= 0)
+	verify("", func() bool { return qDelta >= 0 })
 	mDigitLen := digitLen_int_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3)
 	nDigitLen := digitLen_int_256(nCoeff.dw0, nCoeff.dw1, nCoeff.dw2, nCoeff.dw3)
 	maxCancellation := min(mDigitLen, nDigitLen)
@@ -181,7 +181,7 @@ func addWideAndFinalizeUnlikeSign_rnd_ctxnull(mSign bool, mQ int, mCoeff u256, n
 	}
 	qAlign := mQ - shiftLeft
 	gap := qAlign - nQ
-	verify("", gap >= 0)
+	verify("", func() bool { return gap >= 0 })
 	qr := div_256_pow10_checked_q256res(nCoeff, gap)
 	nAligned := u256{qr.quotDw0, qr.quotDw1, qr.quotDw2, qr.quotDw3}
 	residue := qr.residue

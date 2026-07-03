@@ -35,9 +35,19 @@ func demand(msg string, cond bool) {
 
 // verify is a compile-gated state assertion (§9.1): it checks cond only when
 // verifyEnabled. With verifyEnabled == false it is a no-op the compiler removes.
-func verify(msg string, cond bool) {
+//
+// cond is a thunk (func() bool), not a bare bool, so that with verifyEnabled ==
+// false the predicate is NEVER evaluated: the inlined body is dead and the
+// never-called closure — together with everything it computes — is dead-code-
+// eliminated (no call, no allocation). Go has no @autoclosure (Swift) or macro
+// (C), so the deferral must be spelled at the call site as
+// verify("msg", func() bool { return <predicate> }). Passing a bare bool would
+// evaluate the predicate eagerly even when disabled; for non-inlinable predicates
+// (digitLen/cmp table lookups, whose bounds checks block elimination) that cost
+// survives into production builds — the reason this is a thunk.
+func verify(msg string, cond func() bool) {
 	if verifyEnabled {
-		if !cond {
+		if !cond() {
 			if msg == "" {
 				impossible("verify failed")
 			}

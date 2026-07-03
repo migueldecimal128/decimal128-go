@@ -45,7 +45,7 @@ func clz_int_64(a int64) int {
 
 // ushr_64_64 is a logical right shift; n in 0..<64.
 func ushr_64_64(a int64, n int) int64 {
-	verify("", n >= 0 && n < 64)
+	verify("", func() bool { return n >= 0 && n < 64 })
 	return int64(uint64(a) >> uint(n))
 }
 

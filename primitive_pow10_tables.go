@@ -79,12 +79,12 @@ var pow5_64_table = [14]int64{
 // --- read surface ---
 
 func pow10_128_dw0(p int) int64 {
-	verify("", p <= 38)
+	verify("", func() bool { return p <= 38 })
 	return pow10_128_lo[p]
 }
 
 func pow10_128_dw1(p int) int64 {
-	verify("", p <= 38)
+	verify("", func() bool { return p <= 38 })
 	return pow10_128_hi[p]
 }
 
@@ -94,7 +94,7 @@ func pow10_256_dw2(i int) int64 { return pow10_256_d2[i] }
 func pow10_256_dw3(i int) int64 { return pow10_256_d3[i] }
 
 func pow5_64(p int) int64 {
-	verify("", p <= 13)
+	verify("", func() bool { return p <= 13 })
 	return pow5_64_table[p]
 }
 

@@ -68,7 +68,7 @@ func minMaxNonNaN(x, y d128, op int) d128 {
 }
 
 func minMaxNaN(x, y d128, op int) d128 {
-	verify("", d128_isNAN(x) || d128_isNAN(y))
+	verify("", func() bool { return d128_isNAN(x) || d128_isNAN(y) })
 	if (op & numMask) != 0 {
 		// numeric variant: NaN treated as a missing operand.
 		if !d128_isNAN(x) {
@@ -83,7 +83,7 @@ func minMaxNaN(x, y d128, op int) d128 {
 }
 
 func propagateNAN(x, y d128) d128 {
-	verify("", d128_isNAN(x) || d128_isNAN(y))
+	verify("", func() bool { return d128_isNAN(x) || d128_isNAN(y) })
 	if d128_isSNAN(x) {
 		return d128_quieted(x)
 	}
@@ -99,7 +99,7 @@ func propagateNAN(x, y d128) d128 {
 // compareNumericSigned is a signed numeric compare for min/max returning -1/0/1.
 // Assumes no NaN. Treats +0 == -0; cohort differences yield 0.
 func compareNumericSigned(x, y d128) int {
-	verify("", !d128_isNAN(x) && !d128_isNAN(y))
+	verify("", func() bool { return !d128_isNAN(x) && !d128_isNAN(y) })
 	if bothFinite(x, y) {
 		if d128_isZER(x) && d128_isZER(y) {
 			return 0
@@ -155,7 +155,7 @@ func compareNumericSigned(x, y d128) int {
 // compareNumericMagnitude is an unsigned magnitude compare returning -1/0/1.
 // Assumes no NaN.
 func compareNumericMagnitude(x, y d128) int {
-	verify("", !d128_isNAN(x) && !d128_isNAN(y))
+	verify("", func() bool { return !d128_isNAN(x) && !d128_isNAN(y) })
 	if d128_isFNZ(x) && d128_isFNZ(y) {
 		return cmpMagFnzFnz(x, y)
 	}

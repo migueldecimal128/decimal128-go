@@ -29,7 +29,7 @@ func d128_compound_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) 
 		}
 		return ctxNanOperand1_ctxnull(ctxnull, x)
 	}
-	verify("", d128_isINF(x))
+	verify("", func() bool { return d128_isINF(x) })
 	if d128_signFlag(x) {
 		// -∞ is below -1 → invalid (even for n == 0).
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne)

@@ -6,7 +6,7 @@
 package decimal128
 
 func eExpFnz(qExp, digitLen int) int {
-	verify("", digitLen > 0)
+	verify("", func() bool { return digitLen > 0 })
 	return qExp + digitLen - 1
 }
 
@@ -26,7 +26,7 @@ func compareBExpMagnitudeFnzFnz(xQExp, xBitLen, xDigitLen, yQExp, yBitLen, yDigi
 }
 
 func cmpMagFnzFnz(x, y d128) int {
-	verify("", d128_isFNZ(x) && d128_isFNZ(y))
+	verify("", func() bool { return d128_isFNZ(x) && d128_isFNZ(y) })
 	qDelta := d128_qExp(x) - d128_qExp(y)
 	if qDelta >= 34 {
 		return 1

@@ -29,7 +29,7 @@ func d128_divide_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	if d128_isNAN(x) || d128_isNAN(y) {
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
-	verify("", d128_isINF(x) || d128_isINF(y))
+	verify("", func() bool { return d128_isINF(x) || d128_isINF(y) })
 	if d128_isINF(x) && d128_isINF(y) {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivInfByInf)
 	}
@@ -64,7 +64,7 @@ func d128_divideInteger_ctxnull(x, y d128, ctxnull *context) d128 {
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
 	resultSign := d128_signFlag(x) != d128_signFlag(y)
-	verify("", d128_isINF(x) || d128_isINF(y))
+	verify("", func() bool { return d128_isINF(x) || d128_isINF(y) })
 	if d128_isINF(x) && d128_isINF(y) {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivInfByInf)
 	}
@@ -76,11 +76,11 @@ func d128_divideInteger_ctxnull(x, y d128, ctxnull *context) d128 {
 
 func divIntFnzFnz_rnd_ctx(x, y d128, ctxnull *context) d128 {
 	q1 := d128_divide_rnd_ctxnull(x, y, TOWARD_ZERO, nil) // quiet
-	verify("", d128_isFIN(q1))
+	verify("", func() bool { return d128_isFIN(q1) })
 	q2 := d128_roundToIntegralTowardZeroSignalInexact_ctxnull(q1, nil)
-	verify("", d128_isFIN(q2))
+	verify("", func() bool { return d128_isFIN(q2) })
 	q2Q := d128_qExp(q2)
-	verify("", q2Q >= 0)
+	verify("", func() bool { return q2Q >= 0 })
 	if q2Q == 0 {
 		return q2
 	}
@@ -155,12 +155,12 @@ func remTruncFnzFnz(x, y d128, ctxnull *context) (d128, bool) {
 		nan := ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivIntOverflowsCoefficient)
 		return nan, false
 	}
-	verify("", d128_isFIN(n1))
+	verify("", func() bool { return d128_isFIN(n1) })
 	n := n1
 	if d128_qExp(n1) < 0 {
 		n = d128_roundToIntegralTowardZeroSignalInexact_ctxnull(n1, truncCtx)
 	}
-	verify("", d128_qExp(n) >= 0)
+	verify("", func() bool { return d128_qExp(n) >= 0 })
 	// If the integer quotient has more than 34 digits it cannot be represented
 	// exactly, so the remainder is undefined (dectest "Division_impossible").
 	if d128_digitLen(n)+d128_qExp(n) > 34 {
@@ -296,7 +296,7 @@ func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *cont
 
 	digitLenDelta := d128_digitLen(x) - (m + 1)
 	numeratorScale := 34 - digitLenDelta
-	verify("", numeratorScale > 0)
+	verify("", func() bool { return numeratorScale > 0 })
 
 	scaledNumerator := mulPow10_256_128(x.ubdLo64, d128_hi49(x), numeratorScale)
 	qr := u256DivResidue_128(scaledNumerator, yCoeff)

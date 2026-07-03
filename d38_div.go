@@ -10,14 +10,14 @@
 package decimal128
 
 func d38_divide(x, y d38) d38 {
-	verify("", !d38_isZero(y))
+	verify("", func() bool { return !d38_isZero(y) })
 	if d38_isZero(x) {
 		return D38_ZERO
 	}
 	zSign := d38_signFlag(x) != d38_signFlag(y)
 	digitLenDelta := d38_digitLen(x) - d38_digitLen(y)
 	numeratorScale := 38 - digitLenDelta
-	verify("", numeratorScale > 0)
+	verify("", func() bool { return numeratorScale > 0 })
 
 	// Scale x's coefficient up so the quotient carries a full 38–39 digits.
 	scaledNumerator := mulPow10_256_128(x.coeffLo64, x.coeffHi64, numeratorScale)

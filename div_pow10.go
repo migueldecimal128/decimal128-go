@@ -6,7 +6,7 @@
 package decimal128
 
 func div_128_pow10_checked_q128res(x u128, pow10 int) quot128Residue {
-	verify("", pow10 >= 0 && pow10 <= 13000)
+	verify("", func() bool { return pow10 >= 0 && pow10 <= 13000 })
 	if pow10 == 0 {
 		return quot128Residue{x.dw0, x.dw1, RESIDUE_EXACT}
 	}
@@ -28,7 +28,7 @@ func div_128_pow10_checked_q128res(x u128, pow10 int) quot128Residue {
 }
 
 func div_128_pow10_q128res(x u128, pow10 int) quot128Residue {
-	verify("", pow10 >= 1 && pow10 < digitLen_int_128(x.dw0, x.dw1))
+	verify("", func() bool { return pow10 >= 1 && pow10 < digitLen_int_128(x.dw0, x.dw1) })
 	// pow10 == 1 keeps the divide-by-10 magic (single-digit residue lookup); a
 	// single reciprocal-multiply kernel covers 2..38 uniformly.
 	if pow10 == 1 {
@@ -38,7 +38,7 @@ func div_128_pow10_q128res(x u128, pow10 int) quot128Residue {
 }
 
 func div_256_pow10_checked_q256res(x u256, pow10 int) quot256Residue {
-	verify("", pow10 >= 0 && pow10 <= 19000)
+	verify("", func() bool { return pow10 >= 0 && pow10 <= 19000 })
 	if pow10 == 0 {
 		return quot256Residue{x.dw0, x.dw1, x.dw2, x.dw3, RESIDUE_EXACT}
 	}
@@ -71,7 +71,7 @@ func div_256_pow10_q256res(x u256, pow10 int) quot256Residue {
 		pow10Remaining -= chunk
 	}
 	for pow10Remaining > 0 {
-		verify("", isZero_bool_128(quotient.dw2, quotient.dw3))
+		verify("", func() bool { return isZero_bool_128(quotient.dw2, quotient.dw3) })
 		chunk := min(pow10Remaining, barrettPow10Max)
 		qr := divPow10_q128res_128_barrett(quotient.dw0, quotient.dw1, chunk)
 		totalResidue = residueMerge(qr.residue, totalResidue)

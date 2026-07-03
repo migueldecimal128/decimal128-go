@@ -25,7 +25,7 @@ func bid128Encode(d d128) u128 {
 	} else if d128_isNAN(d) {
 		coeff = d128_nanPayload(d)
 	} else {
-		verify("", d128_isINF(d))
+		verify("", func() bool { return d128_isINF(d) })
 		coeff = u128{0, 0}
 	}
 
@@ -46,14 +46,14 @@ func encodeSignAndGCombinationFieldBid128(d d128, mostSigBits3 int) int64 {
 
 	if d128_isFIN(d) {
 		qExp := d128_qExp(d)
-		verify("", qExp >= qtinyNeg6176 && qExp <= qmax6111)
+		verify("", func() bool { return qExp >= qtinyNeg6176 && qExp <= qmax6111 })
 		biasedQExp := qExp - qtinyNeg6176
-		verify("", (biasedQExp&0x3000) != 0x3000)
+		verify("", func() bool { return (biasedQExp & 0x3000) != 0x3000 })
 		gCombinationField = (biasedQExp << 3) | mostSigBits3
 	} else if d128_isINF(d) {
 		gCombinationField = 0b11110 << 12
 	} else {
-		verify("", d128_isNAN(d))
+		verify("", func() bool { return d128_isNAN(d) })
 		if d128_isSNAN(d) {
 			gCombinationField = 0b111111 << 11
 		} else {
@@ -93,7 +93,7 @@ func bid128Decode(bidHi, bidLo int64) d128 {
 	} else if top5 == 0b11110 {
 		return d128_infinity(sign)
 	} else {
-		verify("", top5 == 0b11111)
+		verify("", func() bool { return top5 == 0b11111 })
 		isSignaling := ((combination >> (w5 - 6)) & 1) != 0
 		var payloadCanonLo, payloadCanonHi int64
 		if ucmp_int_64x64(coeffTHi, payloadMaxHi) > 0 ||

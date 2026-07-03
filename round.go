@@ -41,7 +41,7 @@ func needsRoundUp(rounding round, sign, isOdd bool, res residue) bool {
 }
 
 func ulpBias(rounding round, isOdd bool, res residue) int64 {
-	verify("", res&^3 == 0)
+	verify("", func() bool { return res&^3 == 0 })
 	biasMapEvenOdd := ulpBiasMap | (boolToInt64(isOdd) << 2)
 	bitIndex := (rounding.code << 3) + res
 	return (biasMapEvenOdd >> uint(bitIndex)) & 1

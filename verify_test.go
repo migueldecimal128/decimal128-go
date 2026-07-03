@@ -40,5 +40,5 @@ func TestVerifyIsNoopWhenDisabled(t *testing.T) {
 	if verifyEnabled {
 		t.Skip("verify is enabled; the failure path is covered only when disabled")
 	}
-	verify("should not fire while disabled", false)
+	verify("should not fire while disabled", func() bool { return false })
 }

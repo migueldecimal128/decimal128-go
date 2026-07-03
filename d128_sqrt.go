@@ -24,7 +24,7 @@ func d128_sqrt_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 	if d128_isNAN(x) {
 		return ctxNanOperand1_ctxnull(ctxnull, x)
 	}
-	verify("", d128_isINF(x))
+	verify("", func() bool { return d128_isINF(x) })
 	if d128_signFlag(x) {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeSquareRootOfNegInfinity)
 	}

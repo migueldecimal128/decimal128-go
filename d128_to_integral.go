@@ -31,7 +31,7 @@ func roundToIntegral128_ctxnull(x d128, rounding round, ctxnull *context, suppre
 		} else {
 			xU128 := d128_u128(x)
 			res = residueFromDecadeWithDigitLen_128(xU128.dw0, xU128.dw1, xDigitLen)
-			verify("", res != RESIDUE_EXACT)
+			verify("", func() bool { return res != RESIDUE_EXACT })
 		}
 		var z d128
 		if needsRoundUp(rounding, xSign, false, res) {
@@ -191,7 +191,7 @@ func d128ConvertToInt64_ctxnull(x d128, rounding round, suppressInexact bool, ct
 				} else {
 					xU128 := d128_u128(x)
 					res = residueFromDecadeWithDigitLen_128(xU128.dw0, xU128.dw1, xDigitLen)
-					verify("", res != RESIDUE_EXACT)
+					verify("", func() bool { return res != RESIDUE_EXACT })
 				}
 				var ret int64 = 0
 				if needsRoundUp(rounding, sign, false, res) {
@@ -206,7 +206,7 @@ func d128ConvertToInt64_ctxnull(x d128, rounding round, suppressInexact bool, ct
 			if intDigitLen <= 19 {
 				qr := div_128_pow10_q128res(d128_u128(x), fracDigitLen)
 				res := qr.residue
-				verify("", qr.quotDw1 == 0)
+				verify("", func() bool { return qr.quotDw1 == 0 })
 				r0Initial := qr.quotDw0
 				isOdd := (r0Initial & 1) != 0
 				r0 := r0Initial

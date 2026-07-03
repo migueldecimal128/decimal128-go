@@ -6,12 +6,12 @@
 package decimal128
 
 func residueMerge(left, right residue) residue {
-	verify("", (left|right)&^3 == 0)
+	verify("", func() bool { return (left|right)&^3 == 0 })
 	return (left | right>>1 | right&1) & 3
 }
 
 func residueSubtractionInverse(res residue) residue {
-	verify("", res&^3 == 0)
+	verify("", func() bool { return res&^3 == 0 })
 	// EXACT->EXACT, LT_HALF->GT_HALF, HALF->HALF, GT_HALF->LT_HALF, packed nybbles.
 	const inverseMap = 0x1230
 	return (inverseMap >> uint(res<<2)) & 0x3
@@ -52,13 +52,13 @@ func residueFromDecadeWithDigitLen_128(dw0, dw1 int64, digitLen int) residue {
 		}
 		return (ge << 1) | (1 ^ eq)
 	}
-	verify("", digitLen == 39)
+	verify("", func() bool { return digitLen == 39 })
 	return RESIDUE_LT_HALF
 }
 
 func residueFromDecadeWithDigitLen_256(v u256, digitLen int) residue {
 	if isZero_bool_128(v.dw2, v.dw3) {
-		verify("", digitLen >= 0 && digitLen <= 39)
+		verify("", func() bool { return digitLen >= 0 && digitLen <= 39 })
 		return residueFromDecadeWithDigitLen_128(v.dw0, v.dw1, digitLen)
 	}
 	if digitLen >= 39 && digitLen <= 77 {

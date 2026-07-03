@@ -40,8 +40,8 @@ func addAlignedLikeSignD38(x, y d38) d38 {
 }
 
 func addAlignedUnlikeSignD38(x, y d38) d38 {
-	verify("", d38_qExp(x) == d38_qExp(y))
-	verify("", d38_signFlag(x) != d38_signFlag(y))
+	verify("", func() bool { return d38_qExp(x) == d38_qExp(y) })
+	verify("", func() bool { return d38_signFlag(x) != d38_signFlag(y) })
 	ds := subAbs_d128swap_128x128(x.coeffLo64, x.coeffHi64, y.coeffLo64, y.coeffHi64)
 	if isZero_bool_128(ds.diffDw0, ds.diffDw1) {
 		return D38_ZERO
@@ -55,9 +55,9 @@ func addAlignedUnlikeSignD38(x, y d38) d38 {
 }
 
 func addUnalignedLikeSignD38(x, y d38) d38 {
-	verify("", d38_digitLen(x) <= 38 && d38_digitLen(y) <= 38)
-	verify("", d38_qExp(x) != d38_qExp(y))
-	verify("", d38_signFlag(x) == d38_signFlag(y))
+	verify("", func() bool { return d38_digitLen(x) <= 38 && d38_digitLen(y) <= 38 })
+	verify("", func() bool { return d38_qExp(x) != d38_qExp(y) })
+	verify("", func() bool { return d38_signFlag(x) == d38_signFlag(y) })
 
 	var m, n d38
 	if d38_qExp(x) > d38_qExp(y) {
@@ -70,7 +70,7 @@ func addUnalignedLikeSignD38(x, y d38) d38 {
 	mDigitLen := d38_digitLen(m)
 	nDigitLen := d38_digitLen(n)
 	qDelta := mQ - nQ
-	verify("", qDelta > 0)
+	verify("", func() bool { return qDelta > 0 })
 	headroom := 38 - mDigitLen
 	shiftLeft := min(headroom, qDelta)
 	zU128 := mulPow10_128_128(m.coeffLo64, m.coeffHi64, shiftLeft)
@@ -78,7 +78,7 @@ func addUnalignedLikeSignD38(x, y d38) d38 {
 	shiftRight := qAlign - nQ
 	var res residue
 	if shiftRight == 0 {
-		verify("", shiftLeft > 0)
+		verify("", func() bool { return shiftLeft > 0 })
 		zU128 = add_128_128x128(zU128.dw0, zU128.dw1, n.coeffLo64, n.coeffHi64)
 		res = RESIDUE_EXACT
 	} else if shiftRight > nDigitLen {
@@ -100,8 +100,8 @@ func addUnalignedLikeSignD38(x, y d38) d38 {
 }
 
 func addUnalignedUnlikeSignD38(x, y d38) d38 {
-	verify("", d38_qExp(x) != d38_qExp(y))
-	verify("", d38_signFlag(x) != d38_signFlag(y))
+	verify("", func() bool { return d38_qExp(x) != d38_qExp(y) })
+	verify("", func() bool { return d38_signFlag(x) != d38_signFlag(y) })
 	cmp := cmpMagD38(x, y)
 	if cmp > 0 {
 		return subMagUnalignedFnzFnzD38(d38_signFlag(x), x, y)
@@ -112,8 +112,8 @@ func addUnalignedUnlikeSignD38(x, y d38) d38 {
 }
 
 func subMagUnalignedFnzFnzD38(zSign bool, m, s d38) d38 {
-	verify("", d38_qExp(m) != d38_qExp(s))
-	verify("", cmpMagD38(m, s) > 0)
+	verify("", func() bool { return d38_qExp(m) != d38_qExp(s) })
+	verify("", func() bool { return cmpMagD38(m, s) > 0 })
 	mQ := d38_qExp(m)
 	mU128 := d38_u128(m)
 	mDigitLen := digitLen_int_128(mU128.dw0, mU128.dw1)
@@ -127,20 +127,20 @@ func subMagUnalignedFnzFnzD38(zSign bool, m, s d38) d38 {
 		// much larger than s's. Scale s up to m's qExp using U256.
 		sScaled := mulPow10_256_128(sU128.dw0, sU128.dw1, -gap)
 		diff := sub_256_256x256(mU128.dw0, mU128.dw1, 0, 0, sScaled.dw0, sScaled.dw1, sScaled.dw2, sScaled.dw3)
-		verify("", isZero_bool_128(diff.dw2, diff.dw3))
-		verify("", cmp_int_128x128(diff.dw0, diff.dw1, POW10_38.dw0, POW10_38.dw1) < 0)
+		verify("", func() bool { return isZero_bool_128(diff.dw2, diff.dw3) })
+		verify("", func() bool { return cmp_int_128x128(diff.dw0, diff.dw1, POW10_38.dw0, POW10_38.dw1) < 0 })
 		return d38Pack(zSign, mQ, diff.dw0, diff.dw1)
 	}
 
-	verify("", mDigitLen <= 38)
-	verify("", sDigitLen <= 38)
+	verify("", func() bool { return mDigitLen <= 38 })
+	verify("", func() bool { return sDigitLen <= 38 })
 	headroomWithGuard := 1 + 38 - mDigitLen
 	shiftMLeft := min(gap, headroomWithGuard)
 	zCoeff := mulPow10_256_128(mU128.dw0, mU128.dw1, shiftMLeft)
 
 	qAlign := mQ - shiftMLeft
 	shiftSRight := qAlign - sQ
-	verify("", shiftSRight >= 0)
+	verify("", func() bool { return shiftSRight >= 0 })
 
 	var res residue
 	if shiftSRight == 0 {
@@ -152,7 +152,7 @@ func subMagUnalignedFnzFnzD38(zSign bool, m, s d38) d38 {
 		} else {
 			res = residueSubtractionInverse(residueFromDecadeWithDigitLen_128(sU128.dw0, sU128.dw1, sDigitLen))
 		}
-		verify("", res != RESIDUE_EXACT)
+		verify("", func() bool { return res != RESIDUE_EXACT })
 		zCoeff = sub_256_256x256(zCoeff.dw0, zCoeff.dw1, zCoeff.dw2, zCoeff.dw3, 1, 0, 0, 0)
 	} else {
 		qr := div_128_pow10_q128res(sU128, shiftSRight)

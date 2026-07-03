@@ -22,7 +22,7 @@ func d128_multiply_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 	if d128_isNAN(x) || d128_isNAN(y) {
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
-	verify("", d128_isINF(x) || d128_isINF(y))
+	verify("", func() bool { return d128_isINF(x) || d128_isINF(y) })
 	if (d128_isINF(x) && d128_isZER(y)) || (d128_isINF(y) && d128_isZER(x)) {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMulZeroByInfinity)
 	}

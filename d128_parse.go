@@ -34,7 +34,7 @@ func d128_parse_ctxnull(s string, ctxnull *context) (d128, bool) {
 	if r.status == psSuccess {
 		return r.value, true
 	}
-	verify("", d128_isNAN(r.value))
+	verify("", func() bool { return d128_isNAN(r.value) })
 	ctxSignalInvalidOperation_ctxnull(ctxnull, causeParseMalformed)
 	return D128_QNAN0, false
 }
@@ -205,7 +205,7 @@ func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) fini
 	expSign := false
 
 	ch := chFirst
-	verify("", ch != 0)
+	verify("", func() bool { return ch != 0 })
 
 	var chPrev byte = 0
 	fractionalDigitCount := 0

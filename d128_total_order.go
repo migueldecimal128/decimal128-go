@@ -64,7 +64,7 @@ func totalOrderCompareMagNonNaN(x, y d128) int {
 		return -1
 	}
 	// both ZER (possibly distinct cohorts)
-	verify("", d128_isZER(x) && d128_isZER(y))
+	verify("", func() bool { return d128_isZER(x) && d128_isZER(y) })
 	return cmpInt(d128_qExp(x), d128_qExp(y))
 }
 
@@ -78,7 +78,7 @@ func compareTotalOrderMagFnzFnz(x, y d128) int {
 }
 
 func compareTotalOrderMagNaN(x, y d128, xNaN, yNaN bool) int {
-	verify("", xNaN || yNaN)
+	verify("", func() bool { return xNaN || yNaN })
 	if !xNaN {
 		return -1 // non-NaN < NaN in magnitude
 	}

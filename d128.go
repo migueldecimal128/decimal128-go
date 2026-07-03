@@ -16,8 +16,8 @@ type d128 struct {
 // d128Pack builds a finite d128 from sign + quantum exponent + coefficient dwords
 // (the init(sign,qExp,coeff) mechanic; construction is platform-local).
 func d128Pack(sign bool, qExp int, coeffDw0, coeffDw1 int64) d128 {
-	verify("", qExp >= -6176 && qExp <= 6111)
-	verify("", isLt_pow10_34_bool_128(coeffDw0, coeffDw1))
+	verify("", func() bool { return qExp >= -6176 && qExp <= 6111 })
+	verify("", func() bool { return isLt_pow10_34_bool_128(coeffDw0, coeffDw1) })
 	qExpAndSignBit := (int64(qExp) << 50) | (boolToInt64(sign) << 49)
 	return d128{ubdLo64: coeffDw0, ubdHi64: qExpAndSignBit | coeffDw1}
 }
@@ -25,8 +25,8 @@ func d128Pack(sign bool, qExp int, coeffDw0, coeffDw1 int64) d128 {
 // d128FromQExpSignBit builds a finite d128 from a pre-packed qExpAndSignBit and
 // coefficient (the init(qExpAndSignBit, coeff) mechanic).
 func d128FromQExpSignBit(qExpAndSignBit, coeffDw0, coeffDw1 int64) d128 {
-	verify("", ushr_64_64(qExpAndSignBit, 15) == 0)
-	verify("", isLt_pow10_34_bool_128(coeffDw0, coeffDw1))
+	verify("", func() bool { return ushr_64_64(qExpAndSignBit, 15) == 0 })
+	verify("", func() bool { return isLt_pow10_34_bool_128(coeffDw0, coeffDw1) })
 	return d128{ubdLo64: coeffDw0, ubdHi64: (qExpAndSignBit << 49) | coeffDw1}
 }
 
@@ -176,7 +176,7 @@ func d128_nan_64x64(sign, signaling bool, payloadDw0, payloadDw1 int64) d128 {
 	payloadHi2 := ushr_64_64(payloadHi46, 44)
 	payloadMid44 := payloadHi46 & ((1 << 44) - 1)
 	payloadMid44Biased := d128NonFiniteBias + payloadMid44
-	verify("", payloadMid44Biased < (1<<49))
+	verify("", func() bool { return payloadMid44Biased < (1 << 49) })
 	signBit := boolToInt64(sign) << 49
 	payloadQBits := payloadHi2 << 50
 	snanBit := boolToInt64(signaling) << 58
@@ -197,7 +197,7 @@ func d128_nanPayload(x d128) u128 {
 	}
 	ubdHi := x.ubdHi64
 	payloadMid44Biased := ubdHi & ((1 << 49) - 1)
-	verify("", payloadMid44Biased >= d128NonFiniteBias)
+	verify("", func() bool { return payloadMid44Biased >= d128NonFiniteBias })
 	payloadMid44 := payloadMid44Biased - d128NonFiniteBias
 	payloadHi2 := ushr_64_64(ubdHi, 50) & 0x03
 	payloadHi46 := (payloadHi2 << 44) | payloadMid44
@@ -205,7 +205,7 @@ func d128_nanPayload(x d128) u128 {
 }
 
 func d128_quieted(x d128) d128 {
-	verify("", d128_isNAN(x))
+	verify("", func() bool { return d128_isNAN(x) })
 	return d128{ubdLo64: x.ubdLo64, ubdHi64: x.ubdHi64 &^ (int64(1) << 58)}
 }
 
@@ -217,15 +217,15 @@ func d128_zero(sign bool, qExp int) d128 {
 }
 
 func decimalFNZ_128(sign bool, qExp int, coeffDw0, coeffDw1 int64) d128 {
-	verify("", qExp >= -6176 && qExp <= 6111)
-	verify("", !isZero_bool_128(coeffDw0, coeffDw1))
+	verify("", func() bool { return qExp >= -6176 && qExp <= 6111 })
+	verify("", func() bool { return !isZero_bool_128(coeffDw0, coeffDw1) })
 	return d128Pack(sign, qExp, coeffDw0, coeffDw1)
 }
 
 func decimalFNZ_64x64(sign bool, qExp int, dw0, dw1 int64) d128 {
-	verify("", qExp >= -6176 && qExp <= 6111)
-	verify("", !isZero_bool_128(dw0, dw1))
-	verify("", isLt_pow10_34_bool_128(dw0, dw1))
+	verify("", func() bool { return qExp >= -6176 && qExp <= 6111 })
+	verify("", func() bool { return !isZero_bool_128(dw0, dw1) })
+	verify("", func() bool { return isLt_pow10_34_bool_128(dw0, dw1) })
 	qExpAndSignBit := (int64(qExp) << 50) | (boolToInt64(sign) << 49)
 	return d128{ubdLo64: dw0, ubdHi64: qExpAndSignBit | dw1}
 }

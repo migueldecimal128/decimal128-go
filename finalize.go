@@ -25,8 +25,8 @@ func finalize_128_ctxnull(sign bool, qExpIn int, coeffIn u128, residueIn residue
 // finalizeAddSubFnz_128_ctxnull — narrowed contract: qExp >= -6176 and coeff < 10^35.
 // Skips the underflow diversion and full digit-length scan.
 func finalizeAddSubFnz_128_ctxnull(sign bool, qExpIn int, coeffIn u128, residueIn residue, rounding round, ctxnull *context) d128 {
-	verify("", qExpIn >= -6176)
-	verify("", cmp_int_128x128_pow10(coeffIn.dw0, coeffIn.dw1, 35) < 0)
+	verify("", func() bool { return qExpIn >= -6176 })
+	verify("", func() bool { return cmp_int_128x128_pow10(coeffIn.dw0, coeffIn.dw1, 35) < 0 })
 	if isZero_bool_128(coeffIn.dw0, coeffIn.dw1) {
 		return finalizeZero_ctxnull(sign, qExpIn, residueIn, rounding, ctxnull)
 	}
@@ -47,10 +47,10 @@ func finalizeAddSubFnz_128_ctxnull(sign bool, qExpIn int, coeffIn u128, residueI
 // finalizeSwampedFnz_128_ctxnull — narrower still: coeff != 0, coeff < 10^34,
 // qExp in [-6176, 6111], residue != EXACT. Round, pack, signal inexact.
 func finalizeSwampedFnz_128_ctxnull(sign bool, qExpIn int, coeffIn u128, residueIn residue, rounding round, ctxnull *context) d128 {
-	verify("", qExpIn >= -6176 && qExpIn <= 6111)
-	verify("", !isZero_bool_128(coeffIn.dw0, coeffIn.dw1))
-	verify("", cmp_int_128x128_pow10(coeffIn.dw0, coeffIn.dw1, 34) < 0)
-	verify("", residueIn != RESIDUE_EXACT)
+	verify("", func() bool { return qExpIn >= -6176 && qExpIn <= 6111 })
+	verify("", func() bool { return !isZero_bool_128(coeffIn.dw0, coeffIn.dw1) })
+	verify("", func() bool { return cmp_int_128x128_pow10(coeffIn.dw0, coeffIn.dw1, 34) < 0 })
+	verify("", func() bool { return residueIn != RESIDUE_EXACT })
 	coeff0 := coeffIn.dw0
 	coeff1 := coeffIn.dw1
 	qExp := qExpIn
@@ -107,14 +107,14 @@ func finalize_128_nonTrivial_ctxnull(sign bool, qExpIn int, coeffIn u128, residu
 		coeff1 = qr.quotDw1
 		totalResidue = residueMerge(qr.residue, totalResidue)
 		qExp += precisionTruncationNeeded
-		verify("", digitLen_int_128(coeff0, coeff1) == 34)
+		verify("", func() bool { return digitLen_int_128(coeff0, coeff1) == 34 })
 	}
-	verify("", digitLen_int_128(coeff0, coeff1) <= 34)
+	verify("", func() bool { return digitLen_int_128(coeff0, coeff1) <= 34 })
 	return roundAndPack_128_ctxnull(sign, qExp, coeff0, coeff1, totalResidue, rounding, ctxnull)
 }
 
 func finalizeZero_ctxnull(sign bool, qExp int, res residue, rounding round, ctxnull *context) d128 {
-	verify("", qExp <= 6111)
+	verify("", func() bool { return qExp <= 6111 })
 	var z d128
 	isOdd := false
 	if res != RESIDUE_EXACT && needsRoundUp(rounding, sign, isOdd, res) {
@@ -145,7 +145,7 @@ func finalizeOverflow_ctxnull(sign bool, rounding round, ctxnull *context) d128 
 }
 
 func finalizeUnderflowRegion_128_ctxnull(sign bool, qExp int, coeff u128, res residue, rounding round, ctxnull *context) d128 {
-	verify("", qExp < -6176)
+	verify("", func() bool { return qExp < -6176 })
 	truncationNeeded := -6176 - qExp
 	digitLen := digitLen_int_128(coeff.dw0, coeff.dw1)
 	if truncationNeeded > digitLen {
@@ -156,14 +156,14 @@ func finalizeUnderflowRegion_128_ctxnull(sign bool, qExp int, coeff u128, res re
 		totalResidue := residueMerge(scaleResidue, res)
 		return finalizeUnderflowExactBoundary_ctxnull(sign, totalResidue, rounding, ctxnull)
 	}
-	verify("", truncationNeeded > 0 && truncationNeeded < digitLen)
+	verify("", func() bool { return truncationNeeded > 0 && truncationNeeded < digitLen })
 	qr := div_128_pow10_q128res(coeff, truncationNeeded)
 	totalResidue := residueMerge(qr.residue, res)
 	return finalizeSubnormal_ctxnull(sign, qr.quotDw0, qr.quotDw1, totalResidue, rounding, ctxnull)
 }
 
 func finalizeUnderflowRegion_256_ctxnull(sign bool, qExp int, u256In u256, res residue, rounding round, ctxnull *context) d128 {
-	verify("", qExp < -6176)
+	verify("", func() bool { return qExp < -6176 })
 	truncationNeeded := -6176 - qExp
 	digitLen := digitLen_int_256(u256In.dw0, u256In.dw1, u256In.dw2, u256In.dw3)
 	if truncationNeeded > digitLen {
@@ -174,7 +174,7 @@ func finalizeUnderflowRegion_256_ctxnull(sign bool, qExp int, u256In u256, res r
 		totalResidue := residueMerge(scaleResidue, res)
 		return finalizeUnderflowExactBoundary_ctxnull(sign, totalResidue, rounding, ctxnull)
 	}
-	verify("", truncationNeeded > 0 && truncationNeeded < digitLen)
+	verify("", func() bool { return truncationNeeded > 0 && truncationNeeded < digitLen })
 	qr := div_256_pow10_q128res(u256In, truncationNeeded)
 	totalResidue := residueMerge(qr.residue, res)
 	return finalizeSubnormal_ctxnull(sign, qr.quotDw0, qr.quotDw1, totalResidue, rounding, ctxnull)
@@ -208,7 +208,7 @@ func finalizeUnderflowExactBoundary_ctxnull(sign bool, res residue, rounding rou
 }
 
 func finalizeSubnormal_ctxnull(sign bool, coeffDw0, coeffDw1 int64, res residue, rounding round, ctxnull *context) d128 {
-	verify("", digitLen_int_128(coeffDw0, coeffDw1) <= 34)
+	verify("", func() bool { return digitLen_int_128(coeffDw0, coeffDw1) <= 34 })
 	coeffT0 := coeffDw0
 	coeffT1 := coeffDw1
 	qExpT := -6176
@@ -217,7 +217,7 @@ func finalizeSubnormal_ctxnull(sign bool, coeffDw0, coeffDw1 int64, res residue,
 		rounded := add_128_128x128(coeffT0, coeffT1, 1, 0)
 		coeffT0 = rounded.dw0
 		coeffT1 = rounded.dw1
-		verify("", cmp_int_128x128_pow10(coeffT0, coeffT1, 34) <= 0)
+		verify("", func() bool { return cmp_int_128x128_pow10(coeffT0, coeffT1, 34) <= 0 })
 		if cmp_int_128x128_pow10(coeffT0, coeffT1, 34) == 0 {
 			coeffT0 = pow10_128_dw0(33)
 			coeffT1 = pow10_128_dw1(33)
@@ -235,7 +235,7 @@ func roundAndPack_128_ctxnull(sign bool, qExpIn int, coeffDw0, coeffDw1 int64, t
 	qExp := qExpIn
 	coeff0 := coeffDw0
 	coeff1 := coeffDw1
-	verify("", digitLen_int_128(coeff0, coeff1) <= 34)
+	verify("", func() bool { return digitLen_int_128(coeff0, coeff1) <= 34 })
 	applyRounding := totalResidue != RESIDUE_EXACT
 	isOdd := (coeff0 & 1) != 0
 	if applyRounding && needsRoundUp(rounding, sign, isOdd, totalResidue) {
@@ -248,8 +248,8 @@ func roundAndPack_128_ctxnull(sign bool, qExpIn int, coeffDw0, coeffDw1 int64, t
 			qExp += 1
 		}
 	}
-	verify("", qExp >= -6176)
-	verify("", digitLen_int_128(coeff0, coeff1) <= 34)
+	verify("", func() bool { return qExp >= -6176 })
+	verify("", func() bool { return digitLen_int_128(coeff0, coeff1) <= 34 })
 	if qExp > 6111 {
 		qExcess := qExp - 6111
 		if digitLen_int_128(coeff0, coeff1)+qExcess <= 34 {
@@ -270,9 +270,9 @@ func isCanonical34_128(qExp int, coeff u128) bool {
 
 func finalizeClamping_128(sign bool, coeffDw0, coeffDw1 int64, qExp int) d128 {
 	qExcess := qExp - 6111
-	verify("", qExcess > 0 && qExcess <= 34-digitLen_int_128(coeffDw0, coeffDw1))
+	verify("", func() bool { return qExcess > 0 && qExcess <= 34-digitLen_int_128(coeffDw0, coeffDw1) })
 	coeffScaled := mulPow10_128_128(coeffDw0, coeffDw1, qExcess)
-	verify("", digitLen_int_128(coeffScaled.dw0, coeffScaled.dw1) <= 34)
+	verify("", func() bool { return digitLen_int_128(coeffScaled.dw0, coeffScaled.dw1) <= 34 })
 	return decimalFNZ_64x64(sign, 6111, coeffScaled.dw0, coeffScaled.dw1)
 }
 
@@ -284,22 +284,22 @@ func finalize_256_ctxnull(sign bool, qExpIn int, u256In u256, residueIn residue,
 }
 
 func finalizeFullWidth_256_ctxnull(sign bool, qExpIn int, u256In u256, residueIn residue, rounding round, ctxnull *context) d128 {
-	verify("", !isZero_bool_128(u256In.dw2, u256In.dw3))
+	verify("", func() bool { return !isZero_bool_128(u256In.dw2, u256In.dw3) })
 	rangeTruncationNeeded := -6176 - qExpIn
 	precisionTruncationNeeded := max(digitLen_int_256(u256In.dw0, u256In.dw1, u256In.dw2, u256In.dw3)-34, 0)
 	if rangeTruncationNeeded > precisionTruncationNeeded {
 		return finalizeUnderflowRegion_256_ctxnull(sign, qExpIn, u256In, residueIn, rounding, ctxnull)
 	}
-	verify("", precisionTruncationNeeded >= 5)
+	verify("", func() bool { return precisionTruncationNeeded >= 5 })
 	qr := div_256_pow10_q128res(u256In, precisionTruncationNeeded)
 	totalResidue := residueMerge(qr.residue, residueIn)
 	qExp := qExpIn + precisionTruncationNeeded
-	verify("", digitLen_int_128(qr.quotDw0, qr.quotDw1) == 34)
+	verify("", func() bool { return digitLen_int_128(qr.quotDw0, qr.quotDw1) == 34 })
 	return roundAndPack_128_ctxnull(sign, qExp, qr.quotDw0, qr.quotDw1, totalResidue, rounding, ctxnull)
 }
 
 func finalizeZero_quiet(sign bool, qExp int, res residue) d128 {
-	verify("", qExp <= 6111)
+	verify("", func() bool { return qExp <= 6111 })
 	if res != RESIDUE_GT_HALF {
 		return d128_zero(sign, qExp)
 	}

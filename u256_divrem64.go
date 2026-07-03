@@ -51,7 +51,7 @@ func divRem256by64(xDw0, xDw1, xDw2, xDw3, y int64) quot256Rem64 {
 	x0, x1 := uint64(xDw0), uint64(xDw1)
 	x2, x3 := uint64(xDw2), uint64(xDw3)
 	d0 := uint64(y)
-	verify("", (d0>>32) != 0)
+	verify("", func() bool { return (d0 >> 32) != 0 })
 
 	shift := bits.LeadingZeros64(d0) // 0..31
 	dn := d0
@@ -97,7 +97,7 @@ func divRem32(x u256, y0 uint64) quot256Rem64 {
 	if y0>>16 == 0 {
 		return divRem16(x, y0)
 	}
-	verify("", y0>>32 == 0)
+	verify("", func() bool { return y0>>32 == 0 })
 	bitLen := x.bitLen()
 	if bitLen <= 64 {
 		return divMod64x32(uint64(x.dw0), y0)
@@ -129,14 +129,14 @@ func divRem16(x u256, y0 uint64) quot256Rem64 {
 // --- x32 kernels (32-bit chunking) ---
 
 func divMod64x32(x0, y0 uint64) quot256Rem64 {
-	verify("", y0>>32 == 0)
+	verify("", func() bool { return y0>>32 == 0 })
 	q0 := x0 / y0
 	r := x0 - q0*y0
 	return quot256Rem64{int64(q0), 0, 0, 0, int64(r)}
 }
 
 func divMod128x32(x1, x0, y0 uint64) quot256Rem64 {
-	verify("", y0>>32 == 0)
+	verify("", func() bool { return y0>>32 == 0 })
 	q1 := x1 / y0
 	rem := x1 - q1*y0
 	d1 := (rem << 32) | (x0 >> 32)
@@ -150,7 +150,7 @@ func divMod128x32(x1, x0, y0 uint64) quot256Rem64 {
 }
 
 func divMod192x32(x2, x1, x0, y0 uint64) quot256Rem64 {
-	verify("", y0>>32 == 0)
+	verify("", func() bool { return y0>>32 == 0 })
 	q2 := x2 / y0
 	rem := x2 - q2*y0
 	d3 := (rem << 32) | (x1 >> 32)
@@ -171,7 +171,7 @@ func divMod192x32(x2, x1, x0, y0 uint64) quot256Rem64 {
 }
 
 func divMod256x32(x3, x2, x1, x0, y0 uint64) quot256Rem64 {
-	verify("", y0>>32 == 0)
+	verify("", func() bool { return y0>>32 == 0 })
 	q3 := x3 / y0
 	rem := x3 - q3*y0
 	d5 := (rem << 32) | (x2 >> 32)
@@ -201,7 +201,7 @@ func divMod256x32(x3, x2, x1, x0, y0 uint64) quot256Rem64 {
 // --- x16 kernels (48-bit chunking) ---
 
 func divMod128x16(x1, x0, y0 uint64) quot256Rem64 {
-	verify("", y0>>16 == 0)
+	verify("", func() bool { return y0>>16 == 0 })
 	q1 := x1 / y0
 	rem := x1 - q1*y0
 	d1 := (rem << 32) | (x0 >> 32)
@@ -215,7 +215,7 @@ func divMod128x16(x1, x0, y0 uint64) quot256Rem64 {
 }
 
 func divMod192x16(x2, x1, x0, y0 uint64) quot256Rem64 {
-	verify("", y0>>16 == 0)
+	verify("", func() bool { return y0>>16 == 0 })
 	q2 := x2 / y0
 	rem := x2 - q2*y0
 	d2 := (rem << 48) | (x1 >> 16)
@@ -233,7 +233,7 @@ func divMod192x16(x2, x1, x0, y0 uint64) quot256Rem64 {
 }
 
 func divMod256x16(x3, x2, x1, x0, y0 uint64) quot256Rem64 {
-	verify("", y0>>16 == 0)
+	verify("", func() bool { return y0>>16 == 0 })
 	q3 := x3 / y0
 	rem := x3 - q3*y0
 	d3 := (rem << 48) | (x2 >> 16)

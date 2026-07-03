@@ -32,8 +32,8 @@ var barrettPow5Mu = [14]uint64{
 
 // divPow10_q128r64_128_barrett computes x / 10^pow10 with exact remainder.
 func divPow10_q128r64_128_barrett(xDw0, xDw1 int64, pow10 int) quot128Rem64 {
-	verify("", pow10 >= 1)
-	verify("", pow10 <= barrettPow10Max)
+	verify("", func() bool { return pow10 >= 1 })
+	verify("", func() bool { return pow10 <= barrettPow10Max })
 	loBits := uint64(xDw0) & ((uint64(1) << uint(pow10)) - 1)
 	xShifted := shr_128_128(xDw0, xDw1, pow10)
 	qr := barrett_128_pow5_q128r64(xShifted.dw0, xShifted.dw1, pow10)
@@ -43,7 +43,7 @@ func divPow10_q128r64_128_barrett(xDw0, xDw1 int64, pow10 int) quot128Rem64 {
 }
 
 func barrett_128_pow5_q128r64(xDw0, xDw1 int64, pow5 int) quot128Rem64 {
-	verify("", pow5 >= 1 && pow5 <= barrettPow10Max)
+	verify("", func() bool { return pow5 >= 1 && pow5 <= barrettPow10Max })
 	denom := pow5_64(pow5)
 	mu := int64(barrettPow5Mu[pow5])
 	return barrett_128_32_mu_q128r64(xDw0, xDw1, denom, mu)
@@ -85,7 +85,7 @@ func divPow10_q256res_256_barrett(xDw0, xDw1, xDw2, xDw3 int64, pow10 int) quot2
 // --- 256-bit entry, width dispatch, and chunk ladder ---
 
 func divPow10_q256r64_256_barrett(xDw0, xDw1, xDw2, xDw3 int64, pow10 int) quot256Rem64 {
-	verify("", pow10 >= 1 && pow10 <= barrettPow10Max)
+	verify("", func() bool { return pow10 >= 1 && pow10 <= barrettPow10Max })
 	loBits := xDw0 & ((int64(1) << uint(pow10)) - 1)
 	xShifted := shr_256_256(xDw0, xDw1, xDw2, xDw3, pow10)
 	qr := barrett_256_pow5_q256r64(xShifted, pow10)
@@ -94,7 +94,7 @@ func divPow10_q256r64_256_barrett(xDw0, xDw1, xDw2, xDw3 int64, pow10 int) quot2
 }
 
 func barrett_256_pow5_q256r64(x u256, pow5 int) quot256Rem64 {
-	verify("", pow5 >= 1 && pow5 <= barrettPow10Max)
+	verify("", func() bool { return pow5 >= 1 && pow5 <= barrettPow10Max })
 	denom := pow5_64(pow5)
 	mu := int64(barrettPow5Mu[pow5])
 	xBitLen := bitLen_int_256(x.dw0, x.dw1, x.dw2, x.dw3)

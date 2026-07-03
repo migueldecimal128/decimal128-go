@@ -29,7 +29,7 @@ func readByte(p unsafe.Pointer, off int) byte {
 }
 
 func uIntToASCII(digitPrintCount, u int, ascii unsafe.Pointer, off int) {
-	verify("", u >= 0)
+	verify("", func() bool { return u >= 0 })
 	u64ToASCII(digitPrintCount, int64(u), ascii, off)
 }
 

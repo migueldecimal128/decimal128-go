@@ -91,7 +91,7 @@ func ctxSignalInvalidOperationResult(ctxnull *context, cause invalidCause, resul
 
 // ctxSignalSNanOperandFound_ctxnull quiets an sNaN operand and raises invalidOperation.
 func ctxSignalSNanOperandFound_ctxnull(ctxnull *context, nan d128) d128 {
-	verify("", d128_isNAN(nan))
+	verify("", func() bool { return d128_isNAN(nan) })
 	quietedNaN := nan
 	if d128_isSNAN(nan) {
 		quietedNaN = d128_quieted(nan)
@@ -105,13 +105,13 @@ func ctxSignalSNanOperandFound_ctxnull(ctxnull *context, nan d128) d128 {
 // ctxNanOperand2_ctxnull selects and propagates the NaN of a two-operand op (sNaN takes
 // precedence; raises invalidOperation if any operand was signaling).
 func ctxNanOperand2_ctxnull(ctxnull *context, x, y d128) d128 {
-	verify("", d128_isNAN(x) || d128_isNAN(y))
+	verify("", func() bool { return d128_isNAN(x) || d128_isNAN(y) })
 	takeY := !d128_isNAN(x) || (d128_isSNAN(y) && !d128_isSNAN(x))
 	theNaN := x
 	if takeY {
 		theNaN = y
 	}
-	verify("", d128_isNAN(theNaN))
+	verify("", func() bool { return d128_isNAN(theNaN) })
 	isSignaling := d128_isSNAN(x) || d128_isSNAN(y)
 	if !isSignaling {
 		return theNaN
@@ -121,7 +121,7 @@ func ctxNanOperand2_ctxnull(ctxnull *context, x, y d128) d128 {
 
 // ctxNanOperand1_ctxnull propagates a single NaN operand (quieting an sNaN with a signal).
 func ctxNanOperand1_ctxnull(ctxnull *context, x d128) d128 {
-	verify("", d128_isNAN(x))
+	verify("", func() bool { return d128_isNAN(x) })
 	if d128_isQNAN(x) {
 		return x
 	}

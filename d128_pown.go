@@ -31,7 +31,7 @@ func d128_pown_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d128
 		}
 		return ctxNanOperand1_ctxnull(ctxnull, x)
 	}
-	verify("", d128_isINF(x))
+	verify("", func() bool { return d128_isINF(x) })
 	return pownINF(x, n)
 }
 
@@ -115,7 +115,7 @@ func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 }
 
 func pownFNZ_powGE3(x d128, n int, rounding round, ctxnull *context) d128 {
-	verify("", n >= 3)
+	verify("", func() bool { return n >= 3 })
 	resultSign := d128_signFlag(x) && (n&1) != 0
 	estimatedResultExp := int64(d128_sciExp(x)) * int64(n)
 	if estimatedResultExp > 6200 {

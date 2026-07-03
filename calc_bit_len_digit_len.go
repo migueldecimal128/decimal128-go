@@ -8,12 +8,12 @@ package decimal128
 import "math/bits"
 
 func calcBitLenInt(x int) int {
-	verify("", x >= 0)
+	verify("", func() bool { return x >= 0 })
 	return bits.UintSize - bits.LeadingZeros(uint(x))
 }
 
 func digitLen_int_32(x int) int {
-	verify("", x >= 0)
+	verify("", func() bool { return x >= 0 })
 	bitLen := calcBitLenInt(x)
 	x64 := uint64(int64(x))
 	return calcDigitLen64(bitLen, x64)

@@ -50,7 +50,7 @@ func addWide38(prodSign bool, prodQ int, prodCoeff u256, cSign bool, cQ int, cCo
 // down (its truncated tail ≤ half a ULP at qAlign, captured as residue).
 func addWide38LikeSign(sign bool, mQ int, mCoeff u256, nQ int, nCoeff u256) d38 {
 	qDelta := mQ - nQ
-	verify("", qDelta >= 0)
+	verify("", func() bool { return qDelta >= 0 })
 	mDigitLen := digitLen_int_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3)
 	headroom := max(0, 38-mDigitLen)
 	shiftLeft := min(qDelta, headroom)
@@ -61,7 +61,7 @@ func addWide38LikeSign(sign bool, mQ int, mCoeff u256, nQ int, nCoeff u256) d38 
 	}
 	qAlign := mQ - shiftLeft
 	gap := qAlign - nQ
-	verify("", gap >= 0)
+	verify("", func() bool { return gap >= 0 })
 
 	qr := div_256_pow10_checked_q256res(nCoeff, gap)
 	nAligned := u256{qr.quotDw0, qr.quotDw1, qr.quotDw2, qr.quotDw3}
@@ -75,7 +75,7 @@ func addWide38LikeSign(sign bool, mQ int, mCoeff u256, nQ int, nCoeff u256) d38 
 // when operands are far apart in magnitude, n's tail collapses into the residue.
 func addWide38UnlikeSign(mSign bool, mQ int, mCoeff u256, nSign bool, nQ int, nCoeff u256) d38 {
 	qDelta := mQ - nQ
-	verify("", qDelta >= 0)
+	verify("", func() bool { return qDelta >= 0 })
 	mDigitLen := digitLen_int_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3)
 	headroom := max(0, 77-mDigitLen)
 	shiftLeft := min(qDelta, headroom)
@@ -86,7 +86,7 @@ func addWide38UnlikeSign(mSign bool, mQ int, mCoeff u256, nSign bool, nQ int, nC
 	}
 	qAlign := mQ - shiftLeft
 	gap := qAlign - nQ
-	verify("", gap >= 0)
+	verify("", func() bool { return gap >= 0 })
 
 	qr := div_256_pow10_checked_q256res(nCoeff, gap)
 	nAligned := u256{qr.quotDw0, qr.quotDw1, qr.quotDw2, qr.quotDw3}

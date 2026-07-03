@@ -32,7 +32,7 @@ func mul_128_128x128(xDw0, xDw1, yDw0, yDw1 int64) u128 {
 }
 
 func shl_128_128(xDw0, xDw1 int64, n int) u128 {
-	verify("", n >= 0 && n < 128)
+	verify("", func() bool { return n >= 0 && n < 128 })
 	lo := uint64(xDw0)
 	hi := uint64(xDw1)
 	if n == 0 {
@@ -48,7 +48,7 @@ func shl_128_128(xDw0, xDw1 int64, n int) u128 {
 }
 
 func shr_128_128(xDw0, xDw1 int64, n int) u128 {
-	verify("", n >= 0 && n < 128)
+	verify("", func() bool { return n >= 0 && n < 128 })
 	lo := uint64(xDw0)
 	hi := uint64(xDw1)
 	if n == 0 {

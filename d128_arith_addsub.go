@@ -114,8 +114,8 @@ func d128_subtract_ctx(x, y d128, ctx *context) d128 {
 func addFnzFnzUnalignedLikeSign_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	xQ := d128_qExp(x)
 	yQ := d128_qExp(y)
-	verify("", xQ != yQ)
-	verify("", d128_signFlag(x) == d128_signFlag(y))
+	verify("", func() bool { return xQ != yQ })
+	verify("", func() bool { return d128_signFlag(x) == d128_signFlag(y) })
 
 	var m, n d128
 	var mQ, nQ int
@@ -130,7 +130,7 @@ func addFnzFnzUnalignedLikeSign_rnd_ctxnull(x, y d128, rounding round, ctxnull *
 	}
 	mDigitLen := d128_digitLen(m)
 	qDelta := mQ - nQ
-	verify("", qDelta > 0)
+	verify("", func() bool { return qDelta > 0 })
 	headroom := 34 - mDigitLen
 	shiftLeft := min(max(headroom, 0), qDelta)
 	var zCoeff u128
@@ -152,8 +152,8 @@ func addFnzFnzUnalignedLikeSign_rnd_ctxnull(x, y d128, rounding round, ctxnull *
 }
 
 func addFnzFnzUnalignedUnlikeSign_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
-	verify("", d128_qExp(x) != d128_qExp(y))
-	verify("", d128_signFlag(x) != d128_signFlag(y))
+	verify("", func() bool { return d128_qExp(x) != d128_qExp(y) })
+	verify("", func() bool { return d128_signFlag(x) != d128_signFlag(y) })
 	cmp := cmpMagFnzFnz(x, y)
 	if cmp > 0 {
 		return subMagUnalignedFnzFnz_rnd_ctxnull(d128_signFlag(x), x, y, rounding, ctxnull)
@@ -168,7 +168,7 @@ func addNonFinite_rnd_ctxnull(x, y d128, ctxnull *context) d128 {
 	if d128_isNAN(x) || d128_isNAN(y) {
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
-	verify("", d128_isINF(x) || d128_isINF(y))
+	verify("", func() bool { return d128_isINF(x) || d128_isINF(y) })
 	if d128_isFIN(x) {
 		return y
 	}
@@ -202,14 +202,14 @@ func preferMinimumQExp_exact(x d128, otherExp int) d128 {
 		zCoeff = mulPow10_128_128(xCoeff.dw0, xCoeff.dw1, shiftLeft)
 	}
 	zQ := xQ - shiftLeft
-	verify("", isCanonical34_128(zQ, zCoeff))
+	verify("", func() bool { return isCanonical34_128(zQ, zCoeff) })
 	return d128Pack(xSign, zQ, zCoeff.dw0, zCoeff.dw1)
 }
 
 func subMagUnalignedFnzFnz_rnd_ctxnull(zSign bool, m, s d128, rounding round, ctxnull *context) d128 {
-	verify("", d128_isFNZ(m) && d128_isFNZ(s))
-	verify("", d128_qExp(m) != d128_qExp(s))
-	verify("", cmpMagFnzFnz(m, s) > 0)
+	verify("", func() bool { return d128_isFNZ(m) && d128_isFNZ(s) })
+	verify("", func() bool { return d128_qExp(m) != d128_qExp(s) })
+	verify("", func() bool { return cmpMagFnzFnz(m, s) > 0 })
 	mQ := d128_qExp(m)
 	mCoeff := d128_u128(m)
 	mDigitLen := digitLen_int_128(mCoeff.dw0, mCoeff.dw1)
@@ -222,7 +222,7 @@ func subMagUnalignedFnzFnz_rnd_ctxnull(zSign bool, m, s d128, rounding round, ct
 		diff := sub_128_128x128(mCoeff.dw0, mCoeff.dw1, prod.dw0, prod.dw1)
 		return finalize_128_ctxnull(zSign, mQ, diff, RESIDUE_EXACT, rounding, ctxnull)
 	}
-	verify("", mDigitLen <= 34)
+	verify("", func() bool { return mDigitLen <= 34 })
 
 	// Fully/Borderline swamped fast path at 34-digit scale.
 	headroom := 34 - mDigitLen
@@ -257,7 +257,7 @@ func subMagUnalignedFnzFnz_rnd_ctxnull(zSign bool, m, s d128, rounding round, ct
 	shiftMLeft := min(gap, headroomWithGuard)
 	qAlign := mQ - shiftMLeft
 	shiftSRight := qAlign - sQ
-	verify("", shiftSRight >= 0)
+	verify("", func() bool { return shiftSRight >= 0 })
 
 	zCoeff := mulPow10_128_128(mCoeff.dw0, mCoeff.dw1, shiftMLeft)
 	if sDigitLen == -1 {

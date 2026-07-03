@@ -29,7 +29,7 @@ func u256DivRem_128(x u256, y u128) quot128Rem128 {
 		return div_256_128_q128r128_mg(x, y)
 	}
 	qr := u256DivRem128(x, y)
-	verify("", (qr.quotDw2|qr.quotDw3) == 0)
+	verify("", func() bool { return (qr.quotDw2 | qr.quotDw3) == 0 })
 	return quot128Rem128{qr.quotDw0, qr.quotDw1, qr.remDw0, qr.remDw1}
 }
 
@@ -42,7 +42,7 @@ func u256DivResidue_128(x u256, y u128) quot128Residue {
 // div_256_128_q128r128_mg: x > 2^128, y > 2^64, quotient <= 2^128. One reciprocal
 // build + two DIV3BY2 steps.
 func div_256_128_q128r128_mg(x u256, y u128) quot128Rem128 {
-	verify("", y.dw1 != 0)
+	verify("", func() bool { return y.dw1 != 0 })
 	shift := bits.LeadingZeros64(uint64(y.dw1)) // 0..63
 	d := y
 	if shift != 0 {
@@ -53,7 +53,7 @@ func div_256_128_q128r128_mg(x u256, y u128) quot128Rem128 {
 	v := vReciprocal_64_128_mg(int64(d1), int64(d0))
 
 	u0, u1, u2, u3, u4 := normalizeDividend(x, shift)
-	verify("quotient exceeds 128 bits", u4 == 0)
+	verify("quotient exceeds 128 bits", func() bool { return u4 == 0 })
 
 	remHi, remLo := u3, u2 // top 128 bits; < d (qh == 0)
 
@@ -71,7 +71,7 @@ func div_256_128_q128r128_mg(x u256, y u128) quot128Rem128 {
 
 // div_256_128_q256r128_mg: x > 2^128, y > 2^64, full quotient (sqrt / D38).
 func div_256_128_q256r128_mg(x u256, y u128) quot256Rem128 {
-	verify("", y.dw1 != 0)
+	verify("", func() bool { return y.dw1 != 0 })
 	shift := bits.LeadingZeros64(uint64(y.dw1))
 	d := y
 	if shift != 0 {
