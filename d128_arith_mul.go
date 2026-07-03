@@ -17,7 +17,10 @@ func d128_multiply_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 		return d128Pack(prodSignFlag, prodQExp, lo.dw0, lo.dw1)
 	}
 	if bothFinite(x, y) {
-		return mulFnzFnz_rnd_ctxnull(x, y, rounding, ctxnull)
+		// Reuse prod computed above: the finite×finite slow path is just
+		// "finalize the 256-bit product". Recomputing it in a mulFnzFnz helper
+		// would be a redundant 128×128→256 multiply on every full-width multiply.
+		return finalize_256_ctxnull(prodSignFlag, prodQExp, prod, RESIDUE_EXACT, rounding, ctxnull)
 	}
 	if d128_isNAN(x) || d128_isNAN(y) {
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
@@ -69,11 +72,4 @@ func d128_square_tte(x d128) d128 {
 func d128_square_rnd(x d128, rnd round) d128 { return d128_multiply_rnd_ctxnull(x, x, rnd, nil) }
 func d128_square_ctx(x d128, ctx *context) d128 {
 	return d128_multiply_rnd_ctxnull(x, x, ctx.round, ctx)
-}
-
-func mulFnzFnz_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
-	prod := mul_256_128x128(x.ubdLo64, d128_hi49(x), y.ubdLo64, d128_hi49(y))
-	prodSign := d128_signFlag(x) != d128_signFlag(y)
-	prodQExp := d128_qExp(x) + d128_qExp(y)
-	return finalize_256_ctxnull(prodSign, prodQExp, prod, RESIDUE_EXACT, rounding, ctxnull)
 }
