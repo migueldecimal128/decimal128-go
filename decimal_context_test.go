@@ -9,13 +9,13 @@ func TestContextFlagAccumulation(t *testing.T) {
 	}
 
 	// 1/3 is inexact.
-	ctx.Quo(FromInt(1), FromInt(3))
+	ctx.Quo(FromInt64(1), FromInt64(3))
 	if !ctx.RaisedFlags().Has(FlagInexact) {
 		t.Fatalf("expected Inexact, got %v", ctx.RaisedFlags())
 	}
 
 	// 1/0 raises divisionByZero (flags accumulate).
-	ctx.Quo(FromInt(1), Zero())
+	ctx.Quo(FromInt64(1), Zero())
 	if !ctx.RaisedFlags().Has(FlagDivisionByZero) {
 		t.Fatalf("expected DivisionByZero accumulated, got %v", ctx.RaisedFlags())
 	}
@@ -31,7 +31,7 @@ func TestContextFlagAccumulation(t *testing.T) {
 
 func TestContextExactNoFlags(t *testing.T) {
 	ctx := NewContext()
-	if got := ctx.Add(FromInt(2), FromInt(3)); got.String() != "5" {
+	if got := ctx.Add(FromInt64(2), FromInt64(3)); got.String() != "5" {
 		t.Fatalf("2+3 = %q", got)
 	}
 	if !ctx.RaisedFlags().IsEmpty() {
@@ -41,7 +41,7 @@ func TestContextExactNoFlags(t *testing.T) {
 
 func TestContextRounding(t *testing.T) {
 	ctx := NewContextWithRounding(TowardPositive)
-	if got := ctx.Quo(FromInt(1), FromInt(3)).String(); got != "0.3333333333333333333333333333333334" {
+	if got := ctx.Quo(FromInt64(1), FromInt64(3)).String(); got != "0.3333333333333333333333333333333334" {
 		t.Fatalf("TowardPositive 1/3 = %q", got)
 	}
 	// Changing rounding preserves accumulated flags.
@@ -55,7 +55,7 @@ func TestContextRounding(t *testing.T) {
 	if !ctx.RaisedFlags().Has(FlagInexact) {
 		t.Fatal("SetRounding should preserve accumulated flags")
 	}
-	if got := ctx.Quo(FromInt(1), FromInt(3)).String(); got != "0.3333333333333333333333333333333333" {
+	if got := ctx.Quo(FromInt64(1), FromInt64(3)).String(); got != "0.3333333333333333333333333333333333" {
 		t.Fatalf("TowardZero 1/3 = %q", got)
 	}
 }

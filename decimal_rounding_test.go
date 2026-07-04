@@ -29,7 +29,7 @@ func TestRoundingToIntegral(t *testing.T) {
 }
 
 func TestRoundingAdjacent(t *testing.T) {
-	one := FromInt(1)
+	one := FromInt64(1)
 	up := one.NextUp()
 	if !one.Less(up) {
 		t.Fatal("NextUp should be greater")

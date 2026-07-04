@@ -6,7 +6,7 @@ package decimal128
 
 import "math/bits"
 
-var d128RootnOne = d128_fromInt(1)
+var d128RootnOne = d128_fromInt64(1)
 
 func d128_rootn_tte(x d128, n int) d128            { return d128_rootn_rnd_ctxnull(x, n, TIES_TO_EVEN, nil) }
 func d128_rootn_rnd(x d128, n int, rnd round) d128 { return d128_rootn_rnd_ctxnull(x, n, rnd, nil) }
@@ -86,7 +86,7 @@ func rootnFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 
 	// General case: |x|^(1/n), with the sign restored for odd n.
 	absX := d128_abs(x)
-	nReciprocal := d128_divide_tte(d128RootnOne, d128_fromInt(n))
+	nReciprocal := d128_divide_tte(d128RootnOne, d128_fromInt64(n))
 	z := d128_pow_rnd_ctxnull(absX, nReciprocal, rounding, ctxnull)
 	if d128_signFlag(x) {
 		return d128_negate(z)

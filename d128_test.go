@@ -134,7 +134,7 @@ func TestD128SubnormalNormal(t *testing.T) {
 
 func TestD128FromInt(t *testing.T) {
 	for _, n := range []int{0, 1, -1, 42, -42, 1 << 40, -(1 << 40)} {
-		x := d128_fromInt(n)
+		x := d128_fromInt64(n)
 		absBig := big.NewInt(int64(n))
 		absBig.Abs(absBig)
 		if bigU128(d128_u128(x)).Cmp(absBig) != 0 {

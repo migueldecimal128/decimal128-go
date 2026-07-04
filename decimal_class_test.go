@@ -12,7 +12,7 @@ func TestClass(t *testing.T) {
 		{Inf(-1), ClassNegativeInfinity},
 		{Inf(1), ClassPositiveInfinity},
 		{MustParse("-1"), ClassNegativeNormal},
-		{FromInt(1), ClassPositiveNormal},
+		{FromInt64(1), ClassPositiveNormal},
 		{MustParse("1E-6176"), ClassPositiveSubnormal},
 		{MustParse("-1E-6176"), ClassNegativeSubnormal},
 		{Zero(), ClassPositiveZero},

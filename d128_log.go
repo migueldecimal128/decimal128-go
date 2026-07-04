@@ -42,7 +42,7 @@ func logDispatch(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 		}
 		if isLog10 && isExactPowerOf10(x) {
 			// log10(10^n) = n exactly — no rounding, no inexact flag.
-			return d128_fromInt(d128_sciExp(x))
+			return d128_fromInt64(d128_sciExp(x))
 		}
 		return logImplFNZ(x, isLog10, rounding, ctxnull)
 	}
@@ -111,8 +111,8 @@ func logMagnitudeD38(xd d38, isLog10 bool) d38 {
 	}
 	r := padeEval(zArg, pWeights, padeLogQWeights)
 	r = d38_multiply(r, zArg) // log(c'^(1/2^N)) ≈ z·P(z)/Q(z)
-	twoPowN := d38_fromInt(1 << sqrtCount)
-	eVal := d38_fromInt(eExp)
+	twoPowN := d38_fromInt32(1 << sqrtCount)
+	eVal := d38_fromInt32(eExp)
 
 	if isLog10 {
 		// log10(x) = 2^N·r + log10(k) + e

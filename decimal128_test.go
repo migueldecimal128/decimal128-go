@@ -71,14 +71,14 @@ func TestWrapperClassification(t *testing.T) {
 	if !Zero().IsZero() || !Zero().IsFinite() {
 		t.Fatal("zero classification")
 	}
-	if !FromInt(42).IsFinite() || FromInt(42).IsZero() {
-		t.Fatal("FromInt classification")
+	if !FromInt64(42).IsFinite() || FromInt64(42).IsZero() {
+		t.Fatal("FromInt64 classification")
 	}
 }
 
 func TestWrapperCompare(t *testing.T) {
-	one := FromInt(1)
-	two := FromInt(2)
+	one := FromInt64(1)
+	two := FromInt64(2)
 	if !one.Less(two) || two.Less(one) {
 		t.Fatal("Less")
 	}

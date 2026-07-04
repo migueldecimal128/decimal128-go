@@ -11,8 +11,8 @@ var D38_ONE = d38c(0, 0x1, 0) // 1
 // delivers ≥34 correct digits.
 var Z_THRESHOLD = d38c(-4, 0x2, 0) // 0.02
 
-// d38_fromInt builds a D38 from a signed integer (exact, qExp 0).
-func d38_fromInt(n int) d38 {
+// d38_fromInt32 builds a D38 from a signed integer (exact, qExp 0).
+func d38_fromInt32(n int) d38 {
 	return d38Pack(n < 0, 0, int64(uint64(absInt(n))), 0)
 }
 

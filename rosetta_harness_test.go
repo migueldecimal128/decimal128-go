@@ -561,8 +561,8 @@ func checkCompareCtx(c *rosettaCase, signaling bool) (outcome, string) {
 		if len(c.result) > 0 && (c.result[0] == '#' || c.result[0] == '[') {
 			// dqCanonical gives the result as a canonical encoding of the
 			// -1/0/1 code rather than its decimal text — compare bitwise.
-			got = d128_format(d128_fromInt(n), FORMAT_COEFFICIENT_QEXP)
-			match = d128_bitwiseEQ(d128_fromInt(n), decodeOperand(c.result))
+			got = d128_format(d128_fromInt64(n), FORMAT_COEFFICIENT_QEXP)
+			match = d128_bitwiseEQ(d128_fromInt64(n), decodeOperand(c.result))
 		} else {
 			got = strconv.Itoa(n)
 			match = got == c.result

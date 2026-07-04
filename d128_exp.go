@@ -34,7 +34,7 @@ func d128_exp10_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 func expDispatch(x d128, isExp10 bool, rounding round, ctxnull *context) d128 {
 	if d128_isFIN(x) {
 		if d128_isZER(x) {
-			return d128_fromInt(1) // exp(±0) = 1 exactly
+			return d128_fromInt64(1) // exp(±0) = 1 exactly
 		}
 		if isExp10 {
 			return exp10ImplFNZ(x, rounding, ctxnull)

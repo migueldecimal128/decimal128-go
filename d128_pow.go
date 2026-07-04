@@ -7,7 +7,7 @@ package decimal128
 
 import "math"
 
-var d128PowOne = d128_fromInt(1)
+var d128PowOne = d128_fromInt64(1)
 
 const (
 	qMaxPow  = 6111
@@ -33,9 +33,9 @@ func d128_pow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 		// |y| too large for pown: only a magnitude-1 base stays finite.
 		if d128_isFNZ(x) && cmpMagFnzFnz(x, d128PowOne) == 0 {
 			if d128_signFlag(x) && d128_isOddIntegral(y) {
-				return d128_fromInt(-1)
+				return d128_fromInt64(-1)
 			}
-			return d128_fromInt(1)
+			return d128_fromInt64(1)
 		}
 		// else fall through: a huge integer y overflows/underflows in the matrix.
 	}
@@ -44,7 +44,7 @@ func d128_pow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	if d128_isNAN(x) || d128_isNAN(y) {
 		// pow(1, qNaN) = 1 with no exception (§9.2).
 		if d128_isFNZ(x) && !d128_signFlag(x) && d128_isQNAN(y) && cmpMagFnzFnz(x, d128PowOne) == 0 {
-			return d128_fromInt(1)
+			return d128_fromInt64(1)
 		}
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
@@ -94,7 +94,7 @@ func powInfFnz(y d128) d128 {
 // powFnzInf: pow(x, ±∞), x finite non-zero or ±∞.
 func powFnzInf(x, y d128) d128 {
 	if d128_isFNZ(x) && cmpMagFnzFnz(x, d128PowOne) == 0 {
-		return d128_fromInt(1) // pow(±1, ±∞) = 1
+		return d128_fromInt64(1) // pow(±1, ±∞) = 1
 	}
 	xLessThanOne := d128_isFNZ(x) && d128_sciExp(x) < 0
 	yNeg := d128_signFlag(y)
@@ -137,7 +137,7 @@ func powPreferredQExp(x, y d128, yd d38) int {
 		}
 		return qMaxPow
 	}
-	prod := d38_multiply(yd, d38_fromInt(qX))
+	prod := d38_multiply(yd, d38_fromInt32(qX))
 	floored := d38_roundToIntegralTowardNegative(prod)
 	l := d38_toLongOrMin(floored)
 	return int(maxI64(minI64(l, qMaxPow), qTinyPow))

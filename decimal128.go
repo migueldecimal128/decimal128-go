@@ -21,9 +21,9 @@ type Decimal128 struct {
 
 // --- construction ---
 
-// FromInt returns the Decimal128 value exactly equal to n.
-func FromInt(n int) Decimal128 {
-	return Decimal128{d128_fromInt(n)}
+// FromInt64 returns the Decimal128 value exactly equal to n.
+func FromInt64(n int64) Decimal128 {
+	return Decimal128{d128_fromInt64(int(n))}
 }
 
 // Parse parses a decimal string (e.g. "3.14", "-1E+10", "Infinity", "NaN"),

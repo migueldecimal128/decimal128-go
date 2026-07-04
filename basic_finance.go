@@ -6,7 +6,7 @@
 
 package decimal128
 
-var finOne = d128_fromInt(1)
+var finOne = d128_fromInt64(1)
 var finZero = d128_zero(false, 0)
 var finHalfCent = decimalFNZ_64x64(false, -3, 5, 0) // 0.005
 
@@ -24,7 +24,7 @@ func d128_compoundInterest_tte(principal, rate d128, numPeriods int) d128 {
 
 // d128_effectiveAnnualRate_tte: (1 + nominalRate / timesPerYear)^timesPerYear − 1.
 func d128_effectiveAnnualRate_tte(nominalRate d128, timesPerYear int) d128 {
-	perPeriod := d128_divide_tte(nominalRate, d128_fromInt(timesPerYear))
+	perPeriod := d128_divide_tte(nominalRate, d128_fromInt64(timesPerYear))
 	return d128_subtract_tte(d128_compound_tte(perPeriod, timesPerYear), finOne)
 }
 
@@ -33,7 +33,7 @@ func d128_effectiveAnnualRate_tte(nominalRate d128, timesPerYear int) d128 {
 // d128_mortgagePayment_tte: PV × r × (1+r)^n / ((1+r)^n − 1). r = 0 → PV / n.
 func d128_mortgagePayment_tte(principal, periodicRate d128, numPayments int) d128 {
 	if d128_isZER(periodicRate) {
-		return d128_divide_tte(principal, d128_fromInt(numPayments))
+		return d128_divide_tte(principal, d128_fromInt64(numPayments))
 	}
 	factor := d128_compound_tte(periodicRate, numPayments) // (1+r)^n
 	num := d128_multiply_tte(d128_multiply_tte(principal, periodicRate), factor)
@@ -75,7 +75,7 @@ func d128_amortizationSchedule_tte(principal, periodicRate d128, numPayments int
 // d128_presentValueAnnuity_tte: PMT × (1 − (1+r)^−n) / r. r = 0 → PMT × n.
 func d128_presentValueAnnuity_tte(payment, periodicRate d128, numPeriods int) d128 {
 	if d128_isZER(periodicRate) {
-		return d128_multiply_tte(payment, d128_fromInt(numPeriods))
+		return d128_multiply_tte(payment, d128_fromInt64(numPeriods))
 	}
 	discount := d128_divide_tte(finOne, d128_compound_tte(periodicRate, numPeriods))
 	oneMinus := d128_subtract_tte(finOne, discount)
@@ -85,7 +85,7 @@ func d128_presentValueAnnuity_tte(payment, periodicRate d128, numPeriods int) d1
 // d128_futureValueAnnuity_tte: PMT × ((1+r)^n − 1) / r. r = 0 → PMT × n.
 func d128_futureValueAnnuity_tte(payment, periodicRate d128, numPeriods int) d128 {
 	if d128_isZER(periodicRate) {
-		return d128_multiply_tte(payment, d128_fromInt(numPeriods))
+		return d128_multiply_tte(payment, d128_fromInt64(numPeriods))
 	}
 	growth := d128_subtract_tte(d128_compound_tte(periodicRate, numPeriods), finOne)
 	return d128_divide_tte(d128_multiply_tte(payment, growth), periodicRate)
@@ -139,7 +139,7 @@ func d128_irr_tte(cashFlows []d128, guess, tolerance d128, maxIter int) d128 {
 			npvVal = d128_add_tte(npvVal, d128_divide_tte(cf, divisor))
 			if t > 0 {
 				// derivative term: −t · CF_t / (divisor · (1+r))
-				cfT := d128_multiply_tte(cf, d128_fromInt(t))
+				cfT := d128_multiply_tte(cf, d128_fromInt64(t))
 				denom := d128_multiply_tte(divisor, onePlusR)
 				npvDeriv = d128_subtract_tte(npvDeriv, d128_divide_tte(cfT, denom))
 			}

@@ -234,13 +234,13 @@ func d128_bitwiseEQ(x, y d128) bool {
 	return x.ubdLo64 == y.ubdLo64 && x.ubdHi64 == y.ubdHi64
 }
 
-func d128_fromInt(n int) d128 {
+func d128_fromInt64(n int) d128 {
 	mask := int64(n) >> 63
 	abs := (int64(n) ^ mask) - mask
 	signBit := mask & (1 << 49)
 	return d128{ubdLo64: abs, ubdHi64: signBit}
 }
 
-func d128_fromUInt(u uint) d128 {
+func d128_fromUInt64(u uint) d128 {
 	return d128{ubdLo64: int64(u), ubdHi64: 0}
 }

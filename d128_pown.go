@@ -6,8 +6,8 @@ package decimal128
 
 import "math/bits"
 
-var d128PownOne = d128_fromInt(1)
-var d128PownTen = d128_fromInt(10)
+var d128PownOne = d128_fromInt64(1)
+var d128PownTen = d128_fromInt64(10)
 
 // --- ladder ---
 
@@ -27,7 +27,7 @@ func d128_pown_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d128
 	if d128_isNAN(x) {
 		// pown(x, 0) is 1 unless x is a signaling NaN (§9.2).
 		if n == 0 && d128_isQNAN(x) {
-			return d128_fromInt(1)
+			return d128_fromInt64(1)
 		}
 		return ctxNanOperand1_ctxnull(ctxnull, x)
 	}
@@ -45,7 +45,7 @@ func pownINF(x d128, n int) d128 {
 	if n < 0 {
 		return d128_zero(resultSign, 0)
 	}
-	return d128_fromInt(1)
+	return d128_fromInt64(1)
 }
 
 func pownZER(x d128, n int, ctxnull *context) d128 {
@@ -59,14 +59,14 @@ func pownZER(x d128, n int, ctxnull *context) d128 {
 	if n < 0 {
 		return ctxSignalDivByZero_ctxnull(ctxnull, resultSign)
 	}
-	return d128_fromInt(1)
+	return d128_fromInt64(1)
 }
 
 // --- finite non-zero magnitude ---
 
 func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 	if n == 0 {
-		return d128_fromInt(1)
+		return d128_fromInt64(1)
 	}
 	if n == 1 {
 		return x

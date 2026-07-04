@@ -3,8 +3,8 @@ package decimal128
 import "testing"
 
 func TestComparisonNumeric(t *testing.T) {
-	one := FromInt(1)
-	two := FromInt(2)
+	one := FromInt64(1)
+	two := FromInt64(2)
 	if one.Compare(two) != CmpLess {
 		t.Fatal("1 cmp 2")
 	}
@@ -44,17 +44,17 @@ func TestComparisonTotalOrder(t *testing.T) {
 		t.Fatal("-0 < +0 in total order")
 	}
 	// NaN totalOrders above everything finite — never unordered.
-	if FromInt(1).TotalOrder(NaN()) != CmpLess {
+	if FromInt64(1).TotalOrder(NaN()) != CmpLess {
 		t.Fatal("finite < +NaN in total order")
 	}
-	if FromInt(1).TotalOrder(NaN()) == CmpUnordered {
+	if FromInt64(1).TotalOrder(NaN()) == CmpUnordered {
 		t.Fatal("total order must never be unordered")
 	}
 	// Magnitude order ignores sign: |-5| vs |3|.
-	if MustParse("-5").TotalOrderByMagnitude(FromInt(3)) != CmpGreater {
+	if MustParse("-5").TotalOrderByMagnitude(FromInt64(3)) != CmpGreater {
 		t.Fatal("|−5| > |3|")
 	}
-	if !MustParse("-3").IsTotallyOrderedByMagnitude(FromInt(5)) {
+	if !MustParse("-3").IsTotallyOrderedByMagnitude(FromInt64(5)) {
 		t.Fatal("|−3| ≤ |5|")
 	}
 }
@@ -62,14 +62,14 @@ func TestComparisonTotalOrder(t *testing.T) {
 func TestComparisonContextFlags(t *testing.T) {
 	ctx := NewContext()
 	// Quiet compare with a quiet NaN: unordered, no flag.
-	if ctx.Compare(FromInt(1), NaN()) != CmpUnordered {
+	if ctx.Compare(FromInt64(1), NaN()) != CmpUnordered {
 		t.Fatal("quiet compare NaN")
 	}
 	if !ctx.RaisedFlags().IsEmpty() {
 		t.Fatalf("quiet compare with qNaN should raise nothing, got %v", ctx.RaisedFlags())
 	}
 	// Signaling compare with a quiet NaN: unordered + InvalidOperation.
-	if ctx.CompareSignaling(FromInt(1), NaN()) != CmpUnordered {
+	if ctx.CompareSignaling(FromInt64(1), NaN()) != CmpUnordered {
 		t.Fatal("signaling compare NaN")
 	}
 	if !ctx.RaisedFlags().Has(FlagInvalidOperation) {

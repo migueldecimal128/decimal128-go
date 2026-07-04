@@ -35,7 +35,7 @@ func TestInterchangeRoundTrip(t *testing.T) {
 		}
 	}
 	// Canonical DPD encoding of 1 is 0x2208…0001.
-	hi, lo := FromInt(1).DPD()
+	hi, lo := FromInt64(1).DPD()
 	if hi != 0x2208000000000000 || lo != 0x0000000000000001 {
 		t.Errorf("DPD(1) = %#016x %#016x", hi, lo)
 	}
@@ -60,7 +60,7 @@ func TestToInt64(t *testing.T) {
 
 	// Context: exact integer raises nothing; fractional ToInt64Exact raises Inexact.
 	ctx := NewContext()
-	if got := ctx.ToInt64(FromInt(42)); got != 42 || !ctx.RaisedFlags().IsEmpty() {
+	if got := ctx.ToInt64(FromInt64(42)); got != 42 || !ctx.RaisedFlags().IsEmpty() {
 		t.Fatalf("ctx.ToInt64(42) = %d flags %v", got, ctx.RaisedFlags())
 	}
 	ctx.ToInt64Exact(MustParse("3.5"))

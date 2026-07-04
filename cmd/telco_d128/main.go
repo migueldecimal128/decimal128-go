@@ -95,7 +95,7 @@ func main() {
 		var outStr string
 		if calc {
 			calltype := int(duration & 0x01)
-			n := decimal128.FromInt(int(duration))
+			n := decimal128.FromInt64(int64(duration))
 			var rate decimal128.Decimal128
 			if calltype == 0 {
 				rate = baserate
