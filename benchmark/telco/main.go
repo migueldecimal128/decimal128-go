@@ -34,7 +34,7 @@ func main() {
 	_, thisFile, _, _ := runtime.Caller(0)
 	resourcesDir := filepath.Join(filepath.Dir(thisFile), "..", "..", "resources")
 	filein := filepath.Join(resourcesDir, "telco", "expon180.1e6b")
-	fileou := "telco.outgo"
+	fileou := filepath.Join(os.TempDir(), "benchmark", "telco", "out", "go", "telco.out")
 	calc := true
 	tax := true
 
@@ -64,6 +64,7 @@ func main() {
 
 	fmt.Printf("telco decimal128-go benchmark; processing '%s'\n", filein)
 
+	_ = os.MkdirAll(filepath.Dir(fileou), 0o755)
 	_ = os.Remove(fileou)
 
 	inp, err := os.Open(filein)
