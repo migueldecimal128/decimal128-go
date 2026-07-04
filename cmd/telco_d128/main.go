@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -27,7 +29,11 @@ func main() {
 	ctxHalfEven := decimal128.NewContext()
 	ctxTowardZero := decimal128.NewContextWithRounding(decimal128.TowardZero)
 
-	filein := "telco.testb"
+	// Default input: the 1e6 primary workload from the decimal128-resources
+	// submodule, resolved from this source file's location (cwd-independent).
+	_, thisFile, _, _ := runtime.Caller(0)
+	resourcesDir := filepath.Join(filepath.Dir(thisFile), "..", "..", "resources")
+	filein := filepath.Join(resourcesDir, "telco", "expon180.1e6b")
 	fileou := "telco.outgo"
 	calc := true
 	tax := true
