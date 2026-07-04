@@ -24,11 +24,11 @@ func decodeOperandWrapper(s string) Decimal128 {
 	if len(s) > 0 {
 		if s[0] == '#' {
 			if u, ok := dpd128ParseDecTestHex(s); ok {
-				return DecimalFromDPD(uint64(u.dw1), uint64(u.dw0))
+				return FromDPD128(uint64(u.dw1), uint64(u.dw0))
 			}
 		} else if s[0] == '[' {
 			if u, ok := bid128ParseIntelHex(s); ok {
-				return DecimalFromBID(uint64(u.dw1), uint64(u.dw0))
+				return FromBID128(uint64(u.dw1), uint64(u.dw0))
 			}
 		}
 	}
@@ -37,8 +37,8 @@ func decodeOperandWrapper(s string) Decimal128 {
 
 // dpdEqual reports bitwise equality via the canonical DPD interchange pattern.
 func dpdEqual(a, b Decimal128) bool {
-	ah, al := a.DPD()
-	bh, bl := b.DPD()
+	ah, al := a.DPD128()
+	bh, bl := b.DPD128()
 	return ah == bh && al == bl
 }
 

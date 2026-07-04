@@ -217,29 +217,29 @@ func BenchmarkToInt64(b *testing.B) {
 
 func BenchmarkBIDEncode(b *testing.B) {
 	for b.Loop() {
-		benchHi, benchLo = benchA.BID()
+		benchHi, benchLo = benchA.BID128()
 	}
 }
 
 func BenchmarkBIDDecode(b *testing.B) {
-	hi, lo := benchA.BID()
+	hi, lo := benchA.BID128()
 	b.ResetTimer()
 	for b.Loop() {
-		benchSink = DecimalFromBID(hi, lo)
+		benchSink = FromBID128(hi, lo)
 	}
 }
 
 func BenchmarkDPDEncode(b *testing.B) {
 	for b.Loop() {
-		benchHi, benchLo = benchA.DPD()
+		benchHi, benchLo = benchA.DPD128()
 	}
 }
 
 func BenchmarkDPDDecode(b *testing.B) {
-	hi, lo := benchA.DPD()
+	hi, lo := benchA.DPD128()
 	b.ResetTimer()
 	for b.Loop() {
-		benchSink = DecimalFromDPD(hi, lo)
+		benchSink = FromDPD128(hi, lo)
 	}
 }
 

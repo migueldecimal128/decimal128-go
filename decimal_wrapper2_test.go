@@ -24,18 +24,18 @@ func TestInterchangeRoundTrip(t *testing.T) {
 	for _, s := range []string{"3.14", "-1E+10", "0", "-0", "Infinity", "-Infinity", "NaN", "1.00", "9.999999999999999999999999999999999E+6144"} {
 		d := MustParse(s)
 		// BID round-trip (bitwise via re-render).
-		hi, lo := d.BID()
-		if got := DecimalFromBID(hi, lo); got.Format(StyleCoefficientExponent) != d.Format(StyleCoefficientExponent) {
+		hi, lo := d.BID128()
+		if got := FromBID128(hi, lo); got.Format(StyleCoefficientExponent) != d.Format(StyleCoefficientExponent) {
 			t.Errorf("BID round-trip %q: got %q", s, got)
 		}
 		// DPD round-trip.
-		hi, lo = d.DPD()
-		if got := DecimalFromDPD(hi, lo); got.Format(StyleCoefficientExponent) != d.Format(StyleCoefficientExponent) {
+		hi, lo = d.DPD128()
+		if got := FromDPD128(hi, lo); got.Format(StyleCoefficientExponent) != d.Format(StyleCoefficientExponent) {
 			t.Errorf("DPD round-trip %q: got %q", s, got)
 		}
 	}
 	// Canonical DPD encoding of 1 is 0x2208…0001.
-	hi, lo := FromInt64(1).DPD()
+	hi, lo := FromInt64(1).DPD128()
 	if hi != 0x2208000000000000 || lo != 0x0000000000000001 {
 		t.Errorf("DPD(1) = %#016x %#016x", hi, lo)
 	}
