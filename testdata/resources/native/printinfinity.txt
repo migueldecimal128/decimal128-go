@@ -1,3 +1,0 @@
-// from TestPrintInfinity.swift
-d128_toString TIES_TO_EVEN Infinity -> Infinity
-d128_toString TIES_TO_EVEN -Infinity -> -Infinity

@@ -6,11 +6,11 @@ import (
 )
 
 func resourcesDir() string {
-	return filepath.Join("testdata", "resources")
+	return filepath.Join("resources", "rosetta")
 }
 
 func nativeCorpusPath(name string) string {
-	return filepath.Join("testdata", "resources", "native", name)
+	return filepath.Join("resources", "rosetta", "native", name)
 }
 
 func TestParseNativeLine(t *testing.T) {
