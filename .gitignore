@@ -30,3 +30,7 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# telco benchmark run output
+telco.out*
+/telco_d128
