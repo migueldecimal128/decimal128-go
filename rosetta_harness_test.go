@@ -108,11 +108,11 @@ func decodeOperand(s string) d128 {
 	if len(s) > 0 {
 		if s[0] == '#' {
 			if u, ok := dpd128ParseDecTestHex(s); ok {
-				return d128_fromDPD(u)
+				return d128_from_dpd128(u)
 			}
 		} else if s[0] == '[' {
 			if u, ok := bid128ParseIntelHex(s); ok {
-				return d128_fromBID(u)
+				return d128_from_bid128(u)
 			}
 		}
 	}
@@ -601,7 +601,7 @@ func dispatchApply(c *rosettaCase) (outcome, string) {
 	}
 	val := decodeOperand(c.operands[0])
 	if strings.HasPrefix(c.result, "#") {
-		dpd := d128_toDPD(val)
+		dpd := d128_to_dpd128(val)
 		got := fmt.Sprintf("#%016X%016X", uint64(dpd.dw1), uint64(dpd.dw0))
 		if strings.EqualFold(got, c.result) {
 			return outPass, ""

@@ -120,8 +120,8 @@ func bid128Decode(bidHi, bidLo int64) d128 {
 	return decimalFNZ_64x64(sign, qExp, dw0Bits, dw1Bits)
 }
 
-func d128_fromBID(bid u128) d128 { return bid128Decode(bid.dw1, bid.dw0) }
-func d128_toBID(x d128) u128     { return bid128Encode(x) }
+func d128_from_bid128(bid u128) d128 { return bid128Decode(bid.dw1, bid.dw0) }
+func d128_to_bid128(x d128) u128     { return bid128Encode(x) }
 
 // --- Intel BID test-vector hex parser ---
 //

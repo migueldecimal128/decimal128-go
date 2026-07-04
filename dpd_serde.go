@@ -277,8 +277,8 @@ func dpdEncodeDeclet(n int64) int64 {
 		(x << 1) | y
 }
 
-func d128_fromDPD(dpd u128) d128 { return dpd128Decode(dpd.dw1, dpd.dw0) }
-func d128_toDPD(x d128) u128     { return dpd128Encode(x) }
+func d128_from_dpd128(dpd u128) d128 { return dpd128Decode(dpd.dw1, dpd.dw0) }
+func d128_to_dpd128(x d128) u128     { return dpd128Encode(x) }
 
 // dpd128ParseDecTestHex parses an IBM dectest "#" + 32-hex-digit DPD pattern.
 func dpd128ParseDecTestHex(s string) (u128, bool) {

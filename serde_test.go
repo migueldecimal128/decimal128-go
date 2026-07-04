@@ -30,7 +30,7 @@ func TestBIDRoundTrip(t *testing.T) {
 	r := rand.New(rand.NewSource(100))
 	for i := 0; i < oracleIters; i++ {
 		d := randD128(r)
-		rt := d128_fromBID(d128_toBID(d))
+		rt := d128_from_bid128(d128_to_bid128(d))
 		if !d128_bitwiseEQ(rt, d) {
 			t.Fatalf("BID round-trip failed: class=%d hi=%#x lo=%#x -> hi=%#x lo=%#x",
 				d128_ieeeClass(d), d.ubdHi64, d.ubdLo64, rt.ubdHi64, rt.ubdLo64)
@@ -42,7 +42,7 @@ func TestDPDRoundTrip(t *testing.T) {
 	r := rand.New(rand.NewSource(101))
 	for i := 0; i < oracleIters; i++ {
 		d := randD128(r)
-		rt := d128_fromDPD(d128_toDPD(d))
+		rt := d128_from_dpd128(d128_to_dpd128(d))
 		if !d128_bitwiseEQ(rt, d) {
 			t.Fatalf("DPD round-trip failed: class=%d hi=%#x lo=%#x -> hi=%#x lo=%#x",
 				d128_ieeeClass(d), d.ubdHi64, d.ubdLo64, rt.ubdHi64, rt.ubdLo64)
@@ -55,25 +55,25 @@ func TestSerdeKnownVectors(t *testing.T) {
 	posZero := d128_zero(false, 0)
 
 	// Canonical decimal128 encodings of 1 and +0E+0.
-	bidOne := d128_toBID(one)
+	bidOne := d128_to_bid128(one)
 	if bidOne.dw1 != int64(0x3040000000000000) || bidOne.dw0 != 1 {
 		t.Fatalf("BID(1) = hi=%#x lo=%#x", bidOne.dw1, bidOne.dw0)
 	}
-	dpdOne := d128_toDPD(one)
+	dpdOne := d128_to_dpd128(one)
 	if dpdOne.dw1 != int64(0x2208000000000000) || dpdOne.dw0 != 1 {
 		t.Fatalf("DPD(1) = hi=%#x lo=%#x", dpdOne.dw1, dpdOne.dw0)
 	}
-	bidZero := d128_toBID(posZero)
+	bidZero := d128_to_bid128(posZero)
 	if bidZero.dw1 != int64(0x3040000000000000) || bidZero.dw0 != 0 {
 		t.Fatalf("BID(+0E0) = hi=%#x lo=%#x", bidZero.dw1, bidZero.dw0)
 	}
-	dpdZero := d128_toDPD(posZero)
+	dpdZero := d128_to_dpd128(posZero)
 	if dpdZero.dw1 != int64(0x2208000000000000) || dpdZero.dw0 != 0 {
 		t.Fatalf("DPD(+0E0) = hi=%#x lo=%#x", dpdZero.dw1, dpdZero.dw0)
 	}
 
 	// Decode back.
-	if !d128_bitwiseEQ(d128_fromBID(bidOne), one) || !d128_bitwiseEQ(d128_fromDPD(dpdOne), one) {
+	if !d128_bitwiseEQ(d128_from_bid128(bidOne), one) || !d128_bitwiseEQ(d128_from_dpd128(dpdOne), one) {
 		t.Fatalf("decode of 1 mismatch")
 	}
 }

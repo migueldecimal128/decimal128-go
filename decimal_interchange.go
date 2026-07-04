@@ -15,23 +15,23 @@ package decimal128
 // BID returns d's 128-bit IEEE 754 BID interchange pattern as a high/low uint64
 // pair (hi is the most-significant 64 bits).
 func (d Decimal128) BID() (hi, lo uint64) {
-	u := d128_toBID(d.core)
+	u := d128_to_bid128(d.core)
 	return uint64(u.dw1), uint64(u.dw0)
 }
 
 // DecimalFromBID decodes a value from its 128-bit BID interchange pattern.
 func DecimalFromBID(hi, lo uint64) Decimal128 {
-	return Decimal128{d128_fromBID(u128{int64(lo), int64(hi)})}
+	return Decimal128{d128_from_bid128(u128{int64(lo), int64(hi)})}
 }
 
 // DPD returns d's 128-bit IEEE 754 DPD interchange pattern as a high/low uint64
 // pair (hi is the most-significant 64 bits).
 func (d Decimal128) DPD() (hi, lo uint64) {
-	u := d128_toDPD(d.core)
+	u := d128_to_dpd128(d.core)
 	return uint64(u.dw1), uint64(u.dw0)
 }
 
 // DecimalFromDPD decodes a value from its 128-bit DPD interchange pattern.
 func DecimalFromDPD(hi, lo uint64) Decimal128 {
-	return Decimal128{d128_fromDPD(u128{int64(lo), int64(hi)})}
+	return Decimal128{d128_from_dpd128(u128{int64(lo), int64(hi)})}
 }
