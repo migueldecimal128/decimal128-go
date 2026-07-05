@@ -42,3 +42,10 @@ func (d Decimal128) DPD128() (hi64, lo64 uint64) {
 func FromDPD128(hi64, lo64 uint64) Decimal128 {
 	return Decimal128{d128_from_dpd128(u128{int64(lo64), int64(hi64)})}
 }
+
+// FromDPD64 decodes a value from its DPD64 interchange encoding (64-bit IEEE 754
+// decimal64). Every decimal64 value is a subset of decimal128, so this widening
+// decode is exact — never rounding or signalling.
+func FromDPD64(dpd64 uint64) Decimal128 {
+	return Decimal128{d128_from_dpd64(int64(dpd64))}
+}

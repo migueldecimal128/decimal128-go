@@ -280,6 +280,68 @@ func dpdEncodeDeclet(n int64) int64 {
 func d128_from_dpd128(dpd u128) d128 { return dpd128Decode(dpd.dw1, dpd.dw0) }
 func d128_to_dpd128(x d128) u128     { return dpd128Encode(x) }
 
+// dpd64Decode decodes a d128 from a 64-bit DPD-encoded decimal64 value
+// (IEEE 754-2019 §3.5.2). Every decimal64 value is a strict subset of decimal128,
+// so this decode is exact and lossless — no rounding, no context, no signalling.
+// The coefficient (≤ 16 digits) and NaN payload (≤ 15 digits) each fit one word,
+// so unlike dpd128Decode this is entirely single-word. The 50-bit trailing field T
+// holds 5 declets; the most-significant digit d0 comes from the combination field
+// and is folded into the 6th declet slot (dpdDecodeDeclet(d)==d for a lone digit),
+// exactly as dpd128Decode folds in ITS leading digit. DPD declets always decode to
+// ≤ 999, so no canonicalization checks are needed (unlike bid64Decode).
+func dpd64Decode(dpd64 int64) d128 {
+	const bias = 398
+	const w = 8   // exponent continuation width
+	const w5 = 13 // combination field width
+	const t = 50  // trailing significand width
+
+	sign := ushr_64_64(dpd64, 63) != 0
+	combination := int(ushr_64_64(dpd64, t)) & 0x1FFF
+	coeffT := dpd64 & ((int64(1) << t) - 1) // low 50 bits: 5 declets
+	expContinuation := combination & 0xFF
+
+	var d0 int64
+	var qExp int
+	isNaN := false
+
+	top2 := combination >> (w5 - 2)
+	top4 := combination >> (w5 - 4)
+	top5 := combination >> (w5 - 5)
+
+	if top2 != 0b11 {
+		expMSB := top2
+		biasedExponent := (expMSB << w) | expContinuation
+		qExp = biasedExponent - bias
+		d0 = int64((combination >> w) & 0b111)
+	} else if top4 != 0b1111 {
+		expMSB := (combination >> (w5 - 4)) & 0b11
+		biasedExponent := (expMSB << w) | expContinuation
+		qExp = biasedExponent - bias
+		d0 = 8 + int64((combination>>w)&0b1)
+	} else if top5 == 0b11110 {
+		return d128_infinity(sign)
+	} else {
+		verify("", func() bool { return top5 == 0b11111 })
+		isNaN = true
+		d0 = 0
+		qExp = 0
+	}
+
+	// Fold d0 into the 6th declet slot; binFromDecletsUpTo7 folds it in at 10^15.
+	coeff := binFromDecletsUpTo7((d0 << 50) | coeffT)
+
+	if isNaN {
+		isSignaling := ((combination >> (w5 - 6)) & 1) != 0
+		return d128_nan_64x64(sign, isSignaling, coeff, 0)
+	}
+	if coeff == 0 {
+		return d128_zero(sign, qExp)
+	}
+	return decimalFNZ_64x64(sign, qExp, coeff, 0)
+}
+
+func d128_from_dpd64(dpd64 int64) d128 { return dpd64Decode(dpd64) }
+
 // dpd128ParseDecTestHex parses an IBM dectest "#" + 32-hex-digit DPD pattern.
 func dpd128ParseDecTestHex(s string) (u128, bool) {
 	if len(s) != 33 {
