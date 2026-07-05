@@ -15,6 +15,9 @@ const (
 	coeffMaxLo   int64 = 0x378D_8E63_FFFF_FFFF // 10^34 - 1, lo half
 	payloadMaxHi int64 = 0x0000_314D_C644_8D93 // 10^33 - 1, hi half
 	payloadMaxLo int64 = 0x38C1_5B09_FFFF_FFFF // 10^33 - 1, lo half
+
+	coeff64Max   int64 = 9_999_999_999_999_999 // 10^16 - 1, decimal64 coeff max (one word)
+	payload64Max int64 = 999_999_999_999_999   // 10^15 - 1, decimal64 NaN payload max
 )
 
 // bid128Encode encodes a d128 into its 128-bit BID representation.
@@ -122,6 +125,65 @@ func bid128Decode(bidHi, bidLo int64) d128 {
 
 func d128_from_bid128(bid u128) d128 { return bid128Decode(bid.dw1, bid.dw0) }
 func d128_to_bid128(x d128) u128     { return bid128Encode(x) }
+
+// bid64Decode decodes a d128 from a 64-bit BID-encoded decimal64 value
+// (IEEE 754-2019 §3.5.2). Every decimal64 value is a strict subset of decimal128,
+// so this decode is exact and lossless — no rounding, no context, no signalling.
+// The coefficient (≤ 16 digits, < 2^54) and NaN payload (≤ 15 digits) each fit
+// one word, so unlike bid128Decode this is entirely single-word. Non-canonical
+// finite coefficients (> 10^16 - 1) are treated as zero; non-canonical NaN
+// payloads (≥ 10^15) are canonicalized to zero.
+func bid64Decode(bid64 int64) d128 {
+	const bias = 398
+	const w5 = 13 // combination field width
+	const t = 50  // trailing significand width
+
+	sign := ushr_64_64(bid64, 63) != 0
+	combination := int(ushr_64_64(bid64, t)) & 0x1FFF
+	coeffT := bid64 & ((int64(1) << t) - 1) // lower 50 bits of T
+
+	top2 := combination >> (w5 - 2)
+	top4 := combination >> (w5 - 4)
+	top5 := combination >> (w5 - 5)
+
+	var coeffPrefix int64
+	var qExp int
+
+	if top2 != 0b11 {
+		// Case A: biased exponent in top 10 bits, coeff prefix in low 3 bits.
+		biasedExponentE := combination >> 3
+		qExp = biasedExponentE - bias
+		coeffPrefix = int64(combination & 0x07)
+	} else if top4 != 0b1111 {
+		// Case B: biased exponent in middle 10 bits, coeff prefix = 8 + low bit.
+		biasedExponentE := (combination >> 1) & ((1 << 10) - 1)
+		qExp = biasedExponentE - bias
+		coeffPrefix = 8 + int64(combination&1)
+	} else if top5 == 0b11110 {
+		return d128_infinity(sign)
+	} else {
+		verify("", func() bool { return top5 == 0b11111 })
+		isSignaling := ((combination >> (w5 - 6)) & 1) != 0
+		var payloadCanon int64
+		if ucmp_int_64x64(coeffT, payload64Max) > 0 {
+			payloadCanon = 0
+		} else {
+			payloadCanon = coeffT
+		}
+		return d128_nan_64x64(sign, isSignaling, payloadCanon, 0)
+	}
+
+	// Finite: coefficient = prefix (bits 53..50) | T; fits one word, upper word 0.
+	coeff := (coeffPrefix << t) | coeffT
+
+	// Non-canonical finite coefficient (> 10^16 - 1) is treated as zero.
+	if coeff == 0 || ucmp_int_64x64(coeff, coeff64Max) > 0 {
+		return d128_zero(sign, qExp)
+	}
+	return decimalFNZ_64x64(sign, qExp, coeff, 0)
+}
+
+func d128_from_bid64(bid64 int64) d128 { return bid64Decode(bid64) }
 
 // --- Intel BID test-vector hex parser ---
 //

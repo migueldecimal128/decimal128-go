@@ -24,6 +24,13 @@ func FromBID128(hi64, lo64 uint64) Decimal128 {
 	return Decimal128{d128_from_bid128(u128{int64(lo64), int64(hi64)})}
 }
 
+// FromBID64 decodes a value from its BID64 interchange encoding (64-bit IEEE 754
+// decimal64). Every decimal64 value is a subset of decimal128, so this widening
+// decode is exact — never rounding or signalling.
+func FromBID64(bid64 uint64) Decimal128 {
+	return Decimal128{d128_from_bid64(int64(bid64))}
+}
+
 // DPD128 returns d's DPD128 interchange encoding (128-bit IEEE 754) as a
 // high/low uint64 pair (hi64 is the most-significant 64 bits).
 func (d Decimal128) DPD128() (hi64, lo64 uint64) {
