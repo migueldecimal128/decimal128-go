@@ -52,7 +52,7 @@ func comparisonFromCode(code comparison754) Comparison {
 // yields CmpUnordered; a signaling-NaN operand additionally raises
 // InvalidOperation — use Context.Compare to capture that flag.
 func (d Decimal128) Compare(other Decimal128) Comparison {
-	return comparisonFromCode(d128_compare(d.core, other.core))
+	return comparisonFromCode(d128_comparePartial(d.core, other.core))
 }
 
 // --- total-order comparison (never unordered) ---
@@ -115,12 +115,12 @@ func (d Decimal128) IsUnordered(other Decimal128) bool {
 // flag (InvalidOperation on a signaling-NaN operand) into this context. NaN
 // operands yield CmpUnordered.
 func (c *Context) Compare(a, b Decimal128) Comparison {
-	return comparisonFromCode(d128_compare_ctx(a.core, b.core, c.core))
+	return comparisonFromCode(d128_comparePartial_ctx(a.core, b.core, c.core))
 }
 
 // CompareSignaling returns the signaling IEEE 754 comparison of a to b: any NaN
 // operand (quiet or signaling) raises InvalidOperation into this context.
 // Returns CmpUnordered for NaN.
 func (c *Context) CompareSignaling(a, b Decimal128) Comparison {
-	return comparisonFromCode(d128_compareSignaling_ctx(a.core, b.core, c.core))
+	return comparisonFromCode(d128_comparePartialSignaling_ctx(a.core, b.core, c.core))
 }

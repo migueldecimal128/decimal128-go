@@ -544,9 +544,9 @@ func checkCompareCtx(c *rosettaCase, signaling bool) (outcome, string) {
 	y := decodeOperand(c.operands[1])
 	var code int
 	if signaling {
-		code = d128_compareSignaling_ctx(x, y, ctx)
+		code = d128_comparePartialSignaling_ctx(x, y, ctx)
 	} else {
-		code = d128_compare_ctx(x, y, ctx)
+		code = d128_comparePartial_ctx(x, y, ctx)
 	}
 	var match bool
 	var got string
