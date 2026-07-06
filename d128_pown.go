@@ -114,29 +114,45 @@ func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 	return pownFNZ_powGE3(x, n, rounding, ctxnull)
 }
 
+// Quantum-exponent guard band on the running d38 ladder value. d38 is a bare
+// finite carrier — it has no infinity, and it traps if the quantum exponent
+// leaves int32 — so the ladder guards qExp instead of relying on saturation. A
+// d38 coefficient is at most 38 digits, so a value with qExp > over has
+// magnitude ≥ 10^6200 and one with qExp < under has magnitude < 10^-6213 — both
+// unrepresentable in every decimal128 cohort — hence clamping here never drops a
+// representable result. The ladder magnitude is monotonic (grows for |x|>1,
+// shrinks for |x|<1), so the first band crossing is terminal → the
+// correctly-signed overflow / underflow.
+const pownQExpOver = 6200
+const pownQExpUnder = -6250
+
 func pownFNZ_powGE3(x d128, n int, rounding round, ctxnull *context) d128 {
 	verify("", func() bool { return n >= 3 })
 	resultSign := d128_signFlag(x) && (n&1) != 0
-	estimatedResultExp := int64(d128_sciExp(x)) * int64(n)
-	if estimatedResultExp > 6200 {
-		return finalizeOverflow_ctxnull(resultSign, rounding, ctxnull)
-	}
-	if estimatedResultExp < -6250 {
-		return finalizeUnderflowFullySwamped(resultSign, rounding, ctxnull)
-	}
-	// Left-to-right binary exponentiation; the result sign falls out of the
+	// Left-to-right binary exponentiation in the 38-digit d38 domain (4 guard
+	// digits over decimal128), lowered to the result with a single final round —
+	// the round-once discipline of pow. Each square/multiply rounds only to 38
+	// digits (round-half-even), so the ladder no longer accumulates a decimal128
+	// rounding at every step, and the caller's rounding mode is applied exactly
+	// once (no directed-mode double rounding). The sign falls out of the
 	// multiplies, so no separate sign bookkeeping in the loop.
-	m := x
+	m := d38Pack(d128_signFlag(x), d128_qExp(x), x.ubdLo64, d128_hi49(x))
 	z := m
 	bit := int64(1) << (62 - bits.LeadingZeros64(uint64(n)))
 	for bit != 0 {
-		z = d128_square_rnd_ctxnull(z, rounding, ctxnull)
+		z = d38_square(z)
 		if (int64(n) & bit) != 0 {
-			z = d128_multiply_rnd_ctxnull(z, m, rounding, ctxnull)
+			z = d38_multiply(z, m)
+		}
+		if d38_qExp(z) > pownQExpOver {
+			return finalizeOverflow_ctxnull(resultSign, rounding, ctxnull)
+		}
+		if d38_qExp(z) < pownQExpUnder {
+			return finalizeUnderflowFullySwamped(resultSign, rounding, ctxnull)
 		}
 		bit >>= 1
 	}
-	return z
+	return finalize_128_ctxnull(d38_signFlag(z), d38_qExp(z), d38_u128(z), RESIDUE_EXACT, rounding, ctxnull)
 }
 
 // --- exact builders ---
