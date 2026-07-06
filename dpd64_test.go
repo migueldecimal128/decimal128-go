@@ -77,7 +77,15 @@ func TestDpd64Telco(t *testing.T) {
 			dpd := binary.BigEndian.Uint64(rData[off : off+8])
 			dur := binary.BigEndian.Uint64(bData[off : off+8])
 			decoded := d128_from_dpd64(int64(dpd))
-			expected := decimalFNZ_64x64(false, 0, int64(dur), 0)
+			// The 1e6 telco workload contains zero durations; decimalFNZ_64x64 is
+			// finite-NON-zero (its armed-assertion build panics on a zero
+			// coefficient), so build the zero encoding via d128_zero instead.
+			var expected d128
+			if dur == 0 {
+				expected = d128_zero(false, 0)
+			} else {
+				expected = decimalFNZ_64x64(false, 0, int64(dur), 0)
+			}
 			if !d128_bitwiseEQ(decoded, expected) {
 				t.Fatalf("telco[%s] record %d: dpd64=%#016x dur=%d got hi=%#x lo=%#x want hi=%#x lo=%#x",
 					filepath.Base(rPath), i, dpd, dur,
