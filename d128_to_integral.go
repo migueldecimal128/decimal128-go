@@ -5,6 +5,8 @@
 
 package decimal128
 
+import "math"
+
 const minInt64 int64 = -1 << 63
 
 // --- roundToIntegral core ---
@@ -149,6 +151,34 @@ func d128_toInt64TowardPositiveSignalInexact_ctxnull(x d128, ctxnull *context) i
 }
 func d128_toInt64TowardNegativeSignalInexact_ctxnull(x d128, ctxnull *context) int64 {
 	return d128ConvertToInt64_ctxnull(x, TOWARD_NEGATIVE, false, ctxnull)
+}
+
+// --- range predicates ---
+
+// d128_fitsInt64 reports whether x is finite and lies in the closed real
+// interval [Int64.min, Int64.max]. When true, converting x to int64 cannot
+// overflow under any rounding direction (there is no rounding parameter).
+// NaN and infinity return false.
+func d128_fitsInt64(x d128) bool {
+	if !d128_isFinite(x) {
+		return false
+	}
+	lo := d128_fromInt64(math.MinInt64)
+	hi := d128_fromInt64(math.MaxInt64)
+	return d128_isLessEqual(lo, x) && d128_isLessEqual(x, hi)
+}
+
+// d128_fitsUInt64 reports whether x is finite, non-negative, and at most
+// UInt64.max. When true, converting x to uint64 cannot overflow under any
+// rounding direction. Negative zero is accepted; any negative nonzero value
+// is rejected. NaN and infinity return false.
+func d128_fitsUInt64(x d128) bool {
+	if !d128_isFinite(x) {
+		return false
+	}
+	nonNegative := d128_isZER(x) || !d128_isNegative(x)
+	hi := d128_fromUInt64(math.MaxUint64)
+	return nonNegative && d128_isLessEqual(x, hi)
 }
 
 func d128ConvertToInt64_ctxnull(x d128, rounding round, suppressInexact bool, ctxnull *context) int64 {
