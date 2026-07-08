@@ -57,10 +57,10 @@ func roundToIntegral128_ctxnull(x d128, rounding round, ctxnull *context, suppre
 
 // --- roundToIntegral{Rule} (value form; no inexact signal) ---
 
-func d128_roundedToIntegral(x d128) d128 {
+func d128_roundToIntegral(x d128) d128 {
 	return roundToIntegral128_ctxnull(x, TIES_TO_EVEN, nil, true)
 }
-func d128_roundedToIntegralRnd(x d128, rounding round) d128 {
+func d128_roundToIntegral_rnd(x d128, rounding round) d128 {
 	return roundToIntegral128_ctxnull(x, rounding, nil, true)
 }
 

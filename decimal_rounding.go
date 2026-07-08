@@ -14,7 +14,7 @@ package decimal128
 // ties-to-even, matching IEEE 754 decimal. For another direction use
 // Rounding.RoundToIntegral; for flag tracking use Context.RoundToIntegral.
 func (d Decimal128) RoundToIntegral() Decimal128 {
-	return Decimal128{d128_roundedToIntegral(d.core)}
+	return Decimal128{d128_roundToIntegral(d.core)}
 }
 
 // NextUp returns the least representable value greater than d (IEEE nextUp).
@@ -55,7 +55,7 @@ func (d Decimal128) StripTrailingZeros() Decimal128 {
 // RoundToIntegral returns x rounded to an integral (no fractional digits) in
 // this direction. Quiet — raises no flags.
 func (r Rounding) RoundToIntegral(x Decimal128) Decimal128 {
-	return Decimal128{d128_roundedToIntegralRnd(x.core, r.core())}
+	return Decimal128{d128_roundToIntegral_rnd(x.core, r.core())}
 }
 
 // Quantize returns x re-expressed to share other's quantum (IEEE quantize),
