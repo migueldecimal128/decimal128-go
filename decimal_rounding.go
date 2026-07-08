@@ -30,7 +30,7 @@ func (d Decimal128) ScaleB(n int) Decimal128 { return Decimal128{d128_scaleB_ctx
 // Quantize returns d re-expressed to have the same quantum (exponent) as other,
 // rounding the coefficient as needed (IEEE quantize).
 func (d Decimal128) Quantize(other Decimal128) Decimal128 {
-	return Decimal128{d128_quantize_ctxnull(d.core, other.core, nil)}
+	return Decimal128{d128_quantize_tte(d.core, other.core)}
 }
 
 // SameQuantum reports whether d and other already share the same quantum.
@@ -58,6 +58,12 @@ func (r Rounding) RoundToIntegral(x Decimal128) Decimal128 {
 	return Decimal128{d128_roundedToIntegralRnd(x.core, r.core())}
 }
 
+// Quantize returns x re-expressed to share other's quantum (IEEE quantize),
+// rounding the coefficient in this direction.
+func (r Rounding) Quantize(x, other Decimal128) Decimal128 {
+	return Decimal128{d128_quantize_rnd(x.core, other.core, r.core())}
+}
+
 // --- context-receiver rounding / quantum operations ---
 
 // RoundToIntegral returns x rounded to an integral by this context's direction,
@@ -75,7 +81,7 @@ func (c *Context) ScaleB(x Decimal128, n int) Decimal128 {
 // Quantize returns x re-expressed to share other's quantum (IEEE quantize),
 // flag-tracked through this context.
 func (c *Context) Quantize(x, other Decimal128) Decimal128 {
-	return Decimal128{d128_quantize_ctxnull(x.core, other.core, c.core)}
+	return Decimal128{d128_quantize_ctx(x.core, other.core, c.core)}
 }
 
 // QuantumExponent returns x's quantum exponent q. A NaN or infinite operand

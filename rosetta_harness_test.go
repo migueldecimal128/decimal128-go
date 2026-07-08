@@ -185,7 +185,7 @@ func dispatch(c *rosettaCase) (outcome, string) {
 	case "d128_stripTrailingZeros", "reduce":
 		return checkUnaryCtx(c, func(x d128, ctx *context) d128 { return d128_stripTrailingZeros_ctx(x, 6176, ctx) })
 	case "d128_quantize_ctxnull", "quantize":
-		return checkBinaryCtx(c, d128_quantize_ctxnull)
+		return checkBinaryCtx(c, d128_quantize_ctx)
 	case "d128_logB_ctxnull", "logb":
 		return checkUnaryCtx(c, d128_logB_ctxnull)
 	case "d128_scaleB_ctxnull", "scaleb":

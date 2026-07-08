@@ -6,7 +6,16 @@
 
 package decimal128
 
-func d128_quantize_ctxnull(x, y d128, ctxnull *context) d128 {
+// _rnd_ctxnull is the canonical body; _tte/_rnd/_ctx forward into it — same
+// factoring as d128_divide_* (d128_arith_div). quantize is the sole rounding op
+// with a _rnd form; non-rounding neighbours (scaleB/logB/…) keep bare _ctxnull.
+func d128_quantize_tte(x, y d128) d128            { return d128_quantize_rnd_ctxnull(x, y, TIES_TO_EVEN, nil) }
+func d128_quantize_rnd(x, y d128, rnd round) d128 { return d128_quantize_rnd_ctxnull(x, y, rnd, nil) }
+func d128_quantize_ctx(x, y d128, ctx *context) d128 {
+	return d128_quantize_rnd_ctxnull(x, y, ctx.round, ctx)
+}
+
+func d128_quantize_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	if d128_isNAN(x) || d128_isNAN(y) {
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
@@ -33,10 +42,6 @@ func d128_quantize_ctxnull(x, y d128, ctxnull *context) d128 {
 	delta := d128_qExp(x) - qTarget
 	if delta == 0 {
 		return x
-	}
-	rounding := TIES_TO_EVEN
-	if ctxnull != nil {
-		rounding = ctxnull.round
 	}
 	if delta > 0 {
 		// Finer quantum: append delta zeros. Exact, unless the coefficient
