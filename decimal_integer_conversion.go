@@ -45,9 +45,9 @@ func (c *Context) ToInt64Exact(x Decimal128) int64 {
 func toInt64Mode_ctxnull(x Decimal128, r Rounding, ctx *context, exact bool) int64 {
 	if exact {
 		switch r {
-		case ToNearestEven:
+		case TiesToEven:
 			return d128_toInt64TiesToEvenSignalInexact_ctxnull(x.core, ctx)
-		case ToNearestAway:
+		case TiesToAway:
 			return d128_toInt64TiesToAwaySignalInexact_ctxnull(x.core, ctx)
 		case TowardZero:
 			return d128_toInt64TowardZeroSignalInexact_ctxnull(x.core, ctx)
@@ -58,9 +58,9 @@ func toInt64Mode_ctxnull(x Decimal128, r Rounding, ctx *context, exact bool) int
 		}
 	}
 	switch r {
-	case ToNearestEven:
+	case TiesToEven:
 		return d128_toInt64TiesToEven_ctxnull(x.core, ctx)
-	case ToNearestAway:
+	case TiesToAway:
 		return d128_toInt64TiesToAway_ctxnull(x.core, ctx)
 	case TowardZero:
 		return d128_toInt64TowardZero_ctxnull(x.core, ctx)

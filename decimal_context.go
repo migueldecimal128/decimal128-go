@@ -16,7 +16,7 @@ type Context struct {
 }
 
 // NewContext returns a context rounding ties-to-even with an empty flag set.
-func NewContext() *Context { return NewContextWithRounding(ToNearestEven) }
+func NewContext() *Context { return NewContextWithRounding(TiesToEven) }
 
 // NewContextWithRounding returns a context with the given rounding direction and
 // an empty flag set.

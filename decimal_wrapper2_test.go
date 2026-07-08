@@ -54,7 +54,7 @@ func TestToInt64(t *testing.T) {
 	if got := TowardPositive.ToInt64(MustParse("3.1")); got != 4 {
 		t.Fatalf("ceil 3.1 = %d want 4", got)
 	}
-	if got := ToNearestEven.ToInt64(MustParse("2.5")); got != 2 {
+	if got := TiesToEven.ToInt64(MustParse("2.5")); got != 2 {
 		t.Fatalf("nearest-even 2.5 = %d want 2", got)
 	}
 

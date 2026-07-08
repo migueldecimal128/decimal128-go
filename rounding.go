@@ -12,8 +12,8 @@ import "strconv"
 type Rounding int
 
 const (
-	ToNearestEven  Rounding = iota // ties to even (the default)
-	ToNearestAway                  // ties away from zero
+	TiesToEven     Rounding = iota // ties to even (the default)
+	TiesToAway                     // ties away from zero
 	TowardZero                     // truncate
 	TowardPositive                 // ceiling
 	TowardNegative                 // floor
@@ -25,10 +25,10 @@ func (r Rounding) core() round { return round{int(r)} }
 // String returns a short name for the rounding direction.
 func (r Rounding) String() string {
 	switch r {
-	case ToNearestEven:
-		return "ToNearestEven"
-	case ToNearestAway:
-		return "ToNearestAway"
+	case TiesToEven:
+		return "TiesToEven"
+	case TiesToAway:
+		return "TiesToAway"
 	case TowardZero:
 		return "TowardZero"
 	case TowardPositive:

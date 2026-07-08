@@ -68,9 +68,9 @@ func wrapperFlagLetters(f Flags) string {
 func tokenToRounding(tok string) (Rounding, bool) {
 	switch tok {
 	case "TIES_TO_EVEN":
-		return ToNearestEven, true
+		return TiesToEven, true
 	case "TIES_TO_AWAY":
-		return ToNearestAway, true
+		return TiesToAway, true
 	case "TOWARD_ZERO":
 		return TowardZero, true
 	case "TOWARD_POSITIVE":
@@ -276,9 +276,9 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 	case "d128_totalOrder":
 		return wrapBinaryBool(c, Decimal128.IsTotallyOrdered)
 	case "d128_round_integral_nearest_even":
-		return wrapDirectedRound(c, ToNearestEven)
+		return wrapDirectedRound(c, TiesToEven)
 	case "d128_round_integral_nearest_away":
-		return wrapDirectedRound(c, ToNearestAway)
+		return wrapDirectedRound(c, TiesToAway)
 	case "d128_round_integral_zero":
 		return wrapDirectedRound(c, TowardZero)
 	case "d128_round_integral_positive":
