@@ -256,3 +256,26 @@ func d128ConvertToInt64_ctxnull(x d128, rounding round, suppressInexact bool, ct
 	ctxSignalInvalidOperation_ctxnull(ctxnull, causeConvertNonFiniteToInteger)
 	return minInt64
 }
+
+// d128_toUInt64TowardZero_ctxnull truncates x toward zero to a uint64.
+// roundToIntegralTowardZero + fitsUInt64: truncate first (exact range test);
+// fitsUInt64 guarantees the integral magnitude coeff*10^qExp < 2^64, so it fits
+// the low 64 bits. NaN/inf/negative/overflow -> 0 + invalidOperation; quiet on a
+// discarded fraction.
+func d128_toUInt64TowardZero_ctxnull(x d128, ctxnull *context) uint64 {
+	t := d128_roundToIntegralTowardZero(x)
+	if !d128_fitsUInt64(t) {
+		ctxSignalInvalidOperation_ctxnull(ctxnull, causeConvertNonFiniteToInteger)
+		return 0
+	}
+	// t integral in [0, MaxUint64]; magnitude coeff*10^qExp < 2^64 -> low 64 bits.
+	cu := d128_u128(t)
+	qExp := d128_qExp(t)
+	var mag uint64
+	if qExp == 0 {
+		mag = uint64(cu.dw0)
+	} else {
+		mag = uint64(cu.dw0) * uint64(pow10_128_dw0(qExp)) // wrapping; exact < 2^64
+	}
+	return mag
+}
