@@ -41,21 +41,77 @@ func TestInterchangeRoundTrip(t *testing.T) {
 	}
 }
 
-func TestToInt64(t *testing.T) {
-	if got := MustParse("3.9").ToInt64(); got != 3 { // truncate toward zero
-		t.Fatalf("3.9.ToInt64() = %d want 3", got)
+func TestInt64Conversions(t *testing.T) {
+	threeSeven := MustParse("3.7")
+	twoFive := MustParse("2.5")
+
+	// (a) Range guard: rounding-independent, range only (not integrality).
+	if !threeSeven.FitsInt64() {
+		t.Fatalf("3.7 should fit int64")
 	}
-	if got := MustParse("-3.9").ToInt64(); got != -3 {
-		t.Fatalf("-3.9.ToInt64() = %d want -3", got)
+	if !threeSeven.FitsUInt64() {
+		t.Fatalf("3.7 should fit uint64")
+	}
+	if !threeSeven.Neg().FitsInt64() {
+		t.Fatalf("-3.7 should fit int64")
+	}
+	if threeSeven.Neg().FitsUInt64() { // negative nonzero
+		t.Fatalf("-3.7 should not fit uint64")
+	}
+	if MustParse("-0").FitsUInt64() != true { // -0 converts to 0
+		t.Fatalf("-0 should fit uint64")
+	}
+	if MustParse("1E100").FitsInt64() {
+		t.Fatalf("1E100 should not fit int64")
+	}
+	if NaN().FitsInt64() || Inf(1).FitsInt64() {
+		t.Fatalf("NaN/Inf should not fit int64")
+	}
+
+	// (b) Fallible-exact: succeeds only for exact integers in range.
+	if got, err := FromInt64(3).Int64(); err != nil || got != 3 {
+		t.Fatalf("Int64(3) = %d, %v want 3, nil", got, err)
+	}
+	if got, err := FromInt64(-3).Int64(); err != nil || got != -3 {
+		t.Fatalf("Int64(-3) = %d, %v want -3, nil", got, err)
+	}
+	if got, err := FromInt64(3).Uint64(); err != nil || got != 3 {
+		t.Fatalf("Uint64(3) = %d, %v want 3, nil", got, err)
+	}
+	if _, err := threeSeven.Int64(); err == nil { // fractional → error
+		t.Fatalf("Int64(3.7) should fail")
+	}
+	if _, err := FromInt64(-3).Uint64(); err == nil { // negative → error
+		t.Fatalf("Uint64(-3) should fail")
+	}
+	if _, err := MustParse("1E100").Int64(); err == nil { // out of range → error
+		t.Fatalf("Int64(1E100) should fail")
+	}
+	if _, err := NaN().Int64(); err == nil { // NaN → error
+		t.Fatalf("Int64(NaN) should fail")
+	}
+	if _, err := Inf(1).Int64(); err == nil { // infinity → error
+		t.Fatalf("Int64(Inf) should fail")
+	}
+	// The failure is a typed *IntConversionError.
+	if _, err := threeSeven.Int64(); err != nil {
+		if _, ok := err.(*IntConversionError); !ok {
+			t.Fatalf("expected *IntConversionError, got %T", err)
+		}
+	}
+
+	// (c) Directed forms round a fraction (unchanged).
+	if got := TiesToEven.ToInt64(threeSeven); got != 4 {
+		t.Fatalf("tiesToEven 3.7 = %d want 4", got)
+	}
+	if got := TiesToEven.ToInt64(twoFive); got != 2 { // ties to even
+		t.Fatalf("tiesToEven 2.5 = %d want 2", got)
+	}
+	if got := TowardPositive.ToInt64(twoFive); got != 3 {
+		t.Fatalf("towardPositive 2.5 = %d want 3", got)
 	}
 	if got := TowardNegative.ToInt64(MustParse("3.9")); got != 3 {
 		t.Fatalf("floor 3.9 = %d want 3", got)
-	}
-	if got := TowardPositive.ToInt64(MustParse("3.1")); got != 4 {
-		t.Fatalf("ceil 3.1 = %d want 4", got)
-	}
-	if got := TiesToEven.ToInt64(MustParse("2.5")); got != 2 {
-		t.Fatalf("nearest-even 2.5 = %d want 2", got)
 	}
 
 	// Context: exact integer raises nothing; fractional ToInt64Exact raises Inexact.
@@ -72,5 +128,11 @@ func TestToInt64(t *testing.T) {
 	ctx.ToInt64(NaN())
 	if !ctx.RaisedFlags().Has(FlagInvalidOperation) {
 		t.Fatalf("NaN→int should raise InvalidOperation, got %v", ctx.RaisedFlags())
+	}
+	// Out-of-range is an invalid conversion.
+	ctx.ClearFlags()
+	ctx.ToInt64(MustParse("1E100"))
+	if !ctx.RaisedFlags().Has(FlagInvalidOperation) {
+		t.Fatalf("1E100→int should raise InvalidOperation, got %v", ctx.RaisedFlags())
 	}
 }

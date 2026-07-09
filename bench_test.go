@@ -211,7 +211,7 @@ func BenchmarkString(b *testing.B) {
 
 func BenchmarkToInt64(b *testing.B) {
 	for b.Loop() {
-		benchInt = benchBig.ToInt64()
+		benchInt = TowardZero.ToInt64(benchBig)
 	}
 }
 
