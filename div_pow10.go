@@ -44,6 +44,13 @@ func div_256_pow10_checked_q256res(x u256, pow10 int) quot256Residue {
 	}
 	digitLen := digitLen_int_256(x.dw0, x.dw1, x.dw2, x.dw3)
 	if pow10 < digitLen {
+		// Fits-128 fast path: when the quotient fits 128 bits, use the single-shot
+		// recipmul kernel (D47) and widen its 128-bit quotient with a zero high half,
+		// avoiding the multi-chunk Barrett loop.
+		if digitLen-pow10 <= 34 {
+			qr := div_256_pow10_q128res(x, pow10)
+			return quot256Residue{qr.quotDw0, qr.quotDw1, 0, 0, qr.residue}
+		}
 		return div_256_pow10_q256res(x, pow10)
 	}
 	var res residue
