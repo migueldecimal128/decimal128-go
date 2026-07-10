@@ -42,6 +42,13 @@ var (
 	benchFQb = MustParse("9.87654321E-30")                        //   (gap 60 ⇒ swamped)
 	benchPos = MustParse("2.5")
 	benchBig = MustParse("123456789.987654321")
+	// FMA regime operands (self = addend = receiver; product = lhs*rhs):
+	//   gen : self=2.5 (benchPos), lhs=A34 (benchA), rhs=B34 (benchB) — wide q256res path
+	//   wide: self=1E20,           lhs=A34,          rhs=B34          — fits-128 fast path
+	//   near: self=A34 (benchA),   lhs=12345.678,    rhs=9876.54321   — small align gap
+	benchFmaWideSelf = MustParse("1E20")
+	benchFmaNearL    = MustParse("12345.678")
+	benchFmaNearR    = MustParse("9876.54321")
 )
 
 func BenchmarkAdd(b *testing.B) {
@@ -125,9 +132,20 @@ func BenchmarkQuoPT1(b *testing.B) {
 	}
 }
 
-func BenchmarkFMA(b *testing.B) {
+// FMA regimes (self = addend/receiver; product = lhs*rhs), per BenchmarkMatrix.md.
+func BenchmarkFMAgen(b *testing.B) {
 	for b.Loop() {
-		benchSink = benchA.AddProduct(benchB, benchPos)
+		benchSink = benchPos.AddProduct(benchA, benchB)
+	}
+}
+func BenchmarkFMAwide(b *testing.B) {
+	for b.Loop() {
+		benchSink = benchFmaWideSelf.AddProduct(benchA, benchB)
+	}
+}
+func BenchmarkFMAnear(b *testing.B) {
+	for b.Loop() {
+		benchSink = benchA.AddProduct(benchFmaNearL, benchFmaNearR)
 	}
 }
 
