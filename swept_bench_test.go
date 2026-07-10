@@ -42,15 +42,48 @@ func profileBands(tb testing.TB, profile string) []string {
 	tb.Helper()
 	switch profile {
 	case "P-gen":
-		return []string{"SQ", "NQ", "OQ", "FQ", "CP", "WP", "XP", "CD", "WD", "XD", "ET", "PT"}
+		return []string{"SQ", "NQ", "MQ", "OQ", "FQ", "CP", "WP", "XP", "CD", "WD", "XD", "ET", "PT"}
 	case "P-fin":
 		return []string{"MIX", "CP", "WP", "CD", "WD", "ET", "PT"}
 	case "P-max":
 		return []string{"SQ", "OQ", "FQ", "XP", "XD"}
+	case "FMA":
+		// regime-based (3-operand self+lhs*rhs): FN (near ⇒ Barrett), FF (far ⇒ fits-128)
+		return []string{"FN", "FF"}
 	default:
-		tb.Fatalf("unknown SWEPT_PROFILE %q (expect P-gen|P-fin|P-max)", profile)
+		tb.Fatalf("unknown SWEPT_PROFILE %q (expect P-gen|P-fin|P-max|FMA)", profile)
 		return nil
 	}
+}
+
+// Load one FMA band file (3 space-separated canonical strings per line: self lhs
+// rhs) into parallel operand slices for self + lhs*rhs.
+func loadSweptBand3(tb testing.TB, profile, band string) (ss, ls, rs []Decimal128) {
+	tb.Helper()
+	path := filepath.Join("resources", "swept", profile, band+".txt")
+	f, err := os.Open(path)
+	if err != nil {
+		tb.Fatalf("open %s: %v", path, err)
+	}
+	defer f.Close()
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) != 3 {
+			tb.Fatalf("%s: expected 3 operands, got %q", band, line)
+		}
+		ss = append(ss, MustParse(fields[0]))
+		ls = append(ls, MustParse(fields[1]))
+		rs = append(rs, MustParse(fields[2]))
+	}
+	if err := sc.Err(); err != nil {
+		tb.Fatalf("scan %s: %v", path, err)
+	}
+	return ss, ls, rs
 }
 
 // Load one band file: resources/swept/<profile>/<band>.txt, parsing each data
@@ -93,10 +126,25 @@ func BenchmarkSwept(b *testing.B) {
 	// alignment/MIX bands feed both add and sub off one load. Direct method calls
 	// (not func values) so cheap bands aren't taxed by call overhead.
 	for _, band := range profileBands(b, profile) {
+		// FMA bands (FN/FF) are 3-operand (self lhs rhs); handle before loadSweptBand.
+		if band == "FN" || band == "FF" {
+			ss, ls, rs := loadSweptBand3(b, profile, band)
+			n := len(ss)
+			b.Run("fma/"+band, func(b *testing.B) {
+				i := 0
+				for b.Loop() {
+					benchSink = ss[i].AddProduct(ls[i], rs[i])
+					if i++; i == n {
+						i = 0
+					}
+				}
+			})
+			continue
+		}
 		xs, ys := loadSweptBand(b, profile, band)
 		n := len(xs)
 		switch band {
-		case "SQ", "NQ", "OQ", "FQ", "MIX":
+		case "SQ", "NQ", "MQ", "OQ", "FQ", "MIX":
 			b.Run("add/"+band, func(b *testing.B) {
 				i := 0
 				for b.Loop() {
