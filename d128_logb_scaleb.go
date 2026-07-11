@@ -55,7 +55,7 @@ func d128_scaleB_ctxnull(x d128, pow10Delta int, ctxnull *context) d128 {
 	if d128_isFIN(x) {
 		pow10DeltaCapped := max(min(pow10Delta, 100_000), -100_000)
 		qNew := d128_qExp(x) + pow10DeltaCapped
-		rounding := TIES_TO_EVEN
+		rounding := ROUND_TIES_TO_EVEN
 		if ctxnull != nil {
 			rounding = ctxnull.round
 		}

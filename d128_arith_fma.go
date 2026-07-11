@@ -18,7 +18,7 @@ func d128_fma_rnd_ctxnull(x, y, a d128, rounding round, ctxnull *context) d128 {
 	return fmaSlow_rnd_ctxnull(x, y, a, prod.hi(), prod.lo(), rounding, ctxnull)
 }
 
-func d128_fma_tte(x, y, a d128) d128            { return d128_fma_rnd_ctxnull(x, y, a, TIES_TO_EVEN, nil) }
+func d128_fma_tte(x, y, a d128) d128            { return d128_fma_rnd_ctxnull(x, y, a, ROUND_TIES_TO_EVEN, nil) }
 func d128_fma_rnd(x, y, a d128, rnd round) d128 { return d128_fma_rnd_ctxnull(x, y, a, rnd, nil) }
 func d128_fma_ctx(x, y, a d128, ctx *context) d128 {
 	return d128_fma_rnd_ctxnull(x, y, a, ctx.round, ctx)
@@ -59,7 +59,7 @@ func fmaSlow_rnd_ctxnull(x, y, a d128, prodHi, prodLo u128, rounding round, ctxn
 
 	prodU256 := u256FromHiLo(prodHi, prodLo)
 	aCoeff := d128_u128(a)
-	zeroSign := rounding == TOWARD_NEGATIVE
+	zeroSign := rounding == ROUND_TOWARD_NEGATIVE
 	return addWideAndFinalize_rnd_ctxnull(
 		prodSign, prodQ, prodU256,
 		d128_signFlag(a), d128_qExp(a), u256{aCoeff.dw0, aCoeff.dw1, 0, 0},
@@ -107,7 +107,7 @@ func fmaZeroProd_ctxnull(x, y, a d128, rounding round, ctxnull *context) d128 {
 		if prodSign == d128_signFlag(a) {
 			fmaSign = prodSign
 		} else {
-			fmaSign = rounding == TOWARD_NEGATIVE
+			fmaSign = rounding == ROUND_TOWARD_NEGATIVE
 		}
 		return d128_zero(fmaSign, min(prodQ, d128_qExp(a)))
 	}

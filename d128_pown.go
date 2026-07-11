@@ -11,7 +11,7 @@ var d128PownTen = d128_fromInt64(10)
 
 // --- ladder ---
 
-func d128_pown_tte(x d128, n int) d128            { return d128_pown_rnd_ctxnull(x, n, TIES_TO_EVEN, nil) }
+func d128_pown_tte(x d128, n int) d128            { return d128_pown_rnd_ctxnull(x, n, ROUND_TIES_TO_EVEN, nil) }
 func d128_pown_rnd(x d128, n int, rnd round) d128 { return d128_pown_rnd_ctxnull(x, n, rnd, nil) }
 func d128_pown_ctx(x d128, n int, ctx *context) d128 {
 	return d128_pown_rnd_ctxnull(x, n, ctx.round, ctx)

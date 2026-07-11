@@ -44,7 +44,7 @@ func d128_multiply_tte(x, y d128) d128 {
 			return d128Pack(prodSignFlag, prodQExp, prod.dw0, prod.dw1)
 		}
 	}
-	return d128_multiply_rnd_ctxnull(x, y, TIES_TO_EVEN, nil)
+	return d128_multiply_rnd_ctxnull(x, y, ROUND_TIES_TO_EVEN, nil)
 }
 
 func d128_multiply_rnd(x, y d128, rnd round) d128 { return d128_multiply_rnd_ctxnull(x, y, rnd, nil) }
@@ -66,7 +66,7 @@ func d128_square_tte(x d128) d128 {
 			return d128Pack(false, prodQExp, prod.dw0, prod.dw1) // a square is non-negative
 		}
 	}
-	return d128_multiply_rnd_ctxnull(x, x, TIES_TO_EVEN, nil)
+	return d128_multiply_rnd_ctxnull(x, x, ROUND_TIES_TO_EVEN, nil)
 }
 
 func d128_square_rnd(x d128, rnd round) d128 { return d128_multiply_rnd_ctxnull(x, x, rnd, nil) }

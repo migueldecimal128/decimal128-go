@@ -16,7 +16,7 @@ const (
 
 // --- ladder ---
 
-func d128_pow_tte(x, y d128) d128            { return d128_pow_rnd_ctxnull(x, y, TIES_TO_EVEN, nil) }
+func d128_pow_tte(x, y d128) d128            { return d128_pow_rnd_ctxnull(x, y, ROUND_TIES_TO_EVEN, nil) }
 func d128_pow_rnd(x, y d128, rnd round) d128 { return d128_pow_rnd_ctxnull(x, y, rnd, nil) }
 func d128_pow_ctx(x, y d128, ctx *context) d128 {
 	return d128_pow_rnd_ctxnull(x, y, ctx.round, ctx)

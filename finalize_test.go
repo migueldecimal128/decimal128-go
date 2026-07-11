@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-var allRoundings = []round{TIES_TO_EVEN, TIES_TO_AWAY, TOWARD_ZERO, TOWARD_POSITIVE, TOWARD_NEGATIVE}
+var allRoundings = []round{ROUND_TIES_TO_EVEN, ROUND_TIES_TO_AWAY, ROUND_TOWARD_ZERO, ROUND_TOWARD_POSITIVE, ROUND_TOWARD_NEGATIVE}
 
 // refFinalize is the correctly-rounded decimal128 of (sign, coeff·10^qExp) with
 // the given trailing residue, for the in-range case (no overflow/underflow).
@@ -70,17 +70,17 @@ func TestFinalizeRoundPath(t *testing.T) {
 func TestFinalizeOverflowClamp(t *testing.T) {
 	// Overflow: 34-digit coeff pushed past the max exponent cannot be clamped.
 	c34 := pow10U128(33) // 10^33 has 34 digits
-	ovf := finalize_128_ctxnull(false, 6121, c34, RESIDUE_EXACT, TIES_TO_EVEN, nil)
+	ovf := finalize_128_ctxnull(false, 6121, c34, RESIDUE_EXACT, ROUND_TIES_TO_EVEN, nil)
 	if !d128_isINF(ovf) || d128_isNegative(ovf) {
 		t.Fatalf("expected +Inf on overflow, class=%d", d128_ieeeClass(ovf))
 	}
 	// Toward-zero overflow yields the max finite magnitude.
-	mx := finalize_128_ctxnull(false, 6121, c34, RESIDUE_EXACT, TOWARD_ZERO, nil)
+	mx := finalize_128_ctxnull(false, 6121, c34, RESIDUE_EXACT, ROUND_TOWARD_ZERO, nil)
 	if !d128_bitwiseEQ(mx, maxFiniteMagnitude(false)) {
 		t.Fatalf("expected max finite on toward-zero overflow")
 	}
 	// Clamp: small coeff at qExp just past max absorbs the excess (numerically equal).
-	cl := finalize_128_ctxnull(false, 6120, u128{5, 0}, RESIDUE_EXACT, TIES_TO_EVEN, nil)
+	cl := finalize_128_ctxnull(false, 6120, u128{5, 0}, RESIDUE_EXACT, ROUND_TIES_TO_EVEN, nil)
 	if !d128_isFNZ(cl) || d128_qExp(cl) != 6111 {
 		t.Fatalf("expected clamp to qExp 6111, got qExp=%d", d128_qExp(cl))
 	}
@@ -91,12 +91,12 @@ func TestFinalizeOverflowClamp(t *testing.T) {
 
 func TestFinalizeUnderflowSubnormal(t *testing.T) {
 	// Fully swamped: 1e-6300 underflows to zero under ties-to-even.
-	z := finalize_128_ctxnull(false, -6300, u128{1, 0}, RESIDUE_EXACT, TIES_TO_EVEN, nil)
+	z := finalize_128_ctxnull(false, -6300, u128{1, 0}, RESIDUE_EXACT, ROUND_TIES_TO_EVEN, nil)
 	if !d128_isZER(z) {
 		t.Fatalf("expected zero on full underflow, class=%d", d128_ieeeClass(z))
 	}
 	// Subnormal: 25e-6177 = 2.5e-6176 rounds to 2e-6176 (ties to even).
-	sn := finalize_128_ctxnull(false, -6177, u128{25, 0}, RESIDUE_EXACT, TIES_TO_EVEN, nil)
+	sn := finalize_128_ctxnull(false, -6177, u128{25, 0}, RESIDUE_EXACT, ROUND_TIES_TO_EVEN, nil)
 	if !d128_isSubnormal(sn) || d128_qExp(sn) != -6176 {
 		t.Fatalf("expected subnormal at qExp -6176, got qExp=%d class=%d", d128_qExp(sn), d128_ieeeClass(sn))
 	}
@@ -109,13 +109,13 @@ func TestFinalizeFlags(t *testing.T) {
 	// A coeff guaranteed inexact: 10^34 + 7 (35 digits; trimming drops a 7).
 	ctx := newContext()
 	c := new(big.Int).Add(pow10big(34), big.NewInt(7))
-	_ = finalize_256_ctxnull(false, 0, u256FromBig(c), RESIDUE_EXACT, TIES_TO_EVEN, ctx)
+	_ = finalize_256_ctxnull(false, 0, u256FromBig(c), RESIDUE_EXACT, ROUND_TIES_TO_EVEN, ctx)
 	if !ctx.isSet(INEXACT) || ctx.exceptionLetters() != "x" {
 		t.Fatalf("expected inexact flag, got %q", ctx.exceptionLetters())
 	}
 	// An exact result sets no flags.
 	ctx2 := newContext()
-	_ = finalize_256_ctxnull(false, 0, u256FromBig(big.NewInt(12345)), RESIDUE_EXACT, TIES_TO_EVEN, ctx2)
+	_ = finalize_256_ctxnull(false, 0, u256FromBig(big.NewInt(12345)), RESIDUE_EXACT, ROUND_TIES_TO_EVEN, ctx2)
 	if ctx2.exceptionLetters() != "" {
 		t.Fatalf("expected no flags, got %q", ctx2.exceptionLetters())
 	}

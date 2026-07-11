@@ -7,7 +7,9 @@ package decimal128
 
 var d128CompoundOne = d128_fromInt64(1)
 
-func d128_compound_tte(x d128, n int) d128 { return d128_compound_rnd_ctxnull(x, n, TIES_TO_EVEN, nil) }
+func d128_compound_tte(x d128, n int) d128 {
+	return d128_compound_rnd_ctxnull(x, n, ROUND_TIES_TO_EVEN, nil)
+}
 func d128_compound_rnd(x d128, n int, rnd round) d128 {
 	return d128_compound_rnd_ctxnull(x, n, rnd, nil)
 }

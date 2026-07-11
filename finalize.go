@@ -87,7 +87,7 @@ func finalize_128_quiet(sign bool, qExpIn int, coeffIn u128, residueIn residue) 
 	if isZero_bool_128(coeffIn.dw0, coeffIn.dw1) {
 		return finalizeZero_quiet(sign, qExpIn, residueIn)
 	}
-	return finalize_128_nonTrivial_ctxnull(sign, qExpIn, coeffIn, residueIn, TIES_TO_EVEN, nil)
+	return finalize_128_nonTrivial_ctxnull(sign, qExpIn, coeffIn, residueIn, ROUND_TIES_TO_EVEN, nil)
 }
 
 func finalize_128_nonTrivial_ctxnull(sign bool, qExpIn int, coeffIn u128, residueIn residue, rounding round, ctxnull *context) d128 {
@@ -306,7 +306,7 @@ func finalizeZero_quiet(sign bool, qExp int, res residue) d128 {
 	if qExp >= -6176 {
 		return d128Pack(sign, qExp, 1, 0)
 	}
-	return finalizeUnderflowRegion_128_ctxnull(sign, qExp, u128{1, 0}, res, TIES_TO_EVEN, nil)
+	return finalizeUnderflowRegion_128_ctxnull(sign, qExp, u128{1, 0}, res, ROUND_TIES_TO_EVEN, nil)
 }
 
 // --- magnitude limits ---

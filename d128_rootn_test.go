@@ -11,7 +11,7 @@ import (
 // exact native golden vectors.
 
 func TestRootnVsFloat(t *testing.T) {
-	ctx := newContextRound(TIES_TO_EVEN)
+	ctx := newContextRound(ROUND_TIES_TO_EVEN)
 	rng := rand.New(rand.NewSource(0x600))
 	for i := 0; i < 50000; i++ {
 		base := math.Pow(10, (rng.Float64()*2-1)*2) * (1 + rng.Float64()*9) // positive ~[1e-2, 1e3]
@@ -25,7 +25,7 @@ func TestRootnVsFloat(t *testing.T) {
 }
 
 func TestCompoundVsFloat(t *testing.T) {
-	ctx := newContextRound(TIES_TO_EVEN)
+	ctx := newContextRound(ROUND_TIES_TO_EVEN)
 	rng := rand.New(rand.NewSource(0xC0))
 	for i := 0; i < 50000; i++ {
 		x := math.Pow(10, (rng.Float64()*2-1)*2)*(1+rng.Float64()*9) - 1 // 1+x ~[1e-2, 1e3], x > -1

@@ -28,7 +28,7 @@ func refNeedsRoundUp(code int, sign, isOdd bool, res int) bool {
 }
 
 func TestNeedsRoundUp(t *testing.T) {
-	codes := []round{TIES_TO_EVEN, TIES_TO_AWAY, TOWARD_ZERO, TOWARD_POSITIVE, TOWARD_NEGATIVE}
+	codes := []round{ROUND_TIES_TO_EVEN, ROUND_TIES_TO_AWAY, ROUND_TOWARD_ZERO, ROUND_TOWARD_POSITIVE, ROUND_TOWARD_NEGATIVE}
 	for _, rnd := range codes {
 		for _, sign := range []bool{false, true} {
 			for _, isOdd := range []bool{false, true} {
@@ -46,7 +46,7 @@ func TestNeedsRoundUp(t *testing.T) {
 }
 
 func TestRoundingOverflowUnderflow(t *testing.T) {
-	codes := []round{TIES_TO_EVEN, TIES_TO_AWAY, TOWARD_ZERO, TOWARD_POSITIVE, TOWARD_NEGATIVE}
+	codes := []round{ROUND_TIES_TO_EVEN, ROUND_TIES_TO_AWAY, ROUND_TOWARD_ZERO, ROUND_TOWARD_POSITIVE, ROUND_TOWARD_NEGATIVE}
 	for _, rnd := range codes {
 		for _, sign := range []bool{false, true} {
 			var wantOvf, wantUnf bool

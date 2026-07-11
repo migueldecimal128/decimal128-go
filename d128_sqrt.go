@@ -4,7 +4,7 @@
 
 package decimal128
 
-func d128_sqrt_tte(x d128) d128            { return d128_sqrt_rnd_ctxnull(x, TIES_TO_EVEN, nil) }
+func d128_sqrt_tte(x d128) d128            { return d128_sqrt_rnd_ctxnull(x, ROUND_TIES_TO_EVEN, nil) }
 func d128_sqrt_rnd(x d128, rnd round) d128 { return d128_sqrt_rnd_ctxnull(x, rnd, nil) }
 func d128_sqrt_ctx(x d128, ctx *context) d128 {
 	return d128_sqrt_rnd_ctxnull(x, ctx.round, ctx)

@@ -6,7 +6,7 @@
 
 package decimal128
 
-func d128_divide_tte(x, y d128) d128            { return d128_divide_rnd_ctxnull(x, y, TIES_TO_EVEN, nil) }
+func d128_divide_tte(x, y d128) d128            { return d128_divide_rnd_ctxnull(x, y, ROUND_TIES_TO_EVEN, nil) }
 func d128_divide_rnd(x, y d128, rnd round) d128 { return d128_divide_rnd_ctxnull(x, y, rnd, nil) }
 func d128_divide_ctx(x, y d128, ctx *context) d128 {
 	return d128_divide_rnd_ctxnull(x, y, ctx.round, ctx)
@@ -75,7 +75,7 @@ func d128_divideInteger_ctxnull(x, y d128, ctxnull *context) d128 {
 }
 
 func divIntFnzFnz_rnd_ctx(x, y d128, ctxnull *context) d128 {
-	q1 := d128_divide_rnd_ctxnull(x, y, TOWARD_ZERO, nil) // quiet
+	q1 := d128_divide_rnd_ctxnull(x, y, ROUND_TOWARD_ZERO, nil) // quiet
 	verify("", func() bool { return d128_isFIN(q1) })
 	q2 := d128_roundToIntegralTowardZeroSignalInexact_ctxnull(q1, nil)
 	verify("", func() bool { return d128_isFIN(q2) })
@@ -149,7 +149,7 @@ func d128_remainderNear_ctxnull(x, y d128, ctxnull *context) d128 {
 
 // remTruncFnzFnz returns (r = x - trunc(x/y)*y, truncQuotientIsOdd).
 func remTruncFnzFnz(x, y d128, ctxnull *context) (d128, bool) {
-	truncCtx := newContextRound(TOWARD_ZERO) // scratch: discards flags
+	truncCtx := newContextRound(ROUND_TOWARD_ZERO) // scratch: discards flags
 	n1 := d128_divide_ctx(x, y, truncCtx)
 	if truncCtx.isOverflow() {
 		nan := ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivIntOverflowsCoefficient)
@@ -187,9 +187,9 @@ func remainderNearFnzFnz(x, y d128, ctxnull *context) d128 {
 	}
 	var truncCtx *context
 	if ctxnull != nil {
-		truncCtx = ctxnull.withRoundingAndNewFlags(TOWARD_ZERO)
+		truncCtx = ctxnull.withRoundingAndNewFlags(ROUND_TOWARD_ZERO)
 	} else {
-		truncCtx = newContextRound(TOWARD_ZERO)
+		truncCtx = newContextRound(ROUND_TOWARD_ZERO)
 	}
 	var r2 d128
 	if d128_signFlag(r1) {

@@ -60,60 +60,60 @@ func roundToIntegral128_ctxnull(x d128, rounding round, ctxnull *context, suppre
 // --- roundToIntegral{Rule} (value form; no inexact signal) ---
 
 func d128_roundToIntegral(x d128) d128 {
-	return roundToIntegral128_ctxnull(x, TIES_TO_EVEN, nil, true)
+	return roundToIntegral128_ctxnull(x, ROUND_TIES_TO_EVEN, nil, true)
 }
 func d128_roundToIntegral_rnd(x d128, rounding round) d128 {
 	return roundToIntegral128_ctxnull(x, rounding, nil, true)
 }
 
 func d128_roundToIntegralTiesToEven(x d128) d128 {
-	return roundToIntegral128_ctxnull(x, TIES_TO_EVEN, nil, true)
+	return roundToIntegral128_ctxnull(x, ROUND_TIES_TO_EVEN, nil, true)
 }
 func d128_roundToIntegralTiesToAway(x d128) d128 {
-	return roundToIntegral128_ctxnull(x, TIES_TO_AWAY, nil, true)
+	return roundToIntegral128_ctxnull(x, ROUND_TIES_TO_AWAY, nil, true)
 }
 func d128_roundToIntegralTowardZero(x d128) d128 {
-	return roundToIntegral128_ctxnull(x, TOWARD_ZERO, nil, true)
+	return roundToIntegral128_ctxnull(x, ROUND_TOWARD_ZERO, nil, true)
 }
 func d128_roundToIntegralTowardPositive(x d128) d128 {
-	return roundToIntegral128_ctxnull(x, TOWARD_POSITIVE, nil, true)
+	return roundToIntegral128_ctxnull(x, ROUND_TOWARD_POSITIVE, nil, true)
 }
 func d128_roundToIntegralTowardNegative(x d128) d128 {
-	return roundToIntegral128_ctxnull(x, TOWARD_NEGATIVE, nil, true)
+	return roundToIntegral128_ctxnull(x, ROUND_TOWARD_NEGATIVE, nil, true)
 }
 
 func d128_roundToIntegralTiesToEven_ctx(x d128, ctx *context) d128 {
-	return roundToIntegral128_ctxnull(x, TIES_TO_EVEN, ctx, true)
+	return roundToIntegral128_ctxnull(x, ROUND_TIES_TO_EVEN, ctx, true)
 }
 func d128_roundToIntegralTiesToAway_ctx(x d128, ctx *context) d128 {
-	return roundToIntegral128_ctxnull(x, TIES_TO_AWAY, ctx, true)
+	return roundToIntegral128_ctxnull(x, ROUND_TIES_TO_AWAY, ctx, true)
 }
 func d128_roundToIntegralTowardZero_ctx(x d128, ctx *context) d128 {
-	return roundToIntegral128_ctxnull(x, TOWARD_ZERO, ctx, true)
+	return roundToIntegral128_ctxnull(x, ROUND_TOWARD_ZERO, ctx, true)
 }
 func d128_roundToIntegralTowardPositive_ctx(x d128, ctx *context) d128 {
-	return roundToIntegral128_ctxnull(x, TOWARD_POSITIVE, ctx, true)
+	return roundToIntegral128_ctxnull(x, ROUND_TOWARD_POSITIVE, ctx, true)
 }
 func d128_roundToIntegralTowardNegative_ctx(x d128, ctx *context) d128 {
-	return roundToIntegral128_ctxnull(x, TOWARD_NEGATIVE, ctx, true)
+	return roundToIntegral128_ctxnull(x, ROUND_TOWARD_NEGATIVE, ctx, true)
 }
 
 // --- roundToIntegralExact (SignalInexact form) ---
 
 func d128_roundToIntegralTiesToEvenSignalInexact_ctxnull(x d128, ctxnull *context) d128 {
-	return roundToIntegral128_ctxnull(x, TIES_TO_EVEN, ctxnull, false)
+	return roundToIntegral128_ctxnull(x, ROUND_TIES_TO_EVEN, ctxnull, false)
 }
 func d128_roundToIntegralTiesToAwaySignalInexact_ctxnull(x d128, ctxnull *context) d128 {
-	return roundToIntegral128_ctxnull(x, TIES_TO_AWAY, ctxnull, false)
+	return roundToIntegral128_ctxnull(x, ROUND_TIES_TO_AWAY, ctxnull, false)
 }
 func d128_roundToIntegralTowardZeroSignalInexact_ctxnull(x d128, ctxnull *context) d128 {
-	return roundToIntegral128_ctxnull(x, TOWARD_ZERO, ctxnull, false)
+	return roundToIntegral128_ctxnull(x, ROUND_TOWARD_ZERO, ctxnull, false)
 }
 func d128_roundToIntegralTowardPositiveSignalInexact_ctxnull(x d128, ctxnull *context) d128 {
-	return roundToIntegral128_ctxnull(x, TOWARD_POSITIVE, ctxnull, false)
+	return roundToIntegral128_ctxnull(x, ROUND_TOWARD_POSITIVE, ctxnull, false)
 }
 func d128_roundToIntegralTowardNegativeSignalInexact_ctxnull(x d128, ctxnull *context) d128 {
-	return roundToIntegral128_ctxnull(x, TOWARD_NEGATIVE, ctxnull, false)
+	return roundToIntegral128_ctxnull(x, ROUND_TOWARD_NEGATIVE, ctxnull, false)
 }
 func d128_roundToIntegralSignalInexact(x d128, ctx *context) d128 {
 	return roundToIntegral128_ctxnull(x, ctx.round, ctx, false)
@@ -122,35 +122,35 @@ func d128_roundToIntegralSignalInexact(x d128, ctx *context) d128 {
 // --- convertToInteger64 ---
 
 func d128_toInt64TiesToEven_ctxnull(x d128, ctxnull *context) int64 {
-	return d128ConvertToInt64_ctxnull(x, TIES_TO_EVEN, true, ctxnull)
+	return d128ConvertToInt64_ctxnull(x, ROUND_TIES_TO_EVEN, true, ctxnull)
 }
 func d128_toInt64TiesToAway_ctxnull(x d128, ctxnull *context) int64 {
-	return d128ConvertToInt64_ctxnull(x, TIES_TO_AWAY, true, ctxnull)
+	return d128ConvertToInt64_ctxnull(x, ROUND_TIES_TO_AWAY, true, ctxnull)
 }
 func d128_toInt64TowardZero_ctxnull(x d128, ctxnull *context) int64 {
-	return d128ConvertToInt64_ctxnull(x, TOWARD_ZERO, true, ctxnull)
+	return d128ConvertToInt64_ctxnull(x, ROUND_TOWARD_ZERO, true, ctxnull)
 }
 func d128_toInt64TowardPositive_ctxnull(x d128, ctxnull *context) int64 {
-	return d128ConvertToInt64_ctxnull(x, TOWARD_POSITIVE, true, ctxnull)
+	return d128ConvertToInt64_ctxnull(x, ROUND_TOWARD_POSITIVE, true, ctxnull)
 }
 func d128_toInt64TowardNegative_ctxnull(x d128, ctxnull *context) int64 {
-	return d128ConvertToInt64_ctxnull(x, TOWARD_NEGATIVE, true, ctxnull)
+	return d128ConvertToInt64_ctxnull(x, ROUND_TOWARD_NEGATIVE, true, ctxnull)
 }
 
 func d128_toInt64TiesToEvenSignalInexact_ctxnull(x d128, ctxnull *context) int64 {
-	return d128ConvertToInt64_ctxnull(x, TIES_TO_EVEN, false, ctxnull)
+	return d128ConvertToInt64_ctxnull(x, ROUND_TIES_TO_EVEN, false, ctxnull)
 }
 func d128_toInt64TiesToAwaySignalInexact_ctxnull(x d128, ctxnull *context) int64 {
-	return d128ConvertToInt64_ctxnull(x, TIES_TO_AWAY, false, ctxnull)
+	return d128ConvertToInt64_ctxnull(x, ROUND_TIES_TO_AWAY, false, ctxnull)
 }
 func d128_toInt64TowardZeroSignalInexact_ctxnull(x d128, ctxnull *context) int64 {
-	return d128ConvertToInt64_ctxnull(x, TOWARD_ZERO, false, ctxnull)
+	return d128ConvertToInt64_ctxnull(x, ROUND_TOWARD_ZERO, false, ctxnull)
 }
 func d128_toInt64TowardPositiveSignalInexact_ctxnull(x d128, ctxnull *context) int64 {
-	return d128ConvertToInt64_ctxnull(x, TOWARD_POSITIVE, false, ctxnull)
+	return d128ConvertToInt64_ctxnull(x, ROUND_TOWARD_POSITIVE, false, ctxnull)
 }
 func d128_toInt64TowardNegativeSignalInexact_ctxnull(x d128, ctxnull *context) int64 {
-	return d128ConvertToInt64_ctxnull(x, TOWARD_NEGATIVE, false, ctxnull)
+	return d128ConvertToInt64_ctxnull(x, ROUND_TOWARD_NEGATIVE, false, ctxnull)
 }
 
 // --- range predicates ---

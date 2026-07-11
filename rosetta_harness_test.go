@@ -258,17 +258,17 @@ func dispatch(c *rosettaCase) (outcome, string) {
 func roundingFromToken(tok string) round {
 	switch tok {
 	case "TIES_TO_EVEN":
-		return TIES_TO_EVEN
+		return ROUND_TIES_TO_EVEN
 	case "TIES_TO_AWAY":
-		return TIES_TO_AWAY
+		return ROUND_TIES_TO_AWAY
 	case "TOWARD_ZERO":
-		return TOWARD_ZERO
+		return ROUND_TOWARD_ZERO
 	case "TOWARD_POSITIVE":
-		return TOWARD_POSITIVE
+		return ROUND_TOWARD_POSITIVE
 	case "TOWARD_NEGATIVE":
-		return TOWARD_NEGATIVE
+		return ROUND_TOWARD_NEGATIVE
 	default:
-		return TIES_TO_EVEN
+		return ROUND_TIES_TO_EVEN
 	}
 }
 

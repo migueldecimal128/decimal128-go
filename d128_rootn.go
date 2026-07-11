@@ -8,7 +8,7 @@ import "math/bits"
 
 var d128RootnOne = d128_fromInt64(1)
 
-func d128_rootn_tte(x d128, n int) d128            { return d128_rootn_rnd_ctxnull(x, n, TIES_TO_EVEN, nil) }
+func d128_rootn_tte(x d128, n int) d128            { return d128_rootn_rnd_ctxnull(x, n, ROUND_TIES_TO_EVEN, nil) }
 func d128_rootn_rnd(x d128, n int, rnd round) d128 { return d128_rootn_rnd_ctxnull(x, n, rnd, nil) }
 func d128_rootn_ctx(x d128, n int, ctx *context) d128 {
 	return d128_rootn_rnd_ctxnull(x, n, ctx.round, ctx)

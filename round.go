@@ -8,27 +8,27 @@ package decimal128
 type round struct{ code int }
 
 var (
-	TIES_TO_EVEN    = round{0}
-	TIES_TO_AWAY    = round{1}
-	TOWARD_ZERO     = round{2}
-	TOWARD_POSITIVE = round{3}
-	TOWARD_NEGATIVE = round{4}
+	ROUND_TIES_TO_EVEN    = round{0}
+	ROUND_TIES_TO_AWAY    = round{1}
+	ROUND_TOWARD_ZERO     = round{2}
+	ROUND_TOWARD_POSITIVE = round{3}
+	ROUND_TOWARD_NEGATIVE = round{4}
 )
 
 func roundName(r round) string {
-	if r == TIES_TO_EVEN {
+	if r == ROUND_TIES_TO_EVEN {
 		return "tiesToEven"
 	}
-	if r == TIES_TO_AWAY {
+	if r == ROUND_TIES_TO_AWAY {
 		return "tiesToAway"
 	}
-	if r == TOWARD_ZERO {
+	if r == ROUND_TOWARD_ZERO {
 		return "towardZero"
 	}
-	if r == TOWARD_POSITIVE {
+	if r == ROUND_TOWARD_POSITIVE {
 		return "towardPositive"
 	}
-	if r == TOWARD_NEGATIVE {
+	if r == ROUND_TOWARD_NEGATIVE {
 		return "towardNegative"
 	}
 	return "<< INVALID Round >>"

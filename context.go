@@ -12,7 +12,7 @@ type context struct {
 	flags *flags
 }
 
-func newContext() *context             { return &context{round: TIES_TO_EVEN, flags: newFlags()} }
+func newContext() *context             { return &context{round: ROUND_TIES_TO_EVEN, flags: newFlags()} }
 func newContextRound(r round) *context { return &context{round: r, flags: newFlags()} }
 func ieee754Context() *context         { return newContext() }
 
@@ -29,7 +29,7 @@ func (ctx *context) isUnderflow() bool         { return ctx.isSet(UNDERFLOW) }
 func (ctx *context) exceptionLetters() string  { return ctx.flags.exceptionLetters() }
 func (ctx *context) exceptionFlagsInt() int    { return int(ctx.flags.raw()) }
 
-func isRoundTowardNegative(ctx *context) bool { return ctx.round == TOWARD_NEGATIVE }
+func isRoundTowardNegative(ctx *context) bool { return ctx.round == ROUND_TOWARD_NEGATIVE }
 func isRoundTowardNegative_quiet() bool       { return false }
 
 func ctxSignalInexact_ctxnull(ctx *context, d d128) d128 {

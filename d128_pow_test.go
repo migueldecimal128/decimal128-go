@@ -12,7 +12,7 @@ import (
 // inside float64 range (|log10(result)| ≲ 130).
 
 func TestPowVsFloat(t *testing.T) {
-	ctx := newContextRound(TIES_TO_EVEN)
+	ctx := newContextRound(ROUND_TIES_TO_EVEN)
 	rng := rand.New(rand.NewSource(0x90))
 	for i := 0; i < 50000; i++ {
 		base := math.Pow(10, (rng.Float64()*2-1)*2) * (1 + rng.Float64()*9) // ~[1e-2, 1e3]
@@ -25,7 +25,7 @@ func TestPowVsFloat(t *testing.T) {
 }
 
 func TestPownVsFloat(t *testing.T) {
-	ctx := newContextRound(TIES_TO_EVEN)
+	ctx := newContextRound(ROUND_TIES_TO_EVEN)
 	rng := rand.New(rand.NewSource(0x9010))
 	for i := 0; i < 50000; i++ {
 		base := math.Pow(10, (rng.Float64()*2-1)*2) * (1 + rng.Float64()*9)

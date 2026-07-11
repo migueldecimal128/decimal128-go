@@ -100,7 +100,7 @@ func parseDec34_ctxnull(t *txt, ctxnull *context) d128ParseResult {
 	if (ch >= ascii_0 && ch <= ascii_9) || ch == ascii_dot {
 		r := parseFiniteValueText(sign, ch, t, 34)
 		if r.status == psSuccess {
-			rounding := TIES_TO_EVEN
+			rounding := ROUND_TIES_TO_EVEN
 			if ctxnull != nil {
 				rounding = ctxnull.round
 			}

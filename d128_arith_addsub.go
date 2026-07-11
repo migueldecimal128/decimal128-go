@@ -20,7 +20,7 @@ func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	if d128_isZER(x) {
 		if d128_isZER(y) {
 			resultSign := (d128_signFlag(x) && d128_signFlag(y)) ||
-				(d128_signFlag(x) != d128_signFlag(y) && rounding == TOWARD_NEGATIVE)
+				(d128_signFlag(x) != d128_signFlag(y) && rounding == ROUND_TOWARD_NEGATIVE)
 			return d128_zero(resultSign, min(d128_qExp(x), d128_qExp(y)))
 		}
 		return preferMinimumQExp_exact(y, d128_qExp(x))
@@ -31,7 +31,7 @@ func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	return addFnzFnz_rnd_ctxnull(x, y, rounding, ctxnull)
 }
 
-func d128_add_tte(x, y d128) d128            { return d128_add_rnd_ctxnull(x, y, TIES_TO_EVEN, nil) }
+func d128_add_tte(x, y d128) d128            { return d128_add_rnd_ctxnull(x, y, ROUND_TIES_TO_EVEN, nil) }
 func d128_add_rnd(x, y d128, rnd round) d128 { return d128_add_rnd_ctxnull(x, y, rnd, nil) }
 func d128_add_ctx(x, y d128, ctx *context) d128 {
 	return d128_add_rnd_ctxnull(x, y, ctx.round, ctx)
@@ -64,7 +64,7 @@ func addFnzFnz_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 		} else {
 			ds := subAbs_d128swap_128x128(xCoeffAligned.dw0, xCoeffAligned.dw1, yCoeffAligned.dw0, yCoeffAligned.dw1)
 			if isZero_bool_128(ds.diffDw0, ds.diffDw1) {
-				return d128_zero(rounding == TOWARD_NEGATIVE, qAligned)
+				return d128_zero(rounding == ROUND_TOWARD_NEGATIVE, qAligned)
 			}
 			resultSign = d128_signFlag(x) != ds.swap
 			resultCoeff = u128{ds.diffDw0, ds.diffDw1}
@@ -105,7 +105,9 @@ func d128_subtract_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 	return addFnzFnz_rnd_ctxnull(x, yNeg, rounding, ctxnull)
 }
 
-func d128_subtract_tte(x, y d128) d128            { return d128_subtract_rnd_ctxnull(x, y, TIES_TO_EVEN, nil) }
+func d128_subtract_tte(x, y d128) d128 {
+	return d128_subtract_rnd_ctxnull(x, y, ROUND_TIES_TO_EVEN, nil)
+}
 func d128_subtract_rnd(x, y d128, rnd round) d128 { return d128_subtract_rnd_ctxnull(x, y, rnd, nil) }
 func d128_subtract_ctx(x, y d128, ctx *context) d128 {
 	return d128_subtract_rnd_ctxnull(x, y, ctx.round, ctx)
@@ -161,7 +163,7 @@ func addFnzFnzUnalignedUnlikeSign_rnd_ctxnull(x, y d128, rounding round, ctxnull
 	if cmp < 0 {
 		return subMagUnalignedFnzFnz_rnd_ctxnull(d128_signFlag(y), y, x, rounding, ctxnull)
 	}
-	return d128_zero(rounding == TOWARD_NEGATIVE, min(d128_qExp(x), d128_qExp(y)))
+	return d128_zero(rounding == ROUND_TOWARD_NEGATIVE, min(d128_qExp(x), d128_qExp(y)))
 }
 
 func addNonFinite_rnd_ctxnull(x, y d128, ctxnull *context) d128 {
