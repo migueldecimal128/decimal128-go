@@ -99,9 +99,24 @@ func totalThreeWay(leftBelowEqual, rightBelowEqual bool) Comparison {
 // Equal and Less are already provided on Decimal128 (the IEEE == and < forms);
 // these add the remaining named predicates.
 
+// NotEqual reports whether d ≠ other under IEEE rules (true if either is NaN).
+func (d Decimal128) NotEqual(other Decimal128) bool {
+	return d128_isNotEqual(d.core, other.core)
+}
+
 // LessOrEqual reports whether d ≤ other under IEEE rules (false if either is NaN).
 func (d Decimal128) LessOrEqual(other Decimal128) bool {
 	return d128_isLessEqual(d.core, other.core)
+}
+
+// Greater reports whether d > other under IEEE rules (false if either is NaN).
+func (d Decimal128) Greater(other Decimal128) bool {
+	return d128_isGreater(d.core, other.core)
+}
+
+// GreaterOrEqual reports whether d ≥ other under IEEE rules (false if either is NaN).
+func (d Decimal128) GreaterOrEqual(other Decimal128) bool {
+	return d128_isGreaterEqual(d.core, other.core)
 }
 
 // IsUnordered reports whether either operand is NaN (so the two are not ordered).

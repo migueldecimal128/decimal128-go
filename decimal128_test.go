@@ -92,6 +92,21 @@ func TestWrapperCompare(t *testing.T) {
 	if !Zero().Equal(MustParse("-0")) {
 		t.Fatal("+0 should equal -0")
 	}
+
+	// Named quiet complements: NotEqual / Greater / GreaterOrEqual.
+	if !one.NotEqual(two) || one.NotEqual(MustParse("1.0")) {
+		t.Fatal("NotEqual")
+	}
+	if !two.Greater(one) || one.Greater(two) || one.Greater(MustParse("1.0")) {
+		t.Fatal("Greater")
+	}
+	if !two.GreaterOrEqual(one) || !one.GreaterOrEqual(MustParse("1.0")) || one.GreaterOrEqual(two) {
+		t.Fatal("GreaterOrEqual")
+	}
+	// NaN is unordered: NotEqual is true, the ordering predicates are false.
+	if !one.NotEqual(NaN()) || one.Greater(NaN()) || one.GreaterOrEqual(NaN()) {
+		t.Fatal("NaN quiet comparisons")
+	}
 }
 
 func TestWrapperRounding(t *testing.T) {
