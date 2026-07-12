@@ -120,6 +120,18 @@ func decodeOperand(s string) d128 {
 	return d128_parseOrNaN(s)
 }
 
+// parseWord64 parses a decimal64 operand written as a 16-hex word (optionally
+// bracketed, "[XXXXXXXXXXXXXXXX]") to its raw uint64 bits. Used by the
+// decimal64->decimal128 widening-decode arms (from_bid64/from_dpd64), whose
+// operand is a 64-bit word — NOT the 32-hex bid128 / #dpd128 form decodeOperand
+// expects.
+func parseWord64(s string) uint64 {
+	s = strings.TrimPrefix(s, "[")
+	s = strings.TrimSuffix(s, "]")
+	u, _ := strconv.ParseUint(s, 16, 64)
+	return u
+}
+
 // dispatch runs one case against the engine and reports its Outcome. Arms are
 // added as operators land; unsupported operations report outUnsupported (not a
 // failure). Currently wired: the serde/parse/print/predicate ops.
@@ -327,6 +339,10 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkPredicate(c, d128_fitsUInt64)
 	case "d128_square_ctx":
 		return checkUnaryCtx(c, d128_square_ctx)
+	case "d128_from_bid64":
+		return checkFromWord64(c, func(u uint64) d128 { return d128_from_bid64(int64(u)) })
+	case "d128_from_dpd64":
+		return checkFromWord64(c, func(u uint64) d128 { return d128_from_dpd64(int64(u)) })
 	case "d128_canonical", "canonical":
 		// All UBD encodings are canonical; the DPD decoder normalises any
 		// non-canonical declets, so canonical(x) is the identity on the value.
@@ -522,6 +538,25 @@ func checkUnaryQuiet(c *rosettaCase, op func(x d128) d128) (outcome, string) {
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
 		d128_format(z, FORMAT_COEFFICIENT_QEXP), "",
 		d128_format(decodeOperand(c.result), FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+}
+
+// checkFromWord64 runs a decimal64->decimal128 widening-decode op
+// (from_bid64/from_dpd64): the operand is a 16-hex 64-bit word (parsed
+// op-specifically, NOT via decodeOperand), the result the decoded decimal128.
+// The decode is an exact-subset widening — it never rounds or signals — so the
+// expected flags are always empty. Compared bitwise via the canonical d128.
+func checkFromWord64(c *rosettaCase, op func(u uint64) d128) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	z := op(parseWord64(c.operands[0]))
+	expected := decodeOperand(c.result)
+	if d128_bitwiseEQ(z, expected) && c.expectedFlags == "" {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
+		d128_format(z, FORMAT_COEFFICIENT_QEXP), "",
+		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 // checkBinaryQuiet runs a non-computational binary op (copySign) — bitwise

@@ -452,6 +452,25 @@ func wrapScaleBIntel(c *rosettaCase) (outcome, string) {
 	return wrapCheck(c, ctx, ctx.ScaleB(decodeOperandWrapper(c.operands[0]), n))
 }
 
+// wrapFromWord64 runs a decimal64->decimal128 widening decode (FromBID64/
+// FromDPD64) through the public API. The operand is a 16-hex 64-bit word (parsed
+// op-specifically, NOT via decodeOperandWrapper); the exact-subset decode never
+// rounds or signals, so no flags are expected. Compared bitwise via DPD.
+func wrapFromWord64(c *rosettaCase, op func(uint64) Decimal128) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	if c.expectedFlags != "" {
+		return outUnsupported, "quiet decode cannot track flags"
+	}
+	got := op(parseWord64(c.operands[0]))
+	want := decodeOperandWrapper(c.result)
+	if dpdEqual(got, want) {
+		return outPass, ""
+	}
+	return outFail, "got " + got.Format(StyleCoefficientExponent) + " want " + want.Format(StyleCoefficientExponent)
+}
+
 func wrapPredicate(c *rosettaCase, pred func(Decimal128) bool) (outcome, string) {
 	if len(c.operands) != 1 {
 		return outUnsupported, "bad operand count"
@@ -503,6 +522,10 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapPredicate(c, Decimal128.FitsUInt64)
 	case "d128_square_ctx":
 		return wrapUnaryCtxRnd(c, (*Context).Square, Rounding.Square)
+	case "d128_from_bid64":
+		return wrapFromWord64(c, FromBID64)
+	case "d128_from_dpd64":
+		return wrapFromWord64(c, FromDPD64)
 	case "d128_quantize_ctxnull", "quantize":
 		return wrapBinaryCtx(c, (*Context).Quantize)
 	case "d128_remainder_ctx", "remainder":
