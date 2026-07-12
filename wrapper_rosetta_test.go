@@ -497,6 +497,12 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapIntCtxRnd(c, (*Context).Root, Rounding.Root)
 	case "d128_compound_ctx":
 		return wrapIntCtxRnd(c, (*Context).Compound, Rounding.Compound)
+	case "d128_fitsInt64":
+		return wrapPredicate(c, Decimal128.FitsInt64)
+	case "d128_fitsUInt64":
+		return wrapPredicate(c, Decimal128.FitsUInt64)
+	case "d128_square_ctx":
+		return wrapUnaryCtxRnd(c, (*Context).Square, Rounding.Square)
 	case "d128_quantize_ctxnull", "quantize":
 		return wrapBinaryCtx(c, (*Context).Quantize)
 	case "d128_remainder_ctx", "remainder":

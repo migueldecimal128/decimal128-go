@@ -321,6 +321,12 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkIntExpOp(c, d128_rootn_ctx)
 	case "d128_compound_ctx":
 		return checkIntExpOp(c, d128_compound_ctx)
+	case "d128_fitsInt64":
+		return checkPredicate(c, d128_fitsInt64)
+	case "d128_fitsUInt64":
+		return checkPredicate(c, d128_fitsUInt64)
+	case "d128_square_ctx":
+		return checkUnaryCtx(c, d128_square_ctx)
 	case "d128_canonical", "canonical":
 		// All UBD encodings are canonical; the DPD decoder normalises any
 		// non-canonical declets, so canonical(x) is the identity on the value.
