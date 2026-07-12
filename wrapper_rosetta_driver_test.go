@@ -47,6 +47,36 @@ func TestWrapperRosetta(t *testing.T) {
 			name, r.total, r.passed, r.unsupported, r.failed)
 	}
 
+	// Intel BID operations corpus (readtest.in): NaN/min-max cohort normalization
+	// is applied in wrapCheck; per-line skips are counted, not failed.
+	intelCases, err := loadIntelFile(filepath.Join(resourcesDir(), "intel", "readtest.in"))
+	if err != nil {
+		t.Fatalf("load readtest.in: %v", err)
+	}
+	{
+		r := runWrapperRosetta(intelCases)
+		mergeResult(&total, r)
+		t.Logf("intel   %-20s %d cases — %d passed, %d unsupported, %d failed",
+			"readtest.in", r.total, r.passed, r.unsupported, r.failed)
+	}
+
+	// IEEE fptest corpora (raw cohort results, u-stripped flags, trap-enabled
+	// lines and "#" don't-care results handled in wrapCheck).
+	fptestFiles, err := filepath.Glob(filepath.Join(resourcesDir(), "fptest", "*.fptest"))
+	if err != nil || len(fptestFiles) == 0 {
+		t.Fatalf("glob fptest: %v (%d files)", err, len(fptestFiles))
+	}
+	for _, f := range fptestFiles {
+		cases, err := loadFptestFile(f)
+		if err != nil {
+			t.Fatalf("load %s: %v", f, err)
+		}
+		r := runWrapperRosetta(cases)
+		mergeResult(&total, r)
+		t.Logf("fptest  %-40s %d cases — %d passed, %d unsupported, %d failed",
+			filepath.Base(f), r.total, r.passed, r.unsupported, r.failed)
+	}
+
 	if total.failed != 0 {
 		t.Fatalf("WrapperRosetta: %d/%d failed: %v", total.failed, total.total, sampleFailures(total))
 	}

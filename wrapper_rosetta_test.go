@@ -3,6 +3,7 @@ package decimal128
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // WrapperRosetta: the same conformance corpora, driven entirely through the
@@ -18,8 +19,13 @@ import (
 // decodeOperandWrapper decodes a corpus operand into a Decimal128 through the
 // public constructors (DPD/BID interchange for hex, ParseOrNaN for decimals).
 func decodeOperandWrapper(s string) Decimal128 {
-	if s == "#" {
+	if s == "#" || s == "S" {
+		// dectest's bare "#" and fptest's "S" both denote a signaling NaN operand.
 		return SignalingNaN()
+	}
+	if s == "Q" {
+		// fptest's quiet-NaN operand spelling.
+		return NaN()
 	}
 	if len(s) > 0 {
 		if s[0] == '#' {
@@ -83,14 +89,132 @@ func tokenToRounding(tok string) (Rounding, bool) {
 }
 
 func wrapCheck(c *rosettaCase, ctx *Context, got Decimal128) (outcome, string) {
-	want := decodeOperandWrapper(c.result)
 	flags := wrapperFlagLetters(ctx.RaisedFlags())
+	if c.src == srcFptest {
+		return wrapCheckFptest(c, flags, got)
+	}
+	want := decodeOperandWrapper(c.result)
+	if c.src == srcIntel {
+		want = intelNormalizeWant(c, want)
+	}
 	if dpdEqual(got, want) && flags == c.expectedFlags {
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
 		got.Format(StyleCoefficientExponent), flags,
 		want.Format(StyleCoefficientExponent), c.expectedFlags)
+}
+
+// intelNormalizeWant applies the Intel result-normalization (NaN cohort choice
+// for binary/ternary ops, min/max cohort selection) to the expected value before
+// the bitwise compare — reusing the internal-d128 helpers from the core Intel
+// machinery. Public Decimal128 operands are unwrapped to d128 via the (same
+// package) core field. Mirrors the c.src == srcIntel branches in the core
+// harness's checkBinaryCtx / checkTernaryCtx / checkMinMaxNumber.
+func intelNormalizeWant(c *rosettaCase, want Decimal128) Decimal128 {
+	switch len(c.operands) {
+	case 2:
+		o1 := decodeOperandWrapper(c.operands[0]).core
+		o2 := decodeOperandWrapper(c.operands[1]).core
+		w := intelNanBinary(o1, o2, want.core)
+		if isMinMaxOp(c.operation) {
+			w = intelNumber(o1, o2, w, strings.Contains(c.operation, "max"))
+		}
+		return Decimal128{w}
+	case 3:
+		o1 := decodeOperandWrapper(c.operands[0]).core
+		o2 := decodeOperandWrapper(c.operands[1]).core
+		o3 := decodeOperandWrapper(c.operands[2]).core
+		return Decimal128{intelNanTernary(o1, o2, o3, want.core)}
+	default:
+		return want
+	}
+}
+
+// isMinMaxOp reports whether op is one of the canonical min/max tokens (the
+// NaN-as-missing "Number" family that carries the Intel cohort-selection rule).
+func isMinMaxOp(op string) bool {
+	switch op {
+	case "min", "max", "minmag", "maxmag":
+		return true
+	default:
+		return false
+	}
+}
+
+// wrapCheckFptest compares against an fptest expected result: a raw cohort form
+// (`+coeff e exp`) or a special (Q/S/+inf/-inf/#). Trap-enabled lines are
+// skipped; a "#" result is a don't-care value (flags only). Flags are u-stripped
+// on both sides (fptest's tininess-before-rounding underflow convention differs
+// from ours). Mirrors the Swift wrapper compareFptest.
+func wrapCheckFptest(c *rosettaCase, flags string, got Decimal128) (outcome, string) {
+	if c.traps != "" {
+		return outUnsupported, "fptest trap-enabled"
+	}
+	if c.result == "#" {
+		if fptestFlagsMatch(flags, c.expectedFlags) {
+			return outPass, ""
+		}
+		return outFail, fmt.Sprintf("flags got %q want %q (u-stripped)", flags, c.expectedFlags)
+	}
+	if fptestValueMatch(c.result, got) && fptestFlagsMatch(flags, c.expectedFlags) {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s→%s flags=%q",
+		got.Format(StyleCoefficientExponent), flags,
+		c.result, fptestToCoefExp(c.result), c.expectedFlags)
+}
+
+// fptestValueMatch reports whether got matches the fptest expected token.
+func fptestValueMatch(exp string, got Decimal128) bool {
+	switch {
+	case strings.HasPrefix(exp, "Q"):
+		return got.IsNaN() && !got.IsSignalingNaN()
+	case strings.HasPrefix(exp, "S"):
+		return got.IsSignalingNaN()
+	case exp == "+inf":
+		return got.IsInf() && !got.Signbit()
+	case exp == "-inf":
+		return got.IsInf() && got.Signbit()
+	default:
+		return fptestToCoefExp(exp) == got.Format(StyleCoefficientExponent)
+	}
+}
+
+// fptestToCoefExp converts an fptest finite result (`+coeff e exp`) to our
+// StyleCoefficientExponent spelling: drop the coefficient '+', uppercase 'e'→'E',
+// and sign a non-negative exponent with '+' (which our format always emits;
+// fptest omits it).
+func fptestToCoefExp(s string) string {
+	t := strings.ToUpper(s)
+	t = strings.TrimPrefix(t, "+")
+	if i := strings.IndexByte(t, 'E'); i >= 0 && i+1 < len(t) {
+		if t[i+1] != '-' && t[i+1] != '+' {
+			t = t[:i+1] + "+" + t[i+1:]
+		}
+	}
+	return t
+}
+
+// fptestFlagsMatch compares raised-exception letters with fptest's expectation,
+// stripping the underflow flag from both sides — but our library must not report
+// underflow that fptest did not (fptest detects tininess before rounding). Mirrors
+// the C# verifyFptestFlags.
+func fptestFlagsMatch(obs, exp string) bool {
+	if strings.Contains(obs, "u") && !strings.Contains(exp, "u") {
+		return false
+	}
+	return removeFlagChar(obs, 'u') == removeFlagChar(exp, 'u')
+}
+
+func removeFlagChar(s string, ch byte) string {
+	var b []byte
+	for i := 0; i < len(s); i++ {
+		if s[i] != ch {
+			b = append(b, s[i])
+		}
+	}
+	return string(b)
 }
 
 func wrapBinaryCtx(c *rosettaCase, op func(*Context, Decimal128, Decimal128) Decimal128) (outcome, string) {
@@ -250,6 +374,84 @@ func wrapDirectedRound(c *rosettaCase, r Rounding) (outcome, string) {
 	return outFail, "got " + got.Format(StyleCoefficientExponent) + " want " + want.Format(StyleCoefficientExponent)
 }
 
+// wrapQuietUnary runs a non-computational unary op (abs, nextUp/nextDown) that
+// only moves bits or quiets a NaN. Because the public form is flag-free, a case
+// that expects flags is reported unsupported.
+func wrapQuietUnary(c *rosettaCase, op func(Decimal128) Decimal128) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	if c.expectedFlags != "" {
+		return outUnsupported, "quiet op cannot track flags"
+	}
+	got := op(decodeOperandWrapper(c.operands[0]))
+	want := decodeOperandWrapper(c.result)
+	if dpdEqual(got, want) {
+		return outPass, ""
+	}
+	return outFail, "got " + got.Format(StyleCoefficientExponent) + " want " + want.Format(StyleCoefficientExponent)
+}
+
+// wrapQuietBinary runs a non-computational binary op (copySign) — bitwise
+// compare, no flags.
+func wrapQuietBinary(c *rosettaCase, op func(Decimal128, Decimal128) Decimal128) (outcome, string) {
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	if c.expectedFlags != "" {
+		return outUnsupported, "quiet op cannot track flags"
+	}
+	got := op(decodeOperandWrapper(c.operands[0]), decodeOperandWrapper(c.operands[1]))
+	want := decodeOperandWrapper(c.result)
+	if dpdEqual(got, want) {
+		return outPass, ""
+	}
+	return outFail, "got " + got.Format(StyleCoefficientExponent) + " want " + want.Format(StyleCoefficientExponent)
+}
+
+// wrapMinMaxNumber runs a min/max "Number" (NaN-as-missing) op. The sNaN-versus-
+// number case diverges between 754-2019 minimumNumber and decNumber minNum, so it
+// is reported unsupported; otherwise the Intel cohort normalization in wrapCheck
+// reconciles the equal-value cohort selection.
+func wrapMinMaxNumber(c *rosettaCase, op func(*Context, Decimal128, Decimal128) Decimal128) (outcome, string) {
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	rnd, ok := tokenToRounding(c.rounding)
+	if !ok {
+		return outUnsupported, "rounding mode not representable"
+	}
+	x := decodeOperandWrapper(c.operands[0])
+	y := decodeOperandWrapper(c.operands[1])
+	if (x.IsSignalingNaN() && !y.IsNaN()) || (y.IsSignalingNaN() && !x.IsNaN()) {
+		return outUnsupported, "sNaN handling diverges: 754-2019 minimumNumber vs decNumber minNum"
+	}
+	ctx := NewContextWithRounding(rnd)
+	return wrapCheck(c, ctx, op(ctx, x, y))
+}
+
+// wrapScaleBIntel runs Intel's scalbn (plain-integer scale argument) through the
+// public Context.ScaleB. The dectest scaleb (bounded decimal-argument adapter)
+// has no public form, so non-Intel cases are reported unsupported.
+func wrapScaleBIntel(c *rosettaCase) (outcome, string) {
+	if c.src != srcIntel {
+		return outUnsupported, "scaleb decimal-argument adapter has no public form"
+	}
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	rnd, ok := tokenToRounding(c.rounding)
+	if !ok {
+		return outUnsupported, "rounding mode not representable"
+	}
+	n, err := strconv.Atoi(c.operands[1])
+	if err != nil {
+		return outUnsupported, "non-integer scalbn argument"
+	}
+	ctx := NewContextWithRounding(rnd)
+	return wrapCheck(c, ctx, ctx.ScaleB(decodeOperandWrapper(c.operands[0]), n))
+}
+
 func wrapPredicate(c *rosettaCase, pred func(Decimal128) bool) (outcome, string) {
 	if len(c.operands) != 1 {
 		return outUnsupported, "bad operand count"
@@ -327,12 +529,40 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapPredicate(c, Decimal128.IsSignalingNaN)
 	case "d128_isQNaN":
 		return wrapPredicate(c, func(d Decimal128) bool { return d.IsNaN() && !d.IsSignalingNaN() })
+	case "d128_isNormal":
+		return wrapPredicate(c, Decimal128.IsNormal)
+	case "d128_isSubnormal":
+		return wrapPredicate(c, Decimal128.IsSubnormal)
+	case "d128_isZero":
+		return wrapPredicate(c, Decimal128.IsZero)
 	case "d128_isEqual_ctx":
 		return wrapBinaryBool(c, Decimal128.Equal)
 	case "d128_isLess_ctx":
 		return wrapBinaryBool(c, Decimal128.Less)
 	case "d128_totalOrder":
 		return wrapBinaryBool(c, Decimal128.IsTotallyOrdered)
+	case "d128_totalOrderMag":
+		return wrapBinaryBool(c, Decimal128.IsTotallyOrderedByMagnitude)
+	case "samequantum":
+		return wrapBinaryBool(c, Decimal128.SameQuantum)
+	case "d128_abs", "copyabs":
+		return wrapQuietUnary(c, Decimal128.Abs)
+	case "nextplus":
+		return wrapQuietUnary(c, Decimal128.NextUp)
+	case "nextminus":
+		return wrapQuietUnary(c, Decimal128.NextDown)
+	case "copysign":
+		return wrapQuietBinary(c, Decimal128.CopySign)
+	case "min":
+		return wrapMinMaxNumber(c, (*Context).MinimumNumber)
+	case "max":
+		return wrapMinMaxNumber(c, (*Context).MaximumNumber)
+	case "minmag":
+		return wrapMinMaxNumber(c, (*Context).MinimumMagnitudeNumber)
+	case "maxmag":
+		return wrapMinMaxNumber(c, (*Context).MaximumMagnitudeNumber)
+	case "scaleb":
+		return wrapScaleBIntel(c)
 	case "d128_round_integral_nearest_even":
 		return wrapDirectedRound(c, TiesToEven)
 	case "d128_round_integral_nearest_away":
@@ -352,6 +582,12 @@ func runWrapperRosetta(cases []rosettaCase) rosettaResult {
 	var r rosettaResult
 	r.total = len(cases)
 	for i := range cases {
+		if shouldSkip(&cases[i]) {
+			// Per-line skips (Intel cohort/NaN cases) are counted, not run:
+			// decrement total so the tally reflects only dispatched cases.
+			r.total--
+			continue
+		}
 		out, diag := dispatchWrapper(&cases[i])
 		switch out {
 		case outPass:
