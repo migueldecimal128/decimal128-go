@@ -126,3 +126,23 @@ func TestRosettaDectestAddSub(t *testing.T) {
 		t.Logf("%s: %d cases — %d passed, %d unsupported", name, r.total, r.passed, r.unsupported)
 	}
 }
+
+// TestRosettaIntel runs the Intel BID operations corpus (readtest.in ~14k
+// bid128_* vectors) through the harness. Intel result normalization (NaN cohort
+// + min/max conventions) is applied in the shared compare helpers; per-line
+// skips are counted, not failed. Gates on 0 failures.
+func TestRosettaIntel(t *testing.T) {
+	cases, err := loadIntelFile(filepath.Join(resourcesDir(), "intel", "readtest.in"))
+	if err != nil {
+		t.Fatalf("load readtest.in: %v", err)
+	}
+	r := runRosetta(cases)
+	t.Logf("intel readtest.in: %d cases — %d passed, %d unsupported, %d failed",
+		r.total, r.passed, r.unsupported, r.failed)
+	if r.failed != 0 {
+		t.Fatalf("intel: %d/%d failed: %v", r.failed, r.total, sampleFailures(r))
+	}
+	if r.passed == 0 {
+		t.Fatal("expected some intel cases to pass")
+	}
+}

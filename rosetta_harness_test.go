@@ -10,6 +10,7 @@ package decimal128
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -144,6 +145,12 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkPredicate(c, d128_isSNAN)
 	case "d128_isQNaN":
 		return checkPredicate(c, d128_isQNAN)
+	case "d128_isNormal":
+		return checkPredicate(c, d128_isNormal)
+	case "d128_isSubnormal":
+		return checkPredicate(c, d128_isSubnormal)
+	case "d128_isZero":
+		return checkPredicate(c, d128_isZER)
 	case "d128_add_ctx", "add":
 		return checkBinaryCtx(c, d128_add_ctx)
 	case "d128_subtract_ctx", "subtract":
@@ -160,6 +167,76 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkBinaryBoolCtx(c, d128_isEqual_ctx)
 	case "d128_isLess_ctx":
 		return checkBinaryBoolCtx(c, d128_isLess_ctx)
+	case "d128_isGreater_ctx":
+		return checkBinaryBoolCtx(c, d128_isGreater_ctx)
+	case "d128_isGreaterEqual_ctx":
+		return checkBinaryBoolCtx(c, d128_isGreaterEqual_ctx)
+	case "d128_isGreaterUnordered_ctx":
+		return checkBinaryBoolCtx(c, d128_isGreaterUnordered_ctx)
+	case "d128_isLessEqual_ctx":
+		return checkBinaryBoolCtx(c, d128_isLessEqual_ctx)
+	case "d128_isLessUnordered_ctx":
+		return checkBinaryBoolCtx(c, d128_isLessUnordered_ctx)
+	case "d128_isNotEqual_ctx":
+		return checkBinaryBoolCtx(c, d128_isNotEqual_ctx)
+	case "d128_isNotGreater_ctx":
+		return checkBinaryBoolCtx(c, d128_isNotGreater_ctx)
+	case "d128_isNotLess_ctx":
+		return checkBinaryBoolCtx(c, d128_isNotLess_ctx)
+	case "d128_isOrdered_ctx":
+		return checkBinaryBoolCtx(c, d128_isOrdered_ctx)
+	case "d128_isUnordered_ctx":
+		return checkBinaryBoolCtx(c, d128_isUnordered_ctx)
+	case "d128_isEqualSignaling_ctx":
+		return checkBinaryBoolCtx(c, d128_isEqualSignaling_ctx)
+	case "d128_isGreaterSignaling_ctx":
+		return checkBinaryBoolCtx(c, d128_isGreaterSignaling_ctx)
+	case "d128_isGreaterEqualSignaling_ctx":
+		return checkBinaryBoolCtx(c, d128_isGreaterEqualSignaling_ctx)
+	case "d128_isGreaterUnorderedSignaling_ctx":
+		return checkBinaryBoolCtx(c, d128_isGreaterUnorderedSignaling_ctx)
+	case "d128_isLessSignaling_ctx":
+		return checkBinaryBoolCtx(c, d128_isLessSignaling_ctx)
+	case "d128_isLessEqualSignaling_ctx":
+		return checkBinaryBoolCtx(c, d128_isLessEqualSignaling_ctx)
+	case "d128_isLessUnorderedSignaling_ctx":
+		return checkBinaryBoolCtx(c, d128_isLessUnorderedSignaling_ctx)
+	case "d128_isNotEqualSignaling_ctx":
+		return checkBinaryBoolCtx(c, d128_isNotEqualSignaling_ctx)
+	case "d128_isNotGreaterSignaling_ctx":
+		return checkBinaryBoolCtx(c, d128_isNotGreaterSignaling_ctx)
+	case "d128_isNotLessSignaling_ctx":
+		return checkBinaryBoolCtx(c, d128_isNotLessSignaling_ctx)
+	case "d128_isOrderedSignaling_ctx":
+		return checkBinaryBoolCtx(c, d128_isOrderedSignaling_ctx)
+	case "d128_isUnorderedSignaling_ctx":
+		return checkBinaryBoolCtx(c, d128_isUnorderedSignaling_ctx)
+	case "d128_totalOrderMag":
+		return checkBinaryBoolCtx(c, func(x, y d128, _ *context) bool { return d128_isTotallyOrderedMag(x, y) })
+	case "d128_quantexp":
+		return checkQuantExp(c)
+	case "d128_to_int64_rnint":
+		return checkToInt64(c, d128_toInt64TiesToEven_ctxnull)
+	case "d128_to_int64_rninta":
+		return checkToInt64(c, d128_toInt64TiesToAway_ctxnull)
+	case "d128_to_int64_ceil":
+		return checkToInt64(c, d128_toInt64TowardPositive_ctxnull)
+	case "d128_to_int64_floor":
+		return checkToInt64(c, d128_toInt64TowardNegative_ctxnull)
+	case "d128_to_int64_int":
+		return checkToInt64(c, d128_toInt64TowardZero_ctxnull)
+	case "d128_to_int64_xrnint":
+		return checkToInt64(c, d128_toInt64TiesToEvenSignalInexact_ctxnull)
+	case "d128_to_int64_xrninta":
+		return checkToInt64(c, d128_toInt64TiesToAwaySignalInexact_ctxnull)
+	case "d128_to_int64_xceil":
+		return checkToInt64(c, d128_toInt64TowardPositiveSignalInexact_ctxnull)
+	case "d128_to_int64_xfloor":
+		return checkToInt64(c, d128_toInt64TowardNegativeSignalInexact_ctxnull)
+	case "d128_to_int64_xint":
+		return checkToInt64(c, d128_toInt64TowardZeroSignalInexact_ctxnull)
+	case "d128_to_uint64_int":
+		return checkToUInt64(c)
 	case "d128_divideInteger_ctx", "divideint":
 		return checkBinaryCtx(c, d128_divideInteger_ctx)
 	case "d128_fma_ctx", "fma":
@@ -171,15 +248,15 @@ func dispatch(c *rosettaCase) (outcome, string) {
 	case "d128_roundToIntegralSignalInexact", "tointegralx":
 		return checkUnaryCtx(c, d128_roundToIntegralSignalInexact)
 	case "d128_round_integral_nearest_even":
-		return checkUnaryCtx(c, func(x d128, _ *context) d128 { return d128_roundToIntegralTiesToEven(x) })
+		return checkUnaryCtx(c, d128_roundToIntegralTiesToEven_ctx)
 	case "d128_round_integral_nearest_away":
-		return checkUnaryCtx(c, func(x d128, _ *context) d128 { return d128_roundToIntegralTiesToAway(x) })
+		return checkUnaryCtx(c, d128_roundToIntegralTiesToAway_ctx)
 	case "d128_round_integral_zero":
-		return checkUnaryCtx(c, func(x d128, _ *context) d128 { return d128_roundToIntegralTowardZero(x) })
+		return checkUnaryCtx(c, d128_roundToIntegralTowardZero_ctx)
 	case "d128_round_integral_positive":
-		return checkUnaryCtx(c, func(x d128, _ *context) d128 { return d128_roundToIntegralTowardPositive(x) })
+		return checkUnaryCtx(c, d128_roundToIntegralTowardPositive_ctx)
 	case "d128_round_integral_negative":
-		return checkUnaryCtx(c, func(x d128, _ *context) d128 { return d128_roundToIntegralTowardNegative(x) })
+		return checkUnaryCtx(c, d128_roundToIntegralTowardNegative_ctx)
 	case "d128_sqrt_ctx", "squareroot":
 		return checkUnaryCtx(c, d128_sqrt_ctx)
 	case "d128_stripTrailingZeros", "reduce":
@@ -284,6 +361,9 @@ func checkBinaryCtx(c *rosettaCase, op func(x, y d128, ctx *context) d128) (outc
 	ctx := newContextRound(roundingFromToken(c.rounding))
 	z := op(decodeOperand(c.operands[0]), decodeOperand(c.operands[1]), ctx)
 	expected := decodeOperand(c.result)
+	if c.src == srcIntel {
+		expected = intelNanBinary(decodeOperand(c.operands[0]), decodeOperand(c.operands[1]), expected)
+	}
 	if d128_bitwiseEQ(z, expected) && ctx.exceptionLetters() == c.expectedFlags {
 		return outPass, ""
 	}
@@ -305,8 +385,18 @@ func checkScaleB(c *rosettaCase) (outcome, string) {
 	}
 	ctx := newContextRound(roundingFromToken(c.rounding))
 	x := decodeOperand(c.operands[0])
-	y := decodeOperand(c.operands[1])
-	z := scaleBFromDecimalArg(x, y, ctx)
+	var z d128
+	if c.src == srcIntel {
+		// Intel's scalbn takes a plain integer scale (which may exceed decNumber's
+		// bounded decimal-argument range), applied directly via d128_scaleB.
+		n, err := strconv.Atoi(c.operands[1])
+		if err != nil {
+			return outUnsupported, "non-integer scalbn argument"
+		}
+		z = d128_scaleB_ctxnull(x, n, ctx)
+	} else {
+		z = scaleBFromDecimalArg(x, decodeOperand(c.operands[1]), ctx)
+	}
 	expected := decodeOperand(c.result)
 	if d128_bitwiseEQ(z, expected) && ctx.exceptionLetters() == c.expectedFlags {
 		return outPass, ""
@@ -355,6 +445,11 @@ func checkMinMaxNumber(c *rosettaCase, op func(x, y d128, ctx *context) d128) (o
 	ctx := newContextRound(roundingFromToken(c.rounding))
 	z := op(x, y, ctx)
 	expected := decodeOperand(c.result)
+	if c.src == srcIntel {
+		isMax := strings.Contains(c.operation, "max")
+		expected = intelNanBinary(x, y, expected)
+		expected = intelNumber(x, y, expected, isMax)
+	}
 	if d128_bitwiseEQ(z, expected) && ctx.exceptionLetters() == c.expectedFlags {
 		return outPass, ""
 	}
@@ -438,6 +533,74 @@ func checkBinaryQuiet(c *rosettaCase, op func(x, y d128) d128) (outcome, string)
 		d128_format(decodeOperand(c.result), FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
+// checkQuantExp runs Intel's quantexp: the quantum (encoded) exponent of x as an
+// integer. Never signals (finite/special handled internally), but flags are still
+// compared for parity with the corpus expectation.
+func checkQuantExp(c *rosettaCase) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	got := d128_quantumInt_ctxnull(decodeOperand(c.operands[0]), ctx)
+	if got == math.MinInt {
+		// The core's non-finite quantum sentinel is the platform int min; Intel's
+		// readtest records the 32-bit sentinel. Normalize before compare.
+		got = math.MinInt32
+	}
+	expected, err := strconv.Atoi(c.result)
+	if err != nil {
+		return outUnsupported, "non-integer quantexp result"
+	}
+	if got == expected && ctx.exceptionLetters() == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %d flags=%q want %d flags=%q", got, ctx.exceptionLetters(), expected, c.expectedFlags)
+}
+
+// checkToInt64 runs a directed convert-to-int64 op. On an invalid conversion the
+// returned value is an implementation-defined sentinel; the corpus records
+// Intel's (which the core matches), but if the result token does not parse as an
+// integer we fall back to the signed sentinel math.MinInt64 and rely on the 'i'
+// flag to gate the value.
+func checkToInt64(c *rosettaCase, op func(x d128, ctxnull *context) int64) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	got := op(decodeOperand(c.operands[0]), ctx)
+	expected, err := strconv.ParseInt(c.result, 10, 64)
+	if err != nil {
+		expected = math.MinInt64
+	}
+	if got == expected && ctx.exceptionLetters() == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %d flags=%q want %d flags=%q", got, ctx.exceptionLetters(), expected, c.expectedFlags)
+}
+
+// checkToUInt64 runs convert-to-uint64 toward zero (the only directed unsigned
+// form the core provides). The expected value can exceed Int64.MaxValue (Intel's
+// 2^63 invalid sentinel), so it is parsed as uint64. On an invalid conversion the
+// value is implementation-defined -- our core returns 0, Intel returns 2^63 --
+// so once the 'i' flag is raised only the flag is checked.
+func checkToUInt64(c *rosettaCase) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	got := d128_toUInt64TowardZero_ctxnull(decodeOperand(c.operands[0]), ctx)
+	expected, err := strconv.ParseUint(c.result, 10, 64)
+	if err != nil {
+		expected = 0
+	}
+	invalid := strings.Contains(ctx.exceptionLetters(), "i")
+	valueOK := (got == expected) || (invalid && got == 0)
+	if valueOK && ctx.exceptionLetters() == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %d flags=%q want %d flags=%q", got, ctx.exceptionLetters(), expected, c.expectedFlags)
+}
+
 // decNumber class strings indexed by d128_ieeeClass code (0..9).
 var classStrings = [...]string{
 	CLASS_SIGNALING_NAN:      "sNaN",
@@ -458,7 +621,14 @@ func checkClass(c *rosettaCase) (outcome, string) {
 	if len(c.operands) != 1 {
 		return outUnsupported, "bad operand count"
 	}
-	got := classStrings[d128_ieeeClass(decodeOperand(c.operands[0]))]
+	cls := d128_ieeeClass(decodeOperand(c.operands[0]))
+	var got string
+	if c.src == srcIntel {
+		// Intel's bid128_class returns the numeric class code, not a string.
+		got = strconv.Itoa(cls)
+	} else {
+		got = classStrings[cls]
+	}
 	if got == c.result && c.expectedFlags == "" {
 		return outPass, ""
 	}
@@ -502,6 +672,9 @@ func checkTernaryCtx(c *rosettaCase, op func(x, y, a d128, ctx *context) d128) (
 	ctx := newContextRound(roundingFromToken(c.rounding))
 	z := op(decodeOperand(c.operands[0]), decodeOperand(c.operands[1]), decodeOperand(c.operands[2]), ctx)
 	expected := decodeOperand(c.result)
+	if c.src == srcIntel {
+		expected = intelNanTernary(decodeOperand(c.operands[0]), decodeOperand(c.operands[1]), decodeOperand(c.operands[2]), expected)
+	}
 	if d128_bitwiseEQ(z, expected) && ctx.exceptionLetters() == c.expectedFlags {
 		return outPass, ""
 	}
@@ -803,6 +976,12 @@ func runRosetta(cases []rosettaCase) rosettaResult {
 	var r rosettaResult
 	r.total = len(cases)
 	for i := range cases {
+		if shouldSkip(&cases[i]) {
+			// Per-line skips are counted, not run: decrement total so the tally
+			// reflects only the cases actually dispatched.
+			r.total--
+			continue
+		}
 		out, diag := dispatch(&cases[i])
 		switch out {
 		case outPass:
