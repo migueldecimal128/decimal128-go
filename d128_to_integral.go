@@ -271,6 +271,13 @@ func d128_toUInt64TowardZero_ctxnull(x d128, ctxnull *context) uint64 {
 	// t integral in [0, MaxUint64]; magnitude coeff*10^qExp < 2^64 -> low 64 bits.
 	cu := d128_u128(t)
 	qExp := d128_qExp(t)
+	// A zero coefficient is zero at any exponent, and a zero can carry a large
+	// qExp (e.g. 0E+100) that fitsUInt64 still accepts -> short-circuit before
+	// scaling, since pow10_128_dw0 is only defined over the coefficient's digit
+	// range. A NONZERO value that fitsUInt64 has qExp <= 19, always in range.
+	if cu.dw0 == 0 && cu.dw1 == 0 {
+		return 0
+	}
 	var mag uint64
 	if qExp == 0 {
 		mag = uint64(cu.dw0)
