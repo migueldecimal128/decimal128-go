@@ -1,6 +1,8 @@
-// Computational operations beyond the four basic operators. The bare forms
-// (ties-to-even, quiet) are methods on Decimal128; the flag-tracking forms are
-// receiver methods on Context (round by the context, accumulate exceptions).
+// Computational operations beyond the four basic operators, at all three rung
+// levels: the bare forms (ties-to-even, quiet) are methods on Decimal128; the
+// rounding-direction forms (round in a chosen direction, no flags) are methods
+// on Rounding; and the flag-tracking forms are receiver methods on Context
+// (round by the context, accumulate exceptions).
 
 package decimal128
 
@@ -8,6 +10,9 @@ package decimal128
 
 // Sqrt returns the square root of d, rounded ties-to-even.
 func (d Decimal128) Sqrt() Decimal128 { return Decimal128{d128_sqrt_tte(d.core)} }
+
+// Square returns d² (d × d), rounded ties-to-even.
+func (d Decimal128) Square() Decimal128 { return Decimal128{d128_square_tte(d.core)} }
 
 // AddProduct returns d + (a × b) computed with a single rounding (ties-to-even)
 // — the fused multiply-add with d as the addend.
@@ -74,6 +79,11 @@ func (d Decimal128) LogB() Decimal128 { return Decimal128{d128_logB_ctxnull(d.co
 // Sqrt returns the square root of x, flag-tracked through this context.
 func (c *Context) Sqrt(x Decimal128) Decimal128 {
 	return Decimal128{d128_sqrt_ctx(x.core, c.core)}
+}
+
+// Square returns x² (x × x), flag-tracked through this context.
+func (c *Context) Square(x Decimal128) Decimal128 {
+	return Decimal128{d128_square_ctx(x.core, c.core)}
 }
 
 // FMA returns a × b + c (fused multiply-add) with a single rounding,
@@ -144,4 +154,68 @@ func (c *Context) IntegerDivide(a, b Decimal128) Decimal128 {
 // logB), flag-tracked.
 func (c *Context) LogB(x Decimal128) Decimal128 {
 	return Decimal128{d128_logB_ctxnull(x.core, c.core)}
+}
+
+// --- rounding-direction forms (rounded in this direction, no flags) ---
+//
+// The flag-free counterparts of the Context math above: the rounding direction
+// is the receiver, the operand(s) are parameters, and no flags are raised. The
+// _rnd core rungs exist for the whole family.
+
+// Sqrt returns the square root of x, rounded in this direction.
+func (r Rounding) Sqrt(x Decimal128) Decimal128 {
+	return Decimal128{d128_sqrt_rnd(x.core, r.core())}
+}
+
+// FMA returns a × b + addend (fused multiply-add) with a single rounding in this
+// direction.
+func (r Rounding) FMA(a, b, addend Decimal128) Decimal128 {
+	return Decimal128{d128_fma_rnd(a.core, b.core, addend.core, r.core())}
+}
+
+// Square returns x² (x × x), rounded in this direction.
+func (r Rounding) Square(x Decimal128) Decimal128 {
+	return Decimal128{d128_square_rnd(x.core, r.core())}
+}
+
+// Exp returns eˣ, rounded in this direction.
+func (r Rounding) Exp(x Decimal128) Decimal128 {
+	return Decimal128{d128_exp_rnd(x.core, r.core())}
+}
+
+// Exp10 returns 10ˣ, rounded in this direction.
+func (r Rounding) Exp10(x Decimal128) Decimal128 {
+	return Decimal128{d128_exp10_rnd(x.core, r.core())}
+}
+
+// Ln returns ln x, rounded in this direction.
+func (r Rounding) Ln(x Decimal128) Decimal128 {
+	return Decimal128{d128_ln_rnd(x.core, r.core())}
+}
+
+// Log10 returns log₁₀ x, rounded in this direction.
+func (r Rounding) Log10(x Decimal128) Decimal128 {
+	return Decimal128{d128_log10_rnd(x.core, r.core())}
+}
+
+// PowInt returns xⁿ for an integer power n (IEEE 754 pown), rounded in this
+// direction.
+func (r Rounding) PowInt(x Decimal128, n int) Decimal128 {
+	return Decimal128{d128_pown_rnd(x.core, n, r.core())}
+}
+
+// Pow returns x raised to the decimal power exponent (IEEE 754 pow), rounded in
+// this direction.
+func (r Rounding) Pow(x, exponent Decimal128) Decimal128 {
+	return Decimal128{d128_pow_rnd(x.core, exponent.core, r.core())}
+}
+
+// Root returns the nth root of x (IEEE 754 rootn), rounded in this direction.
+func (r Rounding) Root(x Decimal128, n int) Decimal128 {
+	return Decimal128{d128_rootn_rnd(x.core, n, r.core())}
+}
+
+// Compound returns (1 + x)ⁿ (IEEE 754 compound), rounded in this direction.
+func (r Rounding) Compound(x Decimal128, n int) Decimal128 {
+	return Decimal128{d128_compound_rnd(x.core, n, r.core())}
 }

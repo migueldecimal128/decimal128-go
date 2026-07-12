@@ -117,7 +117,55 @@ func wrapUnaryCtx(c *rosettaCase, op func(*Context, Decimal128) Decimal128) (out
 	return wrapCheck(c, ctx, op(ctx, decodeOperandWrapper(c.operands[0])))
 }
 
-func wrapTernaryCtx(c *rosettaCase, op func(*Context, Decimal128, Decimal128, Decimal128) Decimal128) (outcome, string) {
+// The *CtxRnd helpers run a rounding-bearing math op through BOTH the Context
+// (_ctx, flag-tracking) and the Rounding (_rnd, flag-free) public surfaces and
+// require the two bit-identical (they forward to the same core body). The
+// Context result then carries the usual value/flags check. This validates the
+// flag-free math surface from the shared corpus with no new vectors.
+
+func rndDivergence(ctxRes, rndRes Decimal128) (outcome, string, bool) {
+	if !dpdEqual(ctxRes, rndRes) {
+		return outFail, fmt.Sprintf("_rnd vs _ctx diverge: got %s want %s",
+			rndRes.Format(StyleCoefficientExponent), ctxRes.Format(StyleCoefficientExponent)), true
+	}
+	return outPass, "", false
+}
+
+func wrapUnaryCtxRnd(c *rosettaCase, ctxOp func(*Context, Decimal128) Decimal128, rndOp func(Rounding, Decimal128) Decimal128) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	rnd, ok := tokenToRounding(c.rounding)
+	if !ok {
+		return outUnsupported, "rounding mode not representable"
+	}
+	ctx := NewContextWithRounding(rnd)
+	x := decodeOperandWrapper(c.operands[0])
+	ctxRes := ctxOp(ctx, x)
+	if o, diag, bad := rndDivergence(ctxRes, rndOp(rnd, x)); bad {
+		return o, diag
+	}
+	return wrapCheck(c, ctx, ctxRes)
+}
+
+func wrapBinaryCtxRnd(c *rosettaCase, ctxOp func(*Context, Decimal128, Decimal128) Decimal128, rndOp func(Rounding, Decimal128, Decimal128) Decimal128) (outcome, string) {
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	rnd, ok := tokenToRounding(c.rounding)
+	if !ok {
+		return outUnsupported, "rounding mode not representable"
+	}
+	ctx := NewContextWithRounding(rnd)
+	a, b := decodeOperandWrapper(c.operands[0]), decodeOperandWrapper(c.operands[1])
+	ctxRes := ctxOp(ctx, a, b)
+	if o, diag, bad := rndDivergence(ctxRes, rndOp(rnd, a, b)); bad {
+		return o, diag
+	}
+	return wrapCheck(c, ctx, ctxRes)
+}
+
+func wrapTernaryCtxRnd(c *rosettaCase, ctxOp func(*Context, Decimal128, Decimal128, Decimal128) Decimal128, rndOp func(Rounding, Decimal128, Decimal128, Decimal128) Decimal128) (outcome, string) {
 	if len(c.operands) != 3 {
 		return outUnsupported, "bad operand count"
 	}
@@ -126,10 +174,15 @@ func wrapTernaryCtx(c *rosettaCase, op func(*Context, Decimal128, Decimal128, De
 		return outUnsupported, "rounding mode not representable"
 	}
 	ctx := NewContextWithRounding(rnd)
-	return wrapCheck(c, ctx, op(ctx, decodeOperandWrapper(c.operands[0]), decodeOperandWrapper(c.operands[1]), decodeOperandWrapper(c.operands[2])))
+	a, b, cc := decodeOperandWrapper(c.operands[0]), decodeOperandWrapper(c.operands[1]), decodeOperandWrapper(c.operands[2])
+	ctxRes := ctxOp(ctx, a, b, cc)
+	if o, diag, bad := rndDivergence(ctxRes, rndOp(rnd, a, b, cc)); bad {
+		return o, diag
+	}
+	return wrapCheck(c, ctx, ctxRes)
 }
 
-func wrapIntCtx(c *rosettaCase, op func(*Context, Decimal128, int) Decimal128) (outcome, string) {
+func wrapIntCtxRnd(c *rosettaCase, ctxOp func(*Context, Decimal128, int) Decimal128, rndOp func(Rounding, Decimal128, int) Decimal128) (outcome, string) {
 	if len(c.operands) != 2 {
 		return outUnsupported, "bad operand count"
 	}
@@ -142,7 +195,12 @@ func wrapIntCtx(c *rosettaCase, op func(*Context, Decimal128, int) Decimal128) (
 		return outUnsupported, "non-integer exponent operand"
 	}
 	ctx := NewContextWithRounding(rnd)
-	return wrapCheck(c, ctx, op(ctx, decodeOperandWrapper(c.operands[0]), n))
+	x := decodeOperandWrapper(c.operands[0])
+	ctxRes := ctxOp(ctx, x, n)
+	if o, diag, bad := rndDivergence(ctxRes, rndOp(rnd, x, n)); bad {
+		return o, diag
+	}
+	return wrapCheck(c, ctx, ctxRes)
 }
 
 func wrapFormat(c *rosettaCase, style Style) (outcome, string) {
@@ -218,25 +276,25 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 	case "d128_divide_ctx", "divide":
 		return wrapBinaryCtx(c, (*Context).Quo)
 	case "d128_fma_ctx", "fma":
-		return wrapTernaryCtx(c, (*Context).FMA)
+		return wrapTernaryCtxRnd(c, (*Context).FMA, Rounding.FMA)
 	case "d128_sqrt_ctx", "squareroot":
-		return wrapUnaryCtx(c, (*Context).Sqrt)
+		return wrapUnaryCtxRnd(c, (*Context).Sqrt, Rounding.Sqrt)
 	case "d128_exp_ctx":
-		return wrapUnaryCtx(c, (*Context).Exp)
+		return wrapUnaryCtxRnd(c, (*Context).Exp, Rounding.Exp)
 	case "d128_exp10_ctx":
-		return wrapUnaryCtx(c, (*Context).Exp10)
+		return wrapUnaryCtxRnd(c, (*Context).Exp10, Rounding.Exp10)
 	case "d128_ln_ctx":
-		return wrapUnaryCtx(c, (*Context).Ln)
+		return wrapUnaryCtxRnd(c, (*Context).Ln, Rounding.Ln)
 	case "d128_log10_ctx":
-		return wrapUnaryCtx(c, (*Context).Log10)
+		return wrapUnaryCtxRnd(c, (*Context).Log10, Rounding.Log10)
 	case "d128_pow_ctx":
-		return wrapBinaryCtx(c, (*Context).Pow)
+		return wrapBinaryCtxRnd(c, (*Context).Pow, Rounding.Pow)
 	case "d128_pown_ctx":
-		return wrapIntCtx(c, (*Context).PowInt)
+		return wrapIntCtxRnd(c, (*Context).PowInt, Rounding.PowInt)
 	case "d128_rootn_ctx":
-		return wrapIntCtx(c, (*Context).Root)
+		return wrapIntCtxRnd(c, (*Context).Root, Rounding.Root)
 	case "d128_compound_ctx":
-		return wrapIntCtx(c, (*Context).Compound)
+		return wrapIntCtxRnd(c, (*Context).Compound, Rounding.Compound)
 	case "d128_quantize_ctxnull", "quantize":
 		return wrapBinaryCtx(c, (*Context).Quantize)
 	case "d128_remainder_ctx", "remainder":
