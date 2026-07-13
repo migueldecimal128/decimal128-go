@@ -358,6 +358,147 @@ func wrapBinaryBool(c *rosettaCase, pred func(Decimal128, Decimal128) bool) (out
 	return outFail, "got " + got + " want " + c.result
 }
 
+// wrapPredCmp evaluates an IEEE comparison predicate two independent ways and
+// requires they agree: (1) DERIVE it from the three-way Compare/CompareSignaling
+// result — the public reduction the family is defined by, and also the flag
+// source (the quiet three-way signals on a signaling-NaN operand, the signaling
+// three-way on any NaN operand, accumulated into ctx); and (2) VALIDATE the
+// ACTUAL public wrapper predicate method (x.NotGreater(y), ctx.GreaterSignaling(
+// x,y), …). The quiet methods live on the value type and are flag-free (the
+// three-way call is the sole flag source); the signaling methods live on
+// *Context and raise into the same ctx (sticky-OR, so re-raising is harmless).
+// The method must equal the derivation; both are then checked against the corpus
+// (value + flags). A mismatch is a HARD FAILURE.
+func wrapPredCmp(c *rosettaCase, signaling bool) (outcome, string) {
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	rnd, ok := tokenToRounding(c.rounding)
+	if !ok {
+		return outUnsupported, "rounding mode not representable"
+	}
+	ctx := NewContextWithRounding(rnd)
+	x := decodeOperandWrapper(c.operands[0])
+	y := decodeOperandWrapper(c.operands[1])
+	var cmp Comparison
+	if signaling {
+		cmp = ctx.CompareSignaling(x, y)
+	} else {
+		cmp = ctx.Compare(x, y)
+	}
+	derived := predicateDerived(cmp, c.operation)
+	var actual bool
+	if signaling {
+		actual = signalingPredicate(c.operation, ctx, x, y)
+	} else {
+		actual = quietPredicate(c.operation, x, y)
+	}
+	if actual != derived {
+		return outFail, fmt.Sprintf("%s: wrapper method = %v but three-way reduction = %v :: %s",
+			c.operation, actual, derived, c.text)
+	}
+	got := "0"
+	if actual {
+		got = "1"
+	}
+	flags := wrapperFlagLetters(ctx.RaisedFlags())
+	if got == c.result && flags == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q", got, flags, c.result, c.expectedFlags)
+}
+
+// predicateDerived reduces a three-way Comparison to each IEEE comparison
+// predicate's boolean (CmpLess = ascending, CmpGreater = descending).
+func predicateDerived(cmp Comparison, op string) bool {
+	switch op {
+	case "d128_isEqual_ctx":
+		return cmp == CmpEqual
+	case "d128_isNotEqual_ctx":
+		return cmp != CmpEqual
+	case "d128_isLess_ctx", "d128_isLessSignaling_ctx":
+		return cmp == CmpLess
+	case "d128_isLessEqual_ctx", "d128_isLessEqualSignaling_ctx":
+		return cmp == CmpLess || cmp == CmpEqual
+	case "d128_isGreater_ctx", "d128_isGreaterSignaling_ctx":
+		return cmp == CmpGreater
+	case "d128_isGreaterEqual_ctx", "d128_isGreaterEqualSignaling_ctx":
+		return cmp == CmpGreater || cmp == CmpEqual
+	case "d128_isNotGreater_ctx", "d128_isNotGreaterSignaling_ctx":
+		return cmp != CmpGreater
+	case "d128_isNotLess_ctx", "d128_isNotLessSignaling_ctx":
+		return cmp != CmpLess
+	case "d128_isOrdered_ctx":
+		return cmp != CmpUnordered
+	case "d128_isUnordered_ctx":
+		return cmp == CmpUnordered
+	case "d128_isLessUnordered_ctx", "d128_isLessUnorderedSignaling_ctx":
+		return cmp == CmpLess || cmp == CmpUnordered
+	case "d128_isGreaterUnordered_ctx", "d128_isGreaterUnorderedSignaling_ctx":
+		return cmp == CmpGreater || cmp == CmpUnordered
+	default:
+		return false
+	}
+}
+
+// quietPredicate calls the actual quiet public wrapper predicate method (value
+// type receiver, flag-free) for the given op.
+func quietPredicate(op string, x, y Decimal128) bool {
+	switch op {
+	case "d128_isEqual_ctx":
+		return x.Equal(y)
+	case "d128_isNotEqual_ctx":
+		return x.NotEqual(y)
+	case "d128_isLess_ctx":
+		return x.Less(y)
+	case "d128_isLessEqual_ctx":
+		return x.LessOrEqual(y)
+	case "d128_isGreater_ctx":
+		return x.Greater(y)
+	case "d128_isGreaterEqual_ctx":
+		return x.GreaterOrEqual(y)
+	case "d128_isUnordered_ctx":
+		return x.IsUnordered(y)
+	case "d128_isNotGreater_ctx":
+		return x.NotGreater(y)
+	case "d128_isNotLess_ctx":
+		return x.NotLess(y)
+	case "d128_isOrdered_ctx":
+		return x.IsOrdered(y)
+	case "d128_isGreaterUnordered_ctx":
+		return x.GreaterUnordered(y)
+	case "d128_isLessUnordered_ctx":
+		return x.LessUnordered(y)
+	default:
+		return false
+	}
+}
+
+// signalingPredicate calls the actual signaling public wrapper predicate method
+// (*Context receiver, raises InvalidOperation into ctx on any NaN) for the op.
+func signalingPredicate(op string, ctx *Context, x, y Decimal128) bool {
+	switch op {
+	case "d128_isLessSignaling_ctx":
+		return ctx.LessSignaling(x, y)
+	case "d128_isLessEqualSignaling_ctx":
+		return ctx.LessOrEqualSignaling(x, y)
+	case "d128_isGreaterSignaling_ctx":
+		return ctx.GreaterSignaling(x, y)
+	case "d128_isGreaterEqualSignaling_ctx":
+		return ctx.GreaterOrEqualSignaling(x, y)
+	case "d128_isNotGreaterSignaling_ctx":
+		return ctx.NotGreaterSignaling(x, y)
+	case "d128_isNotLessSignaling_ctx":
+		return ctx.NotLessSignaling(x, y)
+	case "d128_isGreaterUnorderedSignaling_ctx":
+		return ctx.GreaterUnorderedSignaling(x, y)
+	case "d128_isLessUnorderedSignaling_ctx":
+		return ctx.LessUnorderedSignaling(x, y)
+	default:
+		return false
+	}
+}
+
 // wrapDirectedRound runs the quiet directed round-to-integral (no flags).
 func wrapDirectedRound(c *rosettaCase, r Rounding) (outcome, string) {
 	if len(c.operands) != 1 {
@@ -564,10 +705,19 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapPredicate(c, Decimal128.IsSubnormal)
 	case "d128_isZero":
 		return wrapPredicate(c, Decimal128.IsZero)
-	case "d128_isEqual_ctx":
-		return wrapBinaryBool(c, Decimal128.Equal)
-	case "d128_isLess_ctx":
-		return wrapBinaryBool(c, Decimal128.Less)
+	// IEEE comparison predicates (bool): each is derived from the three-way
+	// Compare/CompareSignaling result AND validated against the actual public
+	// wrapper predicate method (wrapPredCmp hard-fails on any disagreement).
+	case "d128_isEqual_ctx", "d128_isNotEqual_ctx", "d128_isLess_ctx",
+		"d128_isLessEqual_ctx", "d128_isGreater_ctx", "d128_isGreaterEqual_ctx",
+		"d128_isUnordered_ctx", "d128_isNotGreater_ctx", "d128_isNotLess_ctx",
+		"d128_isOrdered_ctx", "d128_isGreaterUnordered_ctx", "d128_isLessUnordered_ctx":
+		return wrapPredCmp(c, false)
+	case "d128_isLessSignaling_ctx", "d128_isLessEqualSignaling_ctx",
+		"d128_isGreaterSignaling_ctx", "d128_isGreaterEqualSignaling_ctx",
+		"d128_isNotGreaterSignaling_ctx", "d128_isNotLessSignaling_ctx",
+		"d128_isGreaterUnorderedSignaling_ctx", "d128_isLessUnorderedSignaling_ctx":
+		return wrapPredCmp(c, true)
 	case "d128_totalOrder":
 		return wrapBinaryBool(c, Decimal128.IsTotallyOrdered)
 	case "d128_totalOrderMag":
