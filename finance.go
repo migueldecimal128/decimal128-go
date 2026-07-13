@@ -30,8 +30,8 @@ func (financeAPI) SimpleInterest(principal, rate, periods Decimal128) Decimal128
 
 // CompoundInterest returns the future value with compound interest:
 // principal × (1 + rate)^periods.
-func (financeAPI) CompoundInterest(principal, rate Decimal128, periods int) Decimal128 {
-	return Decimal128{d128_compoundInterest_tte(principal.core, rate.core, periods)}
+func (financeAPI) CompoundInterest(principal, rate Decimal128, numPeriods int) Decimal128 {
+	return Decimal128{d128_compoundInterest_tte(principal.core, rate.core, numPeriods)}
 }
 
 // EffectiveAnnualRate returns (1 + nominalRate / timesPerYear)^timesPerYear − 1.
