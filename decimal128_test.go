@@ -109,6 +109,65 @@ func TestWrapperCompare(t *testing.T) {
 	}
 }
 
+func TestCompareFamily(t *testing.T) {
+	two := FromInt64(2)
+	three := FromInt64(3)
+
+	// --- quiet composite predicates: ordered pair 2 vs 3 ---
+	if !two.NotGreater(three) || three.NotGreater(two) {
+		t.Fatal("NotGreater on ordered pair")
+	}
+	if !three.NotLess(two) || two.NotLess(three) {
+		t.Fatal("NotLess on ordered pair")
+	}
+	if !two.IsOrdered(three) {
+		t.Fatal("IsOrdered on ordered pair")
+	}
+	if !three.GreaterUnordered(two) || two.GreaterUnordered(three) {
+		t.Fatal("GreaterUnordered on ordered pair")
+	}
+	if !two.LessUnordered(three) || three.LessUnordered(two) {
+		t.Fatal("LessUnordered on ordered pair")
+	}
+
+	// --- quiet composite predicates: NaN operand is unordered ---
+	nan := NaN()
+	if !two.NotGreater(nan) || !two.NotLess(nan) {
+		t.Fatal("NotGreater/NotLess against NaN must be true (unordered)")
+	}
+	if !two.GreaterUnordered(nan) || !two.LessUnordered(nan) {
+		t.Fatal("GreaterUnordered/LessUnordered against NaN must be true (unordered)")
+	}
+	if two.IsOrdered(nan) {
+		t.Fatal("IsOrdered against NaN must be false")
+	}
+
+	// --- signaling predicates on *Context ---
+	ctx := NewContext()
+	if !ctx.GreaterSignaling(three, two) {
+		t.Fatal("GreaterSignaling(3, 2) should be true")
+	}
+	if !ctx.RaisedFlags().IsEmpty() {
+		t.Fatalf("ordered signaling comparison should raise no flags, got %v", ctx.RaisedFlags())
+	}
+
+	// Any NaN operand raises InvalidOperation for the signaling forms.
+	if ctx.GreaterSignaling(two, nan) {
+		t.Fatal("GreaterSignaling against NaN should be false")
+	}
+	if !ctx.RaisedFlags().Has(FlagInvalidOperation) {
+		t.Fatalf("signaling comparison against NaN should raise InvalidOperation, got %v", ctx.RaisedFlags())
+	}
+
+	ctx.ClearFlags()
+	if !ctx.IsUnorderedSignaling(two, nan) {
+		t.Fatal("IsUnorderedSignaling against NaN should be true")
+	}
+	if !ctx.RaisedFlags().Has(FlagInvalidOperation) {
+		t.Fatalf("IsUnorderedSignaling against NaN should raise InvalidOperation, got %v", ctx.RaisedFlags())
+	}
+}
+
 func TestWrapperRounding(t *testing.T) {
 	a := MustParse("1")
 	b := MustParse("3")

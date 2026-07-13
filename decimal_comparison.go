@@ -124,6 +124,31 @@ func (d Decimal128) IsUnordered(other Decimal128) bool {
 	return d128_isUnordered(d.core, other.core)
 }
 
+// NotGreater reports NOT(d > other): true if d <= other or the two are unordered.
+func (d Decimal128) NotGreater(other Decimal128) bool {
+	return d128_isNotGreater(d.core, other.core)
+}
+
+// NotLess reports NOT(d < other): true if d >= other or the two are unordered.
+func (d Decimal128) NotLess(other Decimal128) bool {
+	return d128_isNotLess(d.core, other.core)
+}
+
+// IsOrdered reports whether neither operand is NaN (the two are ordered).
+func (d Decimal128) IsOrdered(other Decimal128) bool {
+	return d128_isOrdered(d.core, other.core)
+}
+
+// GreaterUnordered reports whether d > other or the two are unordered.
+func (d Decimal128) GreaterUnordered(other Decimal128) bool {
+	return d128_isGreaterUnordered(d.core, other.core)
+}
+
+// LessUnordered reports whether d < other or the two are unordered.
+func (d Decimal128) LessUnordered(other Decimal128) bool {
+	return d128_isLessUnordered(d.core, other.core)
+}
+
 // --- context-receiver comparison (flag-tracking) ---
 
 // Compare returns the quiet IEEE 754 comparison of a to b, recording any raised
@@ -138,4 +163,43 @@ func (c *Context) Compare(a, b Decimal128) Comparison {
 // Returns CmpUnordered for NaN.
 func (c *Context) CompareSignaling(a, b Decimal128) Comparison {
 	return comparisonFromCode(d128_comparePartialSignaling_ctx(a.core, b.core, c.core))
+}
+
+// --- signaling boolean comparisons (raise invalidOperation on any NaN) ---
+
+func (c *Context) EqualSignaling(a, b Decimal128) bool {
+	return d128_isEqualSignaling_ctx(a.core, b.core, c.core)
+}
+func (c *Context) NotEqualSignaling(a, b Decimal128) bool {
+	return d128_isNotEqualSignaling_ctx(a.core, b.core, c.core)
+}
+func (c *Context) LessSignaling(a, b Decimal128) bool {
+	return d128_isLessSignaling_ctx(a.core, b.core, c.core)
+}
+func (c *Context) LessOrEqualSignaling(a, b Decimal128) bool {
+	return d128_isLessEqualSignaling_ctx(a.core, b.core, c.core)
+}
+func (c *Context) GreaterSignaling(a, b Decimal128) bool {
+	return d128_isGreaterSignaling_ctx(a.core, b.core, c.core)
+}
+func (c *Context) GreaterOrEqualSignaling(a, b Decimal128) bool {
+	return d128_isGreaterEqualSignaling_ctx(a.core, b.core, c.core)
+}
+func (c *Context) IsUnorderedSignaling(a, b Decimal128) bool {
+	return d128_isUnorderedSignaling_ctx(a.core, b.core, c.core)
+}
+func (c *Context) NotGreaterSignaling(a, b Decimal128) bool {
+	return d128_isNotGreaterSignaling_ctx(a.core, b.core, c.core)
+}
+func (c *Context) NotLessSignaling(a, b Decimal128) bool {
+	return d128_isNotLessSignaling_ctx(a.core, b.core, c.core)
+}
+func (c *Context) IsOrderedSignaling(a, b Decimal128) bool {
+	return d128_isOrderedSignaling_ctx(a.core, b.core, c.core)
+}
+func (c *Context) GreaterUnorderedSignaling(a, b Decimal128) bool {
+	return d128_isGreaterUnorderedSignaling_ctx(a.core, b.core, c.core)
+}
+func (c *Context) LessUnorderedSignaling(a, b Decimal128) bool {
+	return d128_isLessUnorderedSignaling_ctx(a.core, b.core, c.core)
 }
