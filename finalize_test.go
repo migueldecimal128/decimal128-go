@@ -151,7 +151,7 @@ func TestFinalize38(t *testing.T) {
 		coeff := randBigDigits(r, d)
 		qExp := r.Intn(201) - 100
 
-		got := finalize38_256(s, qExp, u256FromBig(coeff), RESIDUE_EXACT)
+		got := d38_finalize_256(s, qExp, u256FromBig(coeff), RESIDUE_EXACT)
 		dExcess, eCoeff := refD38(coeff)
 		if d38_signFlag(got) != s {
 			t.Fatalf("d38 sign mismatch")

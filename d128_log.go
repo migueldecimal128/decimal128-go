@@ -60,7 +60,7 @@ func logDispatch(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 
 func logImplFNZ(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 	xd := d38Pack(false, d128_qExp(x), x.ubdLo64, d128_hi49(x))
-	r := logMagnitudeD38(xd, isLog10)
+	r := d38_logMagnitude(xd, isLog10)
 
 	result := finalize_128_ctxnull(d38_signFlag(r), d38_qExp(r), d38_u128(r), RESIDUE_EXACT, rounding, ctxnull)
 
@@ -77,10 +77,10 @@ func logImplFNZ(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 	return result
 }
 
-// logMagnitudeD38 is the 38-digit ln / log10 of a positive FNZ value, as a D38
+// d38_logMagnitude is the 38-digit ln / log10 of a positive FNZ value, as a D38
 // before lowering to D128. logImplFNZ finalizes this; pow consumes it directly
 // so the y·log10(x) product keeps full precision. xd is the sign-stripped operand.
-func logMagnitudeD38(xd d38, isLog10 bool) d38 {
+func d38_logMagnitude(xd d38, isLog10 bool) d38 {
 	// Argument reduction: x = k·10^e with k the rounded leading digit, so
 	// c' = x / (k·10^e) ∈ [~0.75, 1.5).
 	eExp := d38_sciExp(xd)
@@ -99,7 +99,7 @@ func logMagnitudeD38(xd d38, isLog10 bool) d38 {
 	// multiplier is 2^N.
 	zArg := d38_subtract(cPrime, D38_ONE)
 	sqrtCount := 0
-	for cmpMagD38(zArg, Z_THRESHOLD) >= 0 {
+	for d38_cmpMag(zArg, Z_THRESHOLD) >= 0 {
 		cPrime = d38_sqrt(cPrime)
 		zArg = d38_subtract(cPrime, D38_ONE)
 		sqrtCount++
@@ -109,7 +109,7 @@ func logMagnitudeD38(xd d38, isLog10 bool) d38 {
 	if isLog10 {
 		pWeights = padeLog10PWeights
 	}
-	r := padeEval(zArg, pWeights, padeLogQWeights)
+	r := d38_padeEval(zArg, pWeights, padeLogQWeights)
 	r = d38_multiply(r, zArg) // log(c'^(1/2^N)) ≈ z·P(z)/Q(z)
 	twoPowN := d38_fromInt32(1 << sqrtCount)
 	eVal := d38_fromInt32(eExp)

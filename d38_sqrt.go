@@ -14,5 +14,5 @@ func d38_sqrt(x d38) d38 {
 	verify("", func() bool { return !d38_signFlag(x) })
 
 	f := sqrtFloorScaled(d38_u128(x), d38_qExp(x), d38_digitLen(x))
-	return finalize38_256(false, f.resultQExp, f.s, f.residue)
+	return d38_finalize_256(false, f.resultQExp, f.s, f.residue)
 }

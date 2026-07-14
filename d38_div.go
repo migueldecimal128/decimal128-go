@@ -4,7 +4,7 @@
 //
 // Capacity note: a 38-digit-precision quotient lands in [10^37, 10^39) — i.e.
 // 38 OR 39 digits — so it can exceed U128. We take u256DivRem128's full U256
-// quotient and let finalize38_256 scale the 39-digit case back down (merging
+// quotient and let d38_finalize_256 scale the 39-digit case back down (merging
 // residues).
 
 package decimal128
@@ -28,5 +28,5 @@ func d38_divide(x, y d38) d38 {
 
 	// x/y = quotient × 10^(qExp(x) − qExp(y) − numeratorScale).
 	qExp := d38_qExp(x) - d38_qExp(y) - numeratorScale
-	return finalize38_256(zSign, qExp, quot, res)
+	return d38_finalize_256(zSign, qExp, quot, res)
 }

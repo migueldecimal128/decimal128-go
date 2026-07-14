@@ -4,7 +4,7 @@
 
 package decimal128
 
-func padeEval(zArg d38, p, q []d38) d38 {
+func d38_padeEval(zArg d38, p, q []d38) d38 {
 	pAcc := p[len(p)-1]
 	for i := len(p) - 2; i >= 0; i-- {
 		pAcc = d38_fma(pAcc, zArg, p[i])

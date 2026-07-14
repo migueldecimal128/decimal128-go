@@ -115,9 +115,9 @@ func powFnzFnz(x, y d128, rounding round, ctxnull *context) d128 {
 	yd := d38Pack(d128_signFlag(y), d128_qExp(y), y.ubdLo64, d128_hi49(y))
 
 	// x^y = exp10(y · log10(x)), full 38-digit precision through the product.
-	log10X := logMagnitudeD38(xd, true)
+	log10X := d38_logMagnitude(xd, true)
 	yLog10X := d38_multiply(yd, log10X)
-	result := exp10FromD38(yLog10X, rounding, ctxnull)
+	result := d128_exp10_from_d38(yLog10X, rounding, ctxnull)
 
 	// GDAS preferred exponent ⌊y·Q(x)⌋ (only for a finite-nonzero result).
 	if d128_isFNZ(result) {

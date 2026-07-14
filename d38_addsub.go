@@ -15,31 +15,31 @@ func d38_add(x, y d38) d38 {
 		return y
 	}
 	if x.qExpAndSignBit == y.qExpAndSignBit {
-		return addAlignedLikeSignD38(x, y)
+		return d38_addAlignedLikeSign(x, y)
 	}
 	if d38_qExp(x) == d38_qExp(y) {
-		return addAlignedUnlikeSignD38(x, y)
+		return d38_addAlignedUnlikeSign(x, y)
 	}
 	if d38_signFlag(x) == d38_signFlag(y) {
-		return addUnalignedLikeSignD38(x, y)
+		return d38_addUnalignedLikeSign(x, y)
 	}
-	return addUnalignedUnlikeSignD38(x, y)
+	return d38_addUnalignedUnlikeSign(x, y)
 }
 
 func d38_subtract(x, y d38) d38 {
 	return d38_add(x, d38_negated(y))
 }
 
-func addAlignedLikeSignD38(x, y d38) d38 {
+func d38_addAlignedLikeSign(x, y d38) d38 {
 	// same qExp and sign — unscaled addition
 	sum := add_128_128x128(x.coeffLo64, x.coeffHi64, y.coeffLo64, y.coeffHi64)
 	if cmp_int_128x128_pow10(sum.dw0, sum.dw1, 38) < 0 {
 		return d38Raw(x.qExpAndSignBit, sum.dw0, sum.dw1)
 	}
-	return finalize38_128(d38_signFlag(x), d38_qExp(x), sum, RESIDUE_EXACT)
+	return d38_finalize_128(d38_signFlag(x), d38_qExp(x), sum, RESIDUE_EXACT)
 }
 
-func addAlignedUnlikeSignD38(x, y d38) d38 {
+func d38_addAlignedUnlikeSign(x, y d38) d38 {
 	verify("", func() bool { return d38_qExp(x) == d38_qExp(y) })
 	verify("", func() bool { return d38_signFlag(x) != d38_signFlag(y) })
 	ds := subAbs_d128swap_128x128(x.coeffLo64, x.coeffHi64, y.coeffLo64, y.coeffHi64)
@@ -54,7 +54,7 @@ func addAlignedUnlikeSignD38(x, y d38) d38 {
 	return d38Raw(x.qExpAndSignBit^flip, ds.diffDw0, ds.diffDw1)
 }
 
-func addUnalignedLikeSignD38(x, y d38) d38 {
+func d38_addUnalignedLikeSign(x, y d38) d38 {
 	verify("", func() bool { return d38_digitLen(x) <= 38 && d38_digitLen(y) <= 38 })
 	verify("", func() bool { return d38_qExp(x) != d38_qExp(y) })
 	verify("", func() bool { return d38_signFlag(x) == d38_signFlag(y) })
@@ -96,24 +96,24 @@ func addUnalignedLikeSignD38(x, y d38) d38 {
 		res = qr.residue
 		zU128 = add_128_128x128(zU128.dw0, zU128.dw1, q.dw0, q.dw1)
 	}
-	return finalize38_128(d38_signFlag(m), qAlign, zU128, res)
+	return d38_finalize_128(d38_signFlag(m), qAlign, zU128, res)
 }
 
-func addUnalignedUnlikeSignD38(x, y d38) d38 {
+func d38_addUnalignedUnlikeSign(x, y d38) d38 {
 	verify("", func() bool { return d38_qExp(x) != d38_qExp(y) })
 	verify("", func() bool { return d38_signFlag(x) != d38_signFlag(y) })
-	cmp := cmpMagD38(x, y)
+	cmp := d38_cmpMag(x, y)
 	if cmp > 0 {
-		return subMagUnalignedFnzFnzD38(d38_signFlag(x), x, y)
+		return d38_subMagUnalignedFnzFnz(d38_signFlag(x), x, y)
 	} else if cmp < 0 {
-		return subMagUnalignedFnzFnzD38(d38_signFlag(y), y, x)
+		return d38_subMagUnalignedFnzFnz(d38_signFlag(y), y, x)
 	}
 	return D38_ZERO
 }
 
-func subMagUnalignedFnzFnzD38(zSign bool, m, s d38) d38 {
+func d38_subMagUnalignedFnzFnz(zSign bool, m, s d38) d38 {
 	verify("", func() bool { return d38_qExp(m) != d38_qExp(s) })
-	verify("", func() bool { return cmpMagD38(m, s) > 0 })
+	verify("", func() bool { return d38_cmpMag(m, s) > 0 })
 	mQ := d38_qExp(m)
 	mU128 := d38_u128(m)
 	mDigitLen := digitLen_int_128(mU128.dw0, mU128.dw1)
@@ -164,5 +164,5 @@ func subMagUnalignedFnzFnzD38(zSign bool, m, s d38) d38 {
 			zCoeff = sub_256_256x256(zCoeff.dw0, zCoeff.dw1, zCoeff.dw2, zCoeff.dw3, 1, 0, 0, 0)
 		}
 	}
-	return finalize38_256(zSign, qAlign, zCoeff, res)
+	return d38_finalize_256(zSign, qAlign, zCoeff, res)
 }

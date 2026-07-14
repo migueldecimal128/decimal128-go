@@ -74,14 +74,14 @@ func expImplFNZ(x d128, rounding round, ctxnull *context) d128 {
 		nLn10 := mul_256_256x256(
 			LN10_50_COEFF.dw0, LN10_50_COEFF.dw1, LN10_50_COEFF.dw2, LN10_50_COEFF.dw3,
 			nMag, 0, 0, 0)
-		r = addWide38(
+		r = d38_addWide(
 			d38_signFlag(xd), d38_qExp(xd), u256FromU128(d38_u128(xd)),
 			n > 0, LN10_50_QEXP, nLn10) // op2 = −(n·ln10)
 	}
 
 	// exp(r) = exp(r/8)^8 — three squarings.
 	rPrime := d38_divide(r, D38_EIGHT)
-	e := padeEval(rPrime, padeExpPWeights, padeExpQWeights)
+	e := d38_padeEval(rPrime, padeExpPWeights, padeExpQWeights)
 	e = d38_square(e)
 	e = d38_square(e)
 	e = d38_square(e)
@@ -95,13 +95,13 @@ func expImplFNZ(x d128, rounding round, ctxnull *context) d128 {
 
 func exp10ImplFNZ(x d128, rounding round, ctxnull *context) d128 {
 	xd := d38Pack(d128_signFlag(x), d128_qExp(x), x.ubdLo64, d128_hi49(x))
-	return exp10FromD38(xd, rounding, ctxnull)
+	return d128_exp10_from_d38(xd, rounding, ctxnull)
 }
 
-// exp10FromD38 computes 10^xd for a 38-digit argument, lowered to D128 with the
+// d128_exp10_from_d38 computes 10^xd for a 38-digit argument, lowered to D128 with the
 // caller's rounding. exp10ImplFNZ lifts a D128 into this; pow feeds the
 // full-precision y·log10(x) product directly so the result is rounded once.
-func exp10FromD38(xd d38, rounding round, ctxnull *context) d128 {
+func d128_exp10_from_d38(xd d38, rounding round, ctxnull *context) d128 {
 	// Exact fast path: 10^(integer) is exact (avoids transcendental error).
 	l := d38_toLongOrMin(xd)
 	if l != minInt64 {
@@ -134,7 +134,7 @@ func exp10FromD38(xd d38, rounding round, ctxnull *context) d128 {
 
 	// 10^r = 10^(r/8)^8 — three squarings.
 	rPrime := d38_divide(r, D38_EIGHT)
-	z := padeEval(rPrime, padeExp10PWeights, padeExp10QWeights)
+	z := d38_padeEval(rPrime, padeExp10PWeights, padeExp10QWeights)
 	z = d38_square(z)
 	z = d38_square(z)
 	z = d38_square(z)

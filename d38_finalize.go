@@ -3,7 +3,7 @@
 
 package decimal128
 
-func finalize38_128(sign bool, qExp int, u128v u128, res residue) d38 {
+func d38_finalize_128(sign bool, qExp int, u128v u128, res residue) d38 {
 	if cmp_int_128x128_pow10(u128v.dw0, u128v.dw1, 38) < 0 {
 		var roundUp int64 = 0
 		if res == RESIDUE_GT_HALF || (res == RESIDUE_HALF && (u128v.dw0&1) != 0) {
@@ -22,22 +22,22 @@ func finalize38_128(sign bool, qExp int, u128v u128, res residue) d38 {
 	// u128 >= 10^38: scale down by 10, merging residues.
 	qr := div1e1_q128res_128_magic(u128v.dw0, u128v.dw1)
 	totalResidue := residueMerge(qr.residue, res)
-	return scaleDownTailD38(sign, qExp+1, qr.quotDw0, qr.quotDw1, totalResidue)
+	return d38_scaleDownTail(sign, qExp+1, qr.quotDw0, qr.quotDw1, totalResidue)
 }
 
-func finalize38_256(sign bool, qExp int, u256v u256, res residue) d38 {
+func d38_finalize_256(sign bool, qExp int, u256v u256, res residue) d38 {
 	if isZero_bool_128(u256v.dw2, u256v.dw3) {
-		return finalize38_128(sign, qExp, u256v.lo(), res)
+		return d38_finalize_128(sign, qExp, u256v.lo(), res)
 	}
 	digitLen := digitLen_int_256(u256v.dw0, u256v.dw1, u256v.dw2, u256v.dw3)
 	qDelta := digitLen - 38
 	verify("", func() bool { return qDelta > 0 })
 	qr := div_256_pow10_q128res(u256v, qDelta)
 	totalResidue := residueMerge(qr.residue, res)
-	return scaleDownTailD38(sign, qExp+qDelta, qr.quotDw0, qr.quotDw1, totalResidue)
+	return d38_scaleDownTail(sign, qExp+qDelta, qr.quotDw0, qr.quotDw1, totalResidue)
 }
 
-func scaleDownTailD38(sign bool, qExp int, u128Dw0, u128Dw1 int64, res residue) d38 {
+func d38_scaleDownTail(sign bool, qExp int, u128Dw0, u128Dw1 int64, res residue) d38 {
 	var roundUp int64 = 0
 	if res == RESIDUE_GT_HALF || (res == RESIDUE_HALF && (u128Dw0&1) != 0) {
 		roundUp = 1

@@ -7,7 +7,7 @@
 
 package decimal128
 
-func cmpMagD38(x, y d38) int {
+func d38_cmpMag(x, y d38) int {
 	// The bExp pre-check below requires non-zero operands (digitLen > 0); the
 	// ln/log10 √-reduction compares a possibly-zero z = c'−1, so resolve zeros
 	// first. |0| < |nonzero|.
