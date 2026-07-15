@@ -68,7 +68,7 @@ a.Quo(b) // 5
 a.Neg()  // -1.5
 a.Abs()
 a.Sqrt()
-a.AddProduct(b, b) // a + b*b, single rounding (fused multiply-add)
+a.FMA(b, b) // a + b*b, single rounding (fused multiply-add)
 ```
 
 ### Choosing a rounding direction
@@ -127,7 +127,7 @@ x.Compound(n) // (1+x)ⁿ
 a.Equal(b)        // IEEE: +0 == -0, NaN unequal to everything
 a.Less(b)
 a.LessOrEqual(b)
-a.Compare(b)      // CmpLess | CmpEqual | CmpGreater | CmpUnordered
+a.ComparePartial(b) // CmpLess | CmpEqual | CmpGreater | CmpUnordered
 a.TotalOrder(b)   // §5.10 total order — never unordered
 
 decimal128.Minimum(a, b)        // NaN propagates
@@ -152,7 +152,7 @@ x.ToInt64()            // truncate toward zero
 
 ```go
 x.String()                                  // GDAS scientific (fmt.Stringer)
-x.Format(decimal128.StyleEngineering)       // Automatic | Exponential | Engineering | CoefficientExponent
+x.Text(decimal128.StyleEngineering)         // Automatic | Exponential | Engineering | CoefficientExponent
 
 hi, lo := x.BID()                           // IEEE BID 128-bit interchange pattern
 x = decimal128.DecimalFromBID(hi, lo)

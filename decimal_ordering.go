@@ -71,9 +71,9 @@ func MaximumMagnitudeNumber(x, y Decimal128) Decimal128 {
 
 // --- sign composition ---
 
-// CopySign returns a value with the magnitude of d and the sign of sign
+// Copysign returns a value with the magnitude of d and the sign of sign
 // (IEEE copySign).
-func (d Decimal128) CopySign(sign Decimal128) Decimal128 {
+func (d Decimal128) Copysign(sign Decimal128) Decimal128 {
 	return Decimal128{d128_copySign(d.core, sign.core)}
 }
 

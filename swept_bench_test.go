@@ -133,7 +133,7 @@ func BenchmarkSwept(b *testing.B) {
 			b.Run("fma/"+band, func(b *testing.B) {
 				i := 0
 				for b.Loop() {
-					benchSink = ss[i].AddProduct(ls[i], rs[i])
+					benchSink = ss[i].FMA(ls[i], rs[i])
 					if i++; i == n {
 						i = 0
 					}

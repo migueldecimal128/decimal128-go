@@ -14,9 +14,9 @@ func (d Decimal128) Sqrt() Decimal128 { return Decimal128{d128_sqrt_tte(d.core)}
 // Square returns d² (d × d), rounded ties-to-even.
 func (d Decimal128) Square() Decimal128 { return Decimal128{d128_square_tte(d.core)} }
 
-// AddProduct returns d + (a × b) computed with a single rounding (ties-to-even)
+// FMA returns d + (a × b) computed with a single rounding (ties-to-even)
 // — the fused multiply-add with d as the addend.
-func (d Decimal128) AddProduct(a, b Decimal128) Decimal128 {
+func (d Decimal128) FMA(a, b Decimal128) Decimal128 {
 	return Decimal128{d128_fma_tte(a.core, b.core, d.core)}
 }
 
@@ -52,15 +52,15 @@ func (d Decimal128) Root(n int) Decimal128 { return Decimal128{d128_rootn_tte(d.
 // ≥ -1 (else NaN).
 func (d Decimal128) Compound(n int) Decimal128 { return Decimal128{d128_compound_tte(d.core, n)} }
 
-// TruncatingRemainder returns the remainder of d / other with the quotient
+// RemainderTrunc returns the remainder of d / other with the quotient
 // truncated toward zero.
-func (d Decimal128) TruncatingRemainder(other Decimal128) Decimal128 {
+func (d Decimal128) RemainderTrunc(other Decimal128) Decimal128 {
 	return Decimal128{d128_remainderTrunc(d.core, other.core)}
 }
 
-// Remainder returns the IEEE 754 remainder of d / other (quotient rounded to
+// RemainderNear returns the IEEE 754 remainder of d / other (quotient rounded to
 // nearest, ties to even).
-func (d Decimal128) Remainder(other Decimal128) Decimal128 {
+func (d Decimal128) RemainderNear(other Decimal128) Decimal128 {
 	return Decimal128{d128_remainderNear(d.core, other.core)}
 }
 
@@ -70,9 +70,9 @@ func (d Decimal128) IntegerDivide(other Decimal128) Decimal128 {
 	return Decimal128{d128_divideInteger(d.core, other.core)}
 }
 
-// LogB returns the adjusted (scientific) exponent of d as a Decimal128 (IEEE 754
+// Logb returns the adjusted (scientific) exponent of d as a Decimal128 (IEEE 754
 // logB): ⌊log₁₀|d|⌋ for finite nonzero values, -∞ for zero, +∞ for infinity.
-func (d Decimal128) LogB() Decimal128 { return Decimal128{d128_logB_ctxnull(d.core, nil)} }
+func (d Decimal128) Logb() Decimal128 { return Decimal128{d128_logB_ctxnull(d.core, nil)} }
 
 // --- context-receiver forms (rounded by the context, flag-tracked) ---
 
@@ -132,15 +132,15 @@ func (c *Context) Compound(x Decimal128, n int) Decimal128 {
 	return Decimal128{d128_compound_ctx(x.core, n, c.core)}
 }
 
-// TruncatingRemainder returns the remainder of a / b with the quotient
+// RemainderTrunc returns the remainder of a / b with the quotient
 // truncated toward zero, flag-tracked.
-func (c *Context) TruncatingRemainder(a, b Decimal128) Decimal128 {
+func (c *Context) RemainderTrunc(a, b Decimal128) Decimal128 {
 	return Decimal128{d128_remainderTrunc_ctx(a.core, b.core, c.core)}
 }
 
-// Remainder returns the IEEE 754 remainder of a / b (quotient to nearest, ties
+// RemainderNear returns the IEEE 754 remainder of a / b (quotient to nearest, ties
 // to even), flag-tracked.
-func (c *Context) Remainder(a, b Decimal128) Decimal128 {
+func (c *Context) RemainderNear(a, b Decimal128) Decimal128 {
 	return Decimal128{d128_remainderNear_ctx(a.core, b.core, c.core)}
 }
 
@@ -150,9 +150,9 @@ func (c *Context) IntegerDivide(a, b Decimal128) Decimal128 {
 	return Decimal128{d128_divideInteger_ctx(a.core, b.core, c.core)}
 }
 
-// LogB returns the adjusted (scientific) exponent of x as a Decimal128 (IEEE 754
+// Logb returns the adjusted (scientific) exponent of x as a Decimal128 (IEEE 754
 // logB), flag-tracked.
-func (c *Context) LogB(x Decimal128) Decimal128 {
+func (c *Context) Logb(x Decimal128) Decimal128 {
 	return Decimal128{d128_logB_ctxnull(x.core, c.core)}
 }
 

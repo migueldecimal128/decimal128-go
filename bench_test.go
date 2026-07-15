@@ -135,17 +135,17 @@ func BenchmarkQuoPT1(b *testing.B) {
 // FMA regimes (self = addend/receiver; product = lhs*rhs), per BenchmarkMatrix.md.
 func BenchmarkFMAgen(b *testing.B) {
 	for b.Loop() {
-		benchSink = benchPos.AddProduct(benchA, benchB)
+		benchSink = benchPos.FMA(benchA, benchB)
 	}
 }
 func BenchmarkFMAwide(b *testing.B) {
 	for b.Loop() {
-		benchSink = benchFmaWideSelf.AddProduct(benchA, benchB)
+		benchSink = benchFmaWideSelf.FMA(benchA, benchB)
 	}
 }
 func BenchmarkFMAnear(b *testing.B) {
 	for b.Loop() {
-		benchSink = benchA.AddProduct(benchFmaNearL, benchFmaNearR)
+		benchSink = benchA.FMA(benchFmaNearL, benchFmaNearR)
 	}
 }
 
@@ -163,7 +163,7 @@ func BenchmarkAbs(b *testing.B) {
 
 func BenchmarkCompare(b *testing.B) {
 	for b.Loop() {
-		benchCmp = benchA.Compare(benchB)
+		benchCmp = benchA.ComparePartial(benchB)
 	}
 }
 

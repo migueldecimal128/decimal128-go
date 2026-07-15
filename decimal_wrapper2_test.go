@@ -14,7 +14,7 @@ func TestStyleFormat(t *testing.T) {
 		{StyleCoefficientExponent, "123E+3"},
 	}
 	for _, c := range cases {
-		if got := d.Format(c.style); got != c.want {
+		if got := d.Text(c.style); got != c.want {
 			t.Errorf("Format(%v) = %q want %q", c.style, got, c.want)
 		}
 	}
@@ -25,12 +25,12 @@ func TestInterchangeRoundTrip(t *testing.T) {
 		d := MustParse(s)
 		// BID round-trip (bitwise via re-render).
 		hi, lo := d.BID128()
-		if got := FromBID128(hi, lo); got.Format(StyleCoefficientExponent) != d.Format(StyleCoefficientExponent) {
+		if got := FromBID128(hi, lo); got.Text(StyleCoefficientExponent) != d.Text(StyleCoefficientExponent) {
 			t.Errorf("BID round-trip %q: got %q", s, got)
 		}
 		// DPD round-trip.
 		hi, lo = d.DPD128()
-		if got := FromDPD128(hi, lo); got.Format(StyleCoefficientExponent) != d.Format(StyleCoefficientExponent) {
+		if got := FromDPD128(hi, lo); got.Text(StyleCoefficientExponent) != d.Text(StyleCoefficientExponent) {
 			t.Errorf("DPD round-trip %q: got %q", s, got)
 		}
 	}

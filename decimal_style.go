@@ -1,8 +1,8 @@
-// Textual-rendering styles for Decimal128.Format.
+// Textual-rendering styles for Decimal128.Text.
 
 package decimal128
 
-// Style is a textual-rendering style for Decimal128.Format. (Named Style rather
+// Style is a textual-rendering style for Decimal128.Text. (Named Style rather
 // than FormatStyle; its values mirror the core FORMAT_* ordering.)
 type Style int
 
@@ -36,8 +36,8 @@ func (s Style) String() string {
 	}
 }
 
-// Format renders d in the given style. (The no-argument String method uses
+// Text renders d in the given style. (The no-argument String method uses
 // StyleAutomatic.)
-func (d Decimal128) Format(style Style) string {
+func (d Decimal128) Text(style Style) string {
 	return d128_format(d.core, int(style))
 }

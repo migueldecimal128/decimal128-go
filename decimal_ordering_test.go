@@ -62,10 +62,10 @@ func TestOrderingMinMaxNumberContext(t *testing.T) {
 }
 
 func TestOrderingCopySign(t *testing.T) {
-	if got := FromInt64(5).CopySign(MustParse("-1")).String(); got != "-5" {
+	if got := FromInt64(5).Copysign(MustParse("-1")).String(); got != "-5" {
 		t.Fatalf("copySign(5, -1) = %q want -5", got)
 	}
-	if got := MustParse("-5").CopySign(FromInt64(1)).String(); got != "5" {
+	if got := MustParse("-5").Copysign(FromInt64(1)).String(); got != "5" {
 		t.Fatalf("copySign(-5, +1) = %q want 5", got)
 	}
 }

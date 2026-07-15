@@ -101,8 +101,8 @@ func wrapCheck(c *rosettaCase, ctx *Context, got Decimal128) (outcome, string) {
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
-		got.Format(StyleCoefficientExponent), flags,
-		want.Format(StyleCoefficientExponent), c.expectedFlags)
+		got.Text(StyleCoefficientExponent), flags,
+		want.Text(StyleCoefficientExponent), c.expectedFlags)
 }
 
 // intelNormalizeWant applies the Intel result-normalization (NaN cohort choice
@@ -161,7 +161,7 @@ func wrapCheckFptest(c *rosettaCase, flags string, got Decimal128) (outcome, str
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s→%s flags=%q",
-		got.Format(StyleCoefficientExponent), flags,
+		got.Text(StyleCoefficientExponent), flags,
 		c.result, fptestToCoefExp(c.result), c.expectedFlags)
 }
 
@@ -177,7 +177,7 @@ func fptestValueMatch(exp string, got Decimal128) bool {
 	case exp == "-inf":
 		return got.IsInf() && got.Signbit()
 	default:
-		return fptestToCoefExp(exp) == got.Format(StyleCoefficientExponent)
+		return fptestToCoefExp(exp) == got.Text(StyleCoefficientExponent)
 	}
 }
 
@@ -250,7 +250,7 @@ func wrapUnaryCtx(c *rosettaCase, op func(*Context, Decimal128) Decimal128) (out
 func rndDivergence(ctxRes, rndRes Decimal128) (outcome, string, bool) {
 	if !dpdEqual(ctxRes, rndRes) {
 		return outFail, fmt.Sprintf("_rnd vs _ctx diverge: got %s want %s",
-			rndRes.Format(StyleCoefficientExponent), ctxRes.Format(StyleCoefficientExponent)), true
+			rndRes.Text(StyleCoefficientExponent), ctxRes.Text(StyleCoefficientExponent)), true
 	}
 	return outPass, "", false
 }
@@ -331,7 +331,7 @@ func wrapFormat(c *rosettaCase, style Style) (outcome, string) {
 	if len(c.operands) != 1 {
 		return outUnsupported, "bad operand count"
 	}
-	got := decodeOperandWrapper(c.operands[0]).Format(style)
+	got := decodeOperandWrapper(c.operands[0]).Text(style)
 	if got == c.result && c.expectedFlags == "" {
 		return outPass, ""
 	}
@@ -359,7 +359,7 @@ func wrapBinaryBool(c *rosettaCase, pred func(Decimal128, Decimal128) bool) (out
 }
 
 // wrapPredCmp evaluates an IEEE comparison predicate two independent ways and
-// requires they agree: (1) DERIVE it from the three-way Compare/CompareSignaling
+// requires they agree: (1) DERIVE it from the three-way ComparePartial/ComparePartialSignaling
 // result — the public reduction the family is defined by, and also the flag
 // source (the quiet three-way signals on a signaling-NaN operand, the signaling
 // three-way on any NaN operand, accumulated into ctx); and (2) VALIDATE the
@@ -382,9 +382,9 @@ func wrapPredCmp(c *rosettaCase, signaling bool) (outcome, string) {
 	y := decodeOperandWrapper(c.operands[1])
 	var cmp Comparison
 	if signaling {
-		cmp = ctx.CompareSignaling(x, y)
+		cmp = ctx.ComparePartialSignaling(x, y)
 	} else {
-		cmp = ctx.Compare(x, y)
+		cmp = ctx.ComparePartial(x, y)
 	}
 	derived := predicateDerived(cmp, c.operation)
 	var actual bool
@@ -512,7 +512,7 @@ func wrapDirectedRound(c *rosettaCase, r Rounding) (outcome, string) {
 	if dpdEqual(got, want) {
 		return outPass, ""
 	}
-	return outFail, "got " + got.Format(StyleCoefficientExponent) + " want " + want.Format(StyleCoefficientExponent)
+	return outFail, "got " + got.Text(StyleCoefficientExponent) + " want " + want.Text(StyleCoefficientExponent)
 }
 
 // wrapQuietUnary runs a non-computational unary op (abs, nextUp/nextDown) that
@@ -530,7 +530,7 @@ func wrapQuietUnary(c *rosettaCase, op func(Decimal128) Decimal128) (outcome, st
 	if dpdEqual(got, want) {
 		return outPass, ""
 	}
-	return outFail, "got " + got.Format(StyleCoefficientExponent) + " want " + want.Format(StyleCoefficientExponent)
+	return outFail, "got " + got.Text(StyleCoefficientExponent) + " want " + want.Text(StyleCoefficientExponent)
 }
 
 // wrapQuietBinary runs a non-computational binary op (copySign) — bitwise
@@ -547,7 +547,7 @@ func wrapQuietBinary(c *rosettaCase, op func(Decimal128, Decimal128) Decimal128)
 	if dpdEqual(got, want) {
 		return outPass, ""
 	}
-	return outFail, "got " + got.Format(StyleCoefficientExponent) + " want " + want.Format(StyleCoefficientExponent)
+	return outFail, "got " + got.Text(StyleCoefficientExponent) + " want " + want.Text(StyleCoefficientExponent)
 }
 
 // wrapMinMaxNumber runs a min/max "Number" (NaN-as-missing) op. The sNaN-versus-
@@ -609,7 +609,7 @@ func wrapFromWord64(c *rosettaCase, op func(uint64) Decimal128) (outcome, string
 	if dpdEqual(got, want) {
 		return outPass, ""
 	}
-	return outFail, "got " + got.Format(StyleCoefficientExponent) + " want " + want.Format(StyleCoefficientExponent)
+	return outFail, "got " + got.Text(StyleCoefficientExponent) + " want " + want.Text(StyleCoefficientExponent)
 }
 
 func wrapPredicate(c *rosettaCase, pred func(Decimal128) bool) (outcome, string) {
@@ -670,9 +670,9 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 	case "d128_quantize_ctxnull", "quantize":
 		return wrapBinaryCtx(c, (*Context).Quantize)
 	case "d128_remainder_ctx", "remainder":
-		return wrapBinaryCtx(c, (*Context).TruncatingRemainder)
+		return wrapBinaryCtx(c, (*Context).RemainderTrunc)
 	case "d128_remainderNear_ctx", "remaindernear":
-		return wrapBinaryCtx(c, (*Context).Remainder)
+		return wrapBinaryCtx(c, (*Context).RemainderNear)
 	case "d128_divideInteger_ctx", "divideint":
 		return wrapBinaryCtx(c, (*Context).IntegerDivide)
 	case "d128_roundToIntegralSignalInexact", "tointegralx":
@@ -706,7 +706,7 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 	case "d128_isZero":
 		return wrapPredicate(c, Decimal128.IsZero)
 	// IEEE comparison predicates (bool): each is derived from the three-way
-	// Compare/CompareSignaling result AND validated against the actual public
+	// ComparePartial/ComparePartialSignaling result AND validated against the actual public
 	// wrapper predicate method (wrapPredCmp hard-fails on any disagreement).
 	case "d128_isEqual_ctx", "d128_isNotEqual_ctx", "d128_isLess_ctx",
 		"d128_isLessEqual_ctx", "d128_isGreater_ctx", "d128_isGreaterEqual_ctx",
@@ -731,7 +731,7 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 	case "nextminus":
 		return wrapQuietUnary(c, Decimal128.NextDown)
 	case "copysign":
-		return wrapQuietBinary(c, Decimal128.CopySign)
+		return wrapQuietBinary(c, Decimal128.Copysign)
 	case "min":
 		return wrapMinMaxNumber(c, (*Context).MinimumNumber)
 	case "max":

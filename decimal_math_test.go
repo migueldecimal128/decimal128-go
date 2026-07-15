@@ -17,11 +17,11 @@ func TestMathBareMethods(t *testing.T) {
 		{"Pow", MustParse("9").Pow(MustParse("0.5")), "3"},
 		{"Root", MustParse("27").Root(3), "3"},
 		{"Compound", MustParse("0.1").Compound(2), "1.21"},
-		{"AddProduct", FromInt64(1).AddProduct(FromInt64(2), FromInt64(3)), "7"},
-		{"TruncatingRemainder", MustParse("7").TruncatingRemainder(MustParse("3")), "1"},
-		{"Remainder", MustParse("7").Remainder(MustParse("3")), "1"},
+		{"FMA", FromInt64(1).FMA(FromInt64(2), FromInt64(3)), "7"},
+		{"RemainderTrunc", MustParse("7").RemainderTrunc(MustParse("3")), "1"},
+		{"RemainderNear", MustParse("7").RemainderNear(MustParse("3")), "1"},
 		{"IntegerDivide", MustParse("7").IntegerDivide(MustParse("2")), "3"},
-		{"LogB", MustParse("250").LogB(), "2"},
+		{"Logb", MustParse("250").Logb(), "2"},
 	}
 	for _, c := range cases {
 		if got := c.got.String(); got != c.want {

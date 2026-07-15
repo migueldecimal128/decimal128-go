@@ -48,10 +48,10 @@ func comparisonFromCode(code comparison754) Comparison {
 
 // --- numeric three-way comparison (IEEE 754 compare) ---
 
-// Compare returns the quiet IEEE 754 comparison of d to other. A NaN operand
-// yields CmpUnordered; a signaling-NaN operand additionally raises
-// InvalidOperation — use Context.Compare to capture that flag.
-func (d Decimal128) Compare(other Decimal128) Comparison {
+// ComparePartial returns the quiet IEEE 754 comparison of d to other. A NaN
+// operand yields CmpUnordered; a signaling-NaN operand additionally raises
+// InvalidOperation — use Context.ComparePartial to capture that flag.
+func (d Decimal128) ComparePartial(other Decimal128) Comparison {
 	return comparisonFromCode(d128_comparePartial(d.core, other.core))
 }
 
@@ -151,17 +151,17 @@ func (d Decimal128) LessUnordered(other Decimal128) bool {
 
 // --- context-receiver comparison (flag-tracking) ---
 
-// Compare returns the quiet IEEE 754 comparison of a to b, recording any raised
-// flag (InvalidOperation on a signaling-NaN operand) into this context. NaN
-// operands yield CmpUnordered.
-func (c *Context) Compare(a, b Decimal128) Comparison {
+// ComparePartial returns the quiet IEEE 754 comparison of a to b, recording any
+// raised flag (InvalidOperation on a signaling-NaN operand) into this context.
+// NaN operands yield CmpUnordered.
+func (c *Context) ComparePartial(a, b Decimal128) Comparison {
 	return comparisonFromCode(d128_comparePartial_ctx(a.core, b.core, c.core))
 }
 
-// CompareSignaling returns the signaling IEEE 754 comparison of a to b: any NaN
-// operand (quiet or signaling) raises InvalidOperation into this context.
+// ComparePartialSignaling returns the signaling IEEE 754 comparison of a to b:
+// any NaN operand (quiet or signaling) raises InvalidOperation into this context.
 // Returns CmpUnordered for NaN.
-func (c *Context) CompareSignaling(a, b Decimal128) Comparison {
+func (c *Context) ComparePartialSignaling(a, b Decimal128) Comparison {
 	return comparisonFromCode(d128_comparePartialSignaling_ctx(a.core, b.core, c.core))
 }
 

@@ -5,16 +5,16 @@ import "testing"
 func TestComparisonNumeric(t *testing.T) {
 	one := FromInt64(1)
 	two := FromInt64(2)
-	if one.Compare(two) != CmpLess {
+	if one.ComparePartial(two) != CmpLess {
 		t.Fatal("1 cmp 2")
 	}
-	if two.Compare(one) != CmpGreater {
+	if two.ComparePartial(one) != CmpGreater {
 		t.Fatal("2 cmp 1")
 	}
-	if one.Compare(MustParse("1.0")) != CmpEqual {
+	if one.ComparePartial(MustParse("1.0")) != CmpEqual {
 		t.Fatal("1 cmp 1.0 (cohorts equal)")
 	}
-	if one.Compare(NaN()) != CmpUnordered {
+	if one.ComparePartial(NaN()) != CmpUnordered {
 		t.Fatal("1 cmp NaN")
 	}
 	if !one.LessOrEqual(one) || !one.LessOrEqual(two) || two.LessOrEqual(one) {
@@ -62,14 +62,14 @@ func TestComparisonTotalOrder(t *testing.T) {
 func TestComparisonContextFlags(t *testing.T) {
 	ctx := NewContext()
 	// Quiet compare with a quiet NaN: unordered, no flag.
-	if ctx.Compare(FromInt64(1), NaN()) != CmpUnordered {
+	if ctx.ComparePartial(FromInt64(1), NaN()) != CmpUnordered {
 		t.Fatal("quiet compare NaN")
 	}
 	if !ctx.RaisedFlags().IsEmpty() {
 		t.Fatalf("quiet compare with qNaN should raise nothing, got %v", ctx.RaisedFlags())
 	}
 	// Signaling compare with a quiet NaN: unordered + InvalidOperation.
-	if ctx.CompareSignaling(FromInt64(1), NaN()) != CmpUnordered {
+	if ctx.ComparePartialSignaling(FromInt64(1), NaN()) != CmpUnordered {
 		t.Fatal("signaling compare NaN")
 	}
 	if !ctx.RaisedFlags().Has(FlagInvalidOperation) {
