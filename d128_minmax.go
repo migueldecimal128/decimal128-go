@@ -57,7 +57,7 @@ func minMaxNonNaN(x, y d128, op int) d128 {
 		cmp = compareNumericSigned(x, y)
 	}
 	if cmp == 0 {
-		cmp = compareTotalOrder(x, y)
+		cmp = d128_compareTotal(x, y)
 	}
 	// cmp >= 0 means x >= y. For max we want x; for min we want y.
 	pickX := (cmp >= 0) == ((op & maxMask) != 0)

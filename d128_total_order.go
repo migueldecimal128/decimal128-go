@@ -11,16 +11,16 @@ package decimal128
 
 // d128_isTotallyOrdered reports whether x totalOrders before-or-equal-to other.
 func d128_isTotallyOrdered(x, other d128) bool {
-	return compareTotalOrder(x, other) <= 0
+	return d128_compareTotal(x, other) <= 0
 }
 
 // d128_isTotallyOrderedMag reports whether |x| totalOrders before-or-equal-to |other|.
 func d128_isTotallyOrderedMag(x, other d128) bool {
-	return compareTotalOrderMag(x, other) <= 0
+	return d128_compareTotalMag(x, other) <= 0
 }
 
-// compareTotalOrder returns negative / 0 / positive, like memcmp.
-func compareTotalOrder(x, y d128) int {
+// d128_compareTotal returns negative / 0 / positive, like memcmp.
+func d128_compareTotal(x, y d128) int {
 	xSignMask := d128_signMask(x) // 0 or -1
 	ySignMask := d128_signMask(y)
 	if xSignMask != ySignMask {
@@ -28,22 +28,22 @@ func compareTotalOrder(x, y d128) int {
 		// x non-negative, y negative -> y first (+1)
 		return (xSignMask << 1) + 1
 	}
-	cmpMag := compareTotalOrderMag(x, y)
+	cmpMag := d128_compareTotalMag(x, y)
 	return negateForSign(cmpMag, xSignMask)
 }
 
-func compareTotalOrderMag(x, y d128) int {
+func d128_compareTotalMag(x, y d128) int {
 	xNaN := d128_isNAN(x)
 	yNaN := d128_isNAN(y)
 	if !xNaN && !yNaN {
-		return totalOrderCompareMagNonNaN(x, y)
+		return compareTotalMagNonNaN(x, y)
 	}
-	return compareTotalOrderMagNaN(x, y, xNaN, yNaN)
+	return compareTotalMagNaN(x, y, xNaN, yNaN)
 }
 
-func totalOrderCompareMagNonNaN(x, y d128) int {
+func compareTotalMagNonNaN(x, y d128) int {
 	if d128_isFNZ(x) && d128_isFNZ(y) {
-		return compareTotalOrderMagFnzFnz(x, y)
+		return compareTotalMagFnzFnz(x, y)
 	}
 	// INF beats everything else in magnitude.
 	if d128_isINF(x) {
@@ -68,7 +68,7 @@ func totalOrderCompareMagNonNaN(x, y d128) int {
 	return cmpInt(d128_qExp(x), d128_qExp(y))
 }
 
-func compareTotalOrderMagFnzFnz(x, y d128) int {
+func compareTotalMagFnzFnz(x, y d128) int {
 	cmpMag := cmpMagFnzFnz(x, y)
 	if cmpMag != 0 {
 		return cmpMag
@@ -77,7 +77,7 @@ func compareTotalOrderMagFnzFnz(x, y d128) int {
 	return cmpInt(d128_qExp(x), d128_qExp(y))
 }
 
-func compareTotalOrderMagNaN(x, y d128, xNaN, yNaN bool) int {
+func compareTotalMagNaN(x, y d128, xNaN, yNaN bool) int {
 	verify("", func() bool { return xNaN || yNaN })
 	if !xNaN {
 		return -1 // non-NaN < NaN in magnitude

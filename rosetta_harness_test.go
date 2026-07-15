@@ -300,9 +300,9 @@ func dispatch(c *rosettaCase) (outcome, string) {
 	case "d128_totalOrder":
 		return checkBinaryBoolCtx(c, func(x, y d128, _ *context) bool { return d128_isTotallyOrdered(x, y) })
 	case "comparetotal":
-		return checkCompareInt(c, compareTotalOrder)
+		return checkCompareInt(c, d128_compareTotal)
 	case "comparetotmag":
-		return checkCompareInt(c, compareTotalOrderMag)
+		return checkCompareInt(c, d128_compareTotalMag)
 	case "d128_nextUp_ctxnull", "nextplus":
 		return checkUnaryCtx(c, d128_nextUp_ctxnull)
 	case "d128_nextDown_ctxnull", "nextminus":
