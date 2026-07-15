@@ -341,23 +341,3 @@ func dpd64Decode(dpd64 int64) d128 {
 }
 
 func d128_from_dpd64(dpd64 int64) d128 { return dpd64Decode(dpd64) }
-
-// dpd128ParseDecTestHex parses an IBM dectest "#" + 32-hex-digit DPD pattern.
-func dpd128ParseDecTestHex(s string) (u128, bool) {
-	if len(s) != 33 {
-		return u128{}, false
-	}
-	chars := []byte(s)
-	if chars[0] != '#' {
-		return u128{}, false
-	}
-	hi, ok := parseHex16(chars, 1)
-	if !ok {
-		return u128{}, false
-	}
-	lo, ok := parseHex16(chars, 17)
-	if !ok {
-		return u128{}, false
-	}
-	return fromLoHi_128_64x64(lo, hi), true
-}
