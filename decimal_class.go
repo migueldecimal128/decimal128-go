@@ -2,12 +2,12 @@
 
 package decimal128
 
-// Class is the IEEE 754-2019 §5.7.2 class of a Decimal128 value: one of ten
-// mutually exclusive categories. The values match the core class ordering.
-type Class int
+// DecimalClass is the IEEE 754-2019 §5.7.2 class of a Decimal128 value: one of
+// ten mutually exclusive categories. The values match the core class ordering.
+type DecimalClass int
 
 const (
-	ClassSignalingNaN Class = iota
+	ClassSignalingNaN DecimalClass = iota
 	ClassQuietNaN
 	ClassNegativeInfinity
 	ClassNegativeNormal
@@ -20,7 +20,7 @@ const (
 )
 
 // String returns a readable name for the class.
-func (c Class) String() string {
+func (c DecimalClass) String() string {
 	switch c {
 	case ClassSignalingNaN:
 		return "SignalingNaN"
@@ -43,9 +43,9 @@ func (c Class) String() string {
 	case ClassPositiveInfinity:
 		return "PositiveInfinity"
 	default:
-		return "Class(?)"
+		return "DecimalClass(?)"
 	}
 }
 
-// Class returns the IEEE 754 class of d.
-func (d Decimal128) Class() Class { return Class(d128_ieeeClass(d.core)) }
+// DecimalClass returns the IEEE 754 class of d.
+func (d Decimal128) DecimalClass() DecimalClass { return DecimalClass(d128_ieeeClass(d.core)) }
