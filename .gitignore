@@ -34,3 +34,6 @@ go.work.sum
 # telco benchmark run output
 telco.out*
 /telco_d128
+
+# macOS Finder metadata
+.DS_Store
