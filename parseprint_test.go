@@ -111,50 +111,22 @@ func TestPrintKnown(t *testing.T) {
 	}
 }
 
-func TestParseKnown(t *testing.T) {
-	// Valid forms: check the value via the COEFFICIENT_QEXP render.
-	valid := []struct {
-		in   string
-		want string // expected coeffQExp render of the parsed value
-	}{
-		{"1", "1E+0"},
-		{"-1", "-1E+0"},
-		{"1.5", "15E-1"},
-		{"1E3", "1E+3"},
-		{"1.23E-4", "123E-6"},
-		{"000123", "123E+0"},
-		{"0", "0E+0"},
-		{"1_000", "1000E+0"},
-	}
-	for _, c := range valid {
-		x, ok := d128_parse(c.in)
-		if !ok {
-			t.Fatalf("parse(%q) failed", c.in)
-		}
-		if got := d128_format(x, FORMAT_COEFFICIENT_QEXP); got != c.want {
-			t.Errorf("parse(%q) = %q, want %q", c.in, got, c.want)
-		}
-	}
-
-	// Special values.
-	if x, ok := d128_parse("Infinity"); !ok || !d128_isINF(x) || d128_isNegative(x) {
-		t.Errorf("parse Infinity wrong")
-	}
-	if x, ok := d128_parse("-inf"); !ok || !d128_isINF(x) || !d128_isNegative(x) {
-		t.Errorf("parse -inf wrong")
-	}
-	if x, ok := d128_parse("NaN"); !ok || !d128_isQNAN(x) {
-		t.Errorf("parse NaN wrong")
-	}
-	if x, ok := d128_parse("sNaN"); !ok || !d128_isSNAN(x) {
-		t.Errorf("parse sNaN wrong")
-	}
-
-	// Malformed.
-	// Note: "1_" (trailing separator after a digit) is accepted by this parser.
-	for _, bad := range []string{"", "xyz", "1.2.3", "1E", "--1", "_1", "1.2.3E4"} {
+// TestParseResidual — d128_parse (IEEE 754-2019 §5.4.2 convertFromDecimalCharacter,
+// strict form). The (input, result) coverage — cohort-preserving finite parses,
+// underscore separators, every infinity/NaN spelling and payload, and the reject
+// set — now lives as native Rosetta cases in resources/rosetta/native/parse.txt
+// (run through both the core and the public-API harness). What remains here is the
+// handful of reject cases the space-delimited native grammar cannot carry: an
+// operand that IS empty or contains whitespace can't be written as a single native
+// token. These pin that the strict parser rejects them (ok=false, never NaN-on-error).
+func TestParseResidual(t *testing.T) {
+	for _, bad := range []string{
+		"",      // empty string
+		"1 ",    // trailing space after a valid number
+		"nan 1", // space between the NaN word and its payload
+	} {
 		if _, ok := d128_parse(bad); ok {
-			t.Errorf("parse(%q) should have failed", bad)
+			t.Errorf("parse(%q) should have failed (empty/whitespace)", bad)
 		}
 	}
 }

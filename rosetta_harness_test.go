@@ -343,6 +343,8 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkFromWord64(c, func(u uint64) d128 { return d128_from_bid64(int64(u)) })
 	case "d128_from_dpd64":
 		return checkFromWord64(c, func(u uint64) d128 { return d128_from_dpd64(int64(u)) })
+	case "d128_parse":
+		return checkParse(c)
 	case "d128_canonical", "canonical":
 		// All UBD encodings are canonical; the DPD decoder normalises any
 		// non-canonical declets, so canonical(x) is the identity on the value.
@@ -551,6 +553,53 @@ func checkFromWord64(c *rosettaCase, op func(u uint64) d128) (outcome, string) {
 	}
 	z := op(parseWord64(c.operands[0]))
 	expected := decodeOperand(c.result)
+	if d128_bitwiseEQ(z, expected) && c.expectedFlags == "" {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
+		d128_format(z, FORMAT_COEFFICIENT_QEXP), "",
+		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+}
+
+// decodeNativeResult decodes a native-corpus result token, honoring the bare
+// "Q"/"S" payload-0 NaN spellings (the shared decodeOperand — tuned for the
+// dectest/Intel/native operand grammar — does not special-case them; the wrapper
+// decodeOperandWrapper does, so this keeps the two harnesses symmetric).
+func decodeNativeResult(s string) d128 {
+	switch s {
+	case "Q":
+		return D128_QNAN0
+	case "S":
+		return D128_SNAN0
+	default:
+		return decodeOperand(s)
+	}
+}
+
+// checkParse runs the strict decimal-string parse d128_parse. Native-only: the
+// operand is the RAW string, taken verbatim (NOT via decodeOperand — a failure
+// case is deliberately un-decodable). A `FAIL` result asserts the parser rejects
+// the input (the observed "did it parse" must be false, i.e. boolResult with
+// expected = (result == "1") = false); otherwise the parsed value is compared
+// bitwise against the decoded expected. The strict parse is flag-free, so the
+// expected flags are always empty. No dectest/Intel corpus pins the grammar.
+func checkParse(c *rosettaCase) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	z, ok := d128_parse(c.operands[0])
+	if c.result == "FAIL" {
+		if !ok {
+			return outPass, ""
+		}
+		return outFail, "expected FAIL but parsed " + d128_format(z, FORMAT_COEFFICIENT_QEXP)
+	}
+	// Success line: a failed parse here is an impl error; poison with sNaN0 so it
+	// mismatches the authored expected (never collides except a literal sNaN).
+	if !ok {
+		z = D128_SNAN0
+	}
+	expected := decodeNativeResult(c.result)
 	if d128_bitwiseEQ(z, expected) && c.expectedFlags == "" {
 		return outPass, ""
 	}

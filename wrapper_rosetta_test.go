@@ -612,6 +612,32 @@ func wrapFromWord64(c *rosettaCase, op func(uint64) Decimal128) (outcome, string
 	return outFail, "got " + got.Text(StyleCoefficientExponent) + " want " + want.Text(StyleCoefficientExponent)
 }
 
+// wrapParse runs the public failable Parse (strict; a value OR a non-nil error).
+// Native-only: the operand is the RAW string (NOT decodeOperandWrapper). A `FAIL`
+// result asserts Parse returns an error (unconditional pass on error, hard fail
+// if it unexpectedly succeeds); otherwise the parsed value is compared bitwise
+// (via DPD) against the expected. The strict parse is flag-free.
+func wrapParse(c *rosettaCase) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	v, err := Parse(c.operands[0])
+	if c.result == "FAIL" {
+		if err != nil {
+			return outPass, ""
+		}
+		return outFail, "d128_parse: '" + c.operands[0] + "' should have failed to parse"
+	}
+	if err != nil {
+		return outFail, "d128_parse: '" + c.operands[0] + "' unexpectedly failed to parse"
+	}
+	want := decodeOperandWrapper(c.result)
+	if dpdEqual(v, want) {
+		return outPass, ""
+	}
+	return outFail, "got " + v.Text(StyleCoefficientExponent) + " want " + want.Text(StyleCoefficientExponent)
+}
+
 func wrapPredicate(c *rosettaCase, pred func(Decimal128) bool) (outcome, string) {
 	if len(c.operands) != 1 {
 		return outUnsupported, "bad operand count"
@@ -667,6 +693,8 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapFromWord64(c, FromBID64)
 	case "d128_from_dpd64":
 		return wrapFromWord64(c, FromDPD64)
+	case "d128_parse":
+		return wrapParse(c)
 	case "d128_quantize_ctxnull", "quantize":
 		return wrapBinaryCtx(c, (*Context).Quantize)
 	case "d128_remainder_ctx", "remainder":
