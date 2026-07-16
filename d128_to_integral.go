@@ -257,18 +257,37 @@ func d128ConvertToInt64_ctxnull(x d128, rounding round, suppressInexact bool, ct
 	return minInt64
 }
 
-// d128_toUInt64TowardZero_ctxnull truncates x toward zero to a uint64.
-// roundToIntegralTowardZero + fitsUInt64: truncate first (exact range test);
-// fitsUInt64 guarantees the integral magnitude coeff*10^qExp < 2^64, so it fits
-// the low 64 bits. NaN/inf/negative/overflow -> 0 + invalidOperation; quiet on a
-// discarded fraction.
-func d128_toUInt64TowardZero_ctxnull(x d128, ctxnull *context) uint64 {
-	t := d128_roundToIntegralTowardZero(x)
+// --- convertToUnsignedInteger64 ---
+//
+// The unsigned family does NOT reimplement the signed kernel's inline range
+// logic. It rounds QUIETLY in the requested direction, then range-checks the
+// rounded result with fitsUInt64 — a single branch that covers NaN, infinity, a
+// negative-nonzero rounded value, and magnitude >= 2^64. Rounding first makes the
+// range test both exact and direction-dependent (e.g. -0.3 -> 0 is valid toward
+// zero but -0.7 toward negative -> -1 is not; 2^64-0.5 fits toward zero but
+// overflows toward positive). Mirrors Swift d128ConvertToUInt64_ctxnull and the
+// signed d128ConvertToInt64_ctxnull entry-point set one-to-one.
+
+func d128ConvertToUInt64_ctxnull(x d128, rounding round, suppressInexact bool, ctxnull *context) uint64 {
+	// Round to integral QUIETLY in the requested direction (no flags yet), then
+	// range-check the rounded result. NaN/infinity survive rounding as non-finite
+	// and are rejected by fitsUInt64, so the out-of-range branch is the single
+	// INVALID signal (an sNaN is quieted here without a separate signal — the
+	// invalid it deserves is raised below). This is the ONLY place invalid is
+	// raised, and inexact is NEVER raised on this path (IEEE mutual exclusion).
+	t := d128_roundToIntegral_rnd(x, rounding)
 	if !d128_fitsUInt64(t) {
 		ctxSignalInvalidOperation_ctxnull(ctxnull, causeConvertNonFiniteToInteger)
 		return 0
 	}
-	// t integral in [0, MaxUint64]; magnitude coeff*10^qExp < 2^64 -> low 64 bits.
+	// In range. For the Exact variants, signal inexact iff a fraction was
+	// discarded — i.e. the integral result differs in VALUE from the operand.
+	// isEqual compares values (not cohorts), so 5.00 -> 5 is exact.
+	if !suppressInexact && ctxnull != nil && !d128_isEqual(t, x) {
+		ctxSignalInexact_ctxnull(ctxnull, x)
+	}
+	// t is an integral value in [0, MaxUint64]; magnitude coeff*10^qExp with
+	// qExp >= 0 and < 2^64, so the product stays in the low dword.
 	cu := d128_u128(t)
 	qExp := d128_qExp(t)
 	// A zero coefficient is zero at any exponent, and a zero can carry a large
@@ -285,4 +304,41 @@ func d128_toUInt64TowardZero_ctxnull(x d128, ctxnull *context) uint64 {
 		mag = uint64(cu.dw0) * uint64(pow10_128_dw0(qExp)) // wrapping; exact < 2^64
 	}
 	return mag
+}
+
+func d128_toUInt64TiesToEven_ctxnull(x d128, ctxnull *context) uint64 {
+	return d128ConvertToUInt64_ctxnull(x, ROUND_TIES_TO_EVEN, true, ctxnull)
+}
+func d128_toUInt64TiesToAway_ctxnull(x d128, ctxnull *context) uint64 {
+	return d128ConvertToUInt64_ctxnull(x, ROUND_TIES_TO_AWAY, true, ctxnull)
+}
+
+// d128_toUInt64TowardZero_ctxnull truncates x toward zero to a uint64.
+// NaN/inf/negative/overflow -> 0 + invalidOperation; quiet on a discarded
+// fraction. Delegates to the shared kernel with (ROUND_TOWARD_ZERO,
+// suppressInexact=true); observable behavior is unchanged.
+func d128_toUInt64TowardZero_ctxnull(x d128, ctxnull *context) uint64 {
+	return d128ConvertToUInt64_ctxnull(x, ROUND_TOWARD_ZERO, true, ctxnull)
+}
+func d128_toUInt64TowardPositive_ctxnull(x d128, ctxnull *context) uint64 {
+	return d128ConvertToUInt64_ctxnull(x, ROUND_TOWARD_POSITIVE, true, ctxnull)
+}
+func d128_toUInt64TowardNegative_ctxnull(x d128, ctxnull *context) uint64 {
+	return d128ConvertToUInt64_ctxnull(x, ROUND_TOWARD_NEGATIVE, true, ctxnull)
+}
+
+func d128_toUInt64TiesToEvenSignalInexact_ctxnull(x d128, ctxnull *context) uint64 {
+	return d128ConvertToUInt64_ctxnull(x, ROUND_TIES_TO_EVEN, false, ctxnull)
+}
+func d128_toUInt64TiesToAwaySignalInexact_ctxnull(x d128, ctxnull *context) uint64 {
+	return d128ConvertToUInt64_ctxnull(x, ROUND_TIES_TO_AWAY, false, ctxnull)
+}
+func d128_toUInt64TowardZeroSignalInexact_ctxnull(x d128, ctxnull *context) uint64 {
+	return d128ConvertToUInt64_ctxnull(x, ROUND_TOWARD_ZERO, false, ctxnull)
+}
+func d128_toUInt64TowardPositiveSignalInexact_ctxnull(x d128, ctxnull *context) uint64 {
+	return d128ConvertToUInt64_ctxnull(x, ROUND_TOWARD_POSITIVE, false, ctxnull)
+}
+func d128_toUInt64TowardNegativeSignalInexact_ctxnull(x d128, ctxnull *context) uint64 {
+	return d128ConvertToUInt64_ctxnull(x, ROUND_TOWARD_NEGATIVE, false, ctxnull)
 }

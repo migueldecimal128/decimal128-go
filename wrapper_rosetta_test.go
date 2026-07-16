@@ -652,6 +652,40 @@ func wrapPredicate(c *rosettaCase, pred func(Decimal128) bool) (outcome, string)
 	return outFail, "got " + got + " want " + c.result
 }
 
+// wrapToUInt64 runs a directed convert-to-uint64 op through the PUBLIC Context
+// receiver form. The DIRECTION is fixed by the operation (dir), driven through the
+// public surface by setting the context's rounding; the corpus rounding token is
+// irrelevant (the directed conversion ignores it). exact selects the
+// inexact-signaling form (ToUInt64Exact). The expected value can exceed
+// Int64.MaxValue (Intel's 2^63 invalid sentinel), so it is parsed as uint64. On an
+// invalid conversion the returned value is implementation-defined -- our wrapper
+// returns 0, Intel returns 2^63 -- so once the 'i' flag is raised only the flag is
+// checked.
+func wrapToUInt64(c *rosettaCase, dir Rounding, exact bool) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	ctx := NewContextWithRounding(dir)
+	x := decodeOperandWrapper(c.operands[0])
+	var got uint64
+	if exact {
+		got = ctx.ToUInt64Exact(x)
+	} else {
+		got = ctx.ToUInt64(x)
+	}
+	flags := wrapperFlagLetters(ctx.RaisedFlags())
+	expected, err := strconv.ParseUint(c.result, 10, 64)
+	if err != nil {
+		expected = 0
+	}
+	invalid := strings.Contains(flags, "i")
+	valueOK := (got == expected) || (invalid && got == 0)
+	if valueOK && flags == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %d flags=%q want %d flags=%q", got, flags, expected, c.expectedFlags)
+}
+
 // dispatchWrapper runs a case through the public API.
 func dispatchWrapper(c *rosettaCase) (outcome, string) {
 	switch c.operation {
@@ -800,6 +834,26 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapDirectedRound(c, TowardPositive)
 	case "d128_round_integral_negative":
 		return wrapDirectedRound(c, TowardNegative)
+	case "d128_to_uint64_rnint":
+		return wrapToUInt64(c, TiesToEven, false)
+	case "d128_to_uint64_rninta":
+		return wrapToUInt64(c, TiesToAway, false)
+	case "d128_to_uint64_ceil":
+		return wrapToUInt64(c, TowardPositive, false)
+	case "d128_to_uint64_floor":
+		return wrapToUInt64(c, TowardNegative, false)
+	case "d128_to_uint64_int":
+		return wrapToUInt64(c, TowardZero, false)
+	case "d128_to_uint64_xrnint":
+		return wrapToUInt64(c, TiesToEven, true)
+	case "d128_to_uint64_xrninta":
+		return wrapToUInt64(c, TiesToAway, true)
+	case "d128_to_uint64_xceil":
+		return wrapToUInt64(c, TowardPositive, true)
+	case "d128_to_uint64_xfloor":
+		return wrapToUInt64(c, TowardNegative, true)
+	case "d128_to_uint64_xint":
+		return wrapToUInt64(c, TowardZero, true)
 	default:
 		return outUnsupported, "no public-API arm for " + c.operation
 	}

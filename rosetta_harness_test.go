@@ -247,8 +247,26 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkToInt64(c, d128_toInt64TowardNegativeSignalInexact_ctxnull)
 	case "d128_to_int64_xint":
 		return checkToInt64(c, d128_toInt64TowardZeroSignalInexact_ctxnull)
+	case "d128_to_uint64_rnint":
+		return checkToUInt64(c, d128_toUInt64TiesToEven_ctxnull)
+	case "d128_to_uint64_rninta":
+		return checkToUInt64(c, d128_toUInt64TiesToAway_ctxnull)
+	case "d128_to_uint64_ceil":
+		return checkToUInt64(c, d128_toUInt64TowardPositive_ctxnull)
+	case "d128_to_uint64_floor":
+		return checkToUInt64(c, d128_toUInt64TowardNegative_ctxnull)
 	case "d128_to_uint64_int":
-		return checkToUInt64(c)
+		return checkToUInt64(c, d128_toUInt64TowardZero_ctxnull)
+	case "d128_to_uint64_xrnint":
+		return checkToUInt64(c, d128_toUInt64TiesToEvenSignalInexact_ctxnull)
+	case "d128_to_uint64_xrninta":
+		return checkToUInt64(c, d128_toUInt64TiesToAwaySignalInexact_ctxnull)
+	case "d128_to_uint64_xceil":
+		return checkToUInt64(c, d128_toUInt64TowardPositiveSignalInexact_ctxnull)
+	case "d128_to_uint64_xfloor":
+		return checkToUInt64(c, d128_toUInt64TowardNegativeSignalInexact_ctxnull)
+	case "d128_to_uint64_xint":
+		return checkToUInt64(c, d128_toUInt64TowardZeroSignalInexact_ctxnull)
 	case "d128_divideInteger_ctx", "divideint":
 		return checkBinaryCtx(c, d128_divideInteger_ctx)
 	case "d128_fma_ctx", "fma":
@@ -668,17 +686,17 @@ func checkToInt64(c *rosettaCase, op func(x d128, ctxnull *context) int64) (outc
 	return outFail, fmt.Sprintf("got %d flags=%q want %d flags=%q", got, ctx.exceptionLetters(), expected, c.expectedFlags)
 }
 
-// checkToUInt64 runs convert-to-uint64 toward zero (the only directed unsigned
-// form the core provides). The expected value can exceed Int64.MaxValue (Intel's
-// 2^63 invalid sentinel), so it is parsed as uint64. On an invalid conversion the
-// value is implementation-defined -- our core returns 0, Intel returns 2^63 --
-// so once the 'i' flag is raised only the flag is checked.
-func checkToUInt64(c *rosettaCase) (outcome, string) {
+// checkToUInt64 runs a directed convert-to-uint64 op. The expected value can
+// exceed Int64.MaxValue (Intel's 2^63 invalid sentinel), so it is parsed as
+// uint64. On an invalid conversion the value is implementation-defined -- our
+// core returns 0, Intel returns 2^63 -- so once the 'i' flag is raised only the
+// flag is checked.
+func checkToUInt64(c *rosettaCase, op func(x d128, ctxnull *context) uint64) (outcome, string) {
 	if len(c.operands) != 1 {
 		return outUnsupported, "bad operand count"
 	}
 	ctx := newContextRound(roundingFromToken(c.rounding))
-	got := d128_toUInt64TowardZero_ctxnull(decodeOperand(c.operands[0]), ctx)
+	got := op(decodeOperand(c.operands[0]), ctx)
 	expected, err := strconv.ParseUint(c.result, 10, 64)
 	if err != nil {
 		expected = 0

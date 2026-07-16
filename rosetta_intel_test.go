@@ -42,8 +42,12 @@ var intelInclude = map[string]bool{
 	"bid128_sub": true, "bid128_to_int64_rnint": true, "bid128_to_int64_rninta": true,
 	"bid128_to_int64_ceil": true, "bid128_to_int64_floor": true, "bid128_to_int64_int": true,
 	"bid128_to_int64_xrnint": true, "bid128_to_int64_xrninta": true, "bid128_to_int64_xceil": true,
-	"bid128_to_int64_xfloor": true, "bid128_to_int64_xint": true, "bid128_to_uint64_int": true,
-	"bid128_totalOrder": true, "bid128_totalOrderMag": true,
+	"bid128_to_int64_xfloor": true, "bid128_to_int64_xint": true,
+	"bid128_to_uint64_rnint": true, "bid128_to_uint64_rninta": true, "bid128_to_uint64_ceil": true,
+	"bid128_to_uint64_floor": true, "bid128_to_uint64_int": true, "bid128_to_uint64_xrnint": true,
+	"bid128_to_uint64_xrninta": true, "bid128_to_uint64_xceil": true, "bid128_to_uint64_xfloor": true,
+	"bid128_to_uint64_xint": true,
+	"bid128_totalOrder":     true, "bid128_totalOrderMag": true,
 }
 
 // intelOpMap maps an included bid128_* operation to the harness dispatch token.
@@ -112,7 +116,16 @@ var intelOpMap = map[string]string{
 	"bid128_to_int64_xceil":              "d128_to_int64_xceil",
 	"bid128_to_int64_xfloor":             "d128_to_int64_xfloor",
 	"bid128_to_int64_xint":               "d128_to_int64_xint",
+	"bid128_to_uint64_rnint":             "d128_to_uint64_rnint",
+	"bid128_to_uint64_rninta":            "d128_to_uint64_rninta",
+	"bid128_to_uint64_ceil":              "d128_to_uint64_ceil",
+	"bid128_to_uint64_floor":             "d128_to_uint64_floor",
 	"bid128_to_uint64_int":               "d128_to_uint64_int",
+	"bid128_to_uint64_xrnint":            "d128_to_uint64_xrnint",
+	"bid128_to_uint64_xrninta":           "d128_to_uint64_xrninta",
+	"bid128_to_uint64_xceil":             "d128_to_uint64_xceil",
+	"bid128_to_uint64_xfloor":            "d128_to_uint64_xfloor",
+	"bid128_to_uint64_xint":              "d128_to_uint64_xint",
 	"bid128_totalOrder":                  "d128_totalOrder",
 	"bid128_totalOrderMag":               "d128_totalOrderMag",
 }

@@ -109,6 +109,29 @@ func (c *Context) ToInt64Exact(x Decimal128) int64 {
 	return toInt64Mode_ctxnull(x, c.rounding, c.core, true)
 }
 
+// ToUInt64 converts x to uint64, discarding any fraction in this direction, with
+// no flag tracking.
+func (r Rounding) ToUInt64(x Decimal128) uint64 { return toUInt64Mode_ctxnull(x, r, nil, false) }
+
+// ToUInt64Exact is like ToUInt64 but is the signaling form (IEEE
+// convertToIntegerExact). Without a context there is no sink, so the Inexact
+// signal is dropped; use Context.ToUInt64Exact to capture it.
+func (r Rounding) ToUInt64Exact(x Decimal128) uint64 { return toUInt64Mode_ctxnull(x, r, nil, true) }
+
+// ToUInt64 converts x to uint64, discarding any fraction by this context's
+// rounding. Raises InvalidOperation into the context for a NaN/infinite/negative/
+// out-of-range operand; does not raise Inexact for a discarded fraction — use
+// ToUInt64Exact for that.
+func (c *Context) ToUInt64(x Decimal128) uint64 {
+	return toUInt64Mode_ctxnull(x, c.rounding, c.core, false)
+}
+
+// ToUInt64Exact is like ToUInt64 but additionally raises Inexact into the context
+// when a fractional part is discarded (IEEE convertToIntegerExact).
+func (c *Context) ToUInt64Exact(x Decimal128) uint64 {
+	return toUInt64Mode_ctxnull(x, c.rounding, c.core, true)
+}
+
 // toInt64Mode_ctxnull dispatches to the per-direction core conversion, optionally the
 // inexact-signaling variant.
 func toInt64Mode_ctxnull(x Decimal128, r Rounding, ctx *context, exact bool) int64 {
@@ -137,5 +160,36 @@ func toInt64Mode_ctxnull(x Decimal128, r Rounding, ctx *context, exact bool) int
 		return d128_toInt64TowardPositive_ctxnull(x.core, ctx)
 	default:
 		return d128_toInt64TowardNegative_ctxnull(x.core, ctx)
+	}
+}
+
+// toUInt64Mode_ctxnull dispatches to the per-direction core conversion, optionally
+// the inexact-signaling variant.
+func toUInt64Mode_ctxnull(x Decimal128, r Rounding, ctx *context, exact bool) uint64 {
+	if exact {
+		switch r {
+		case TiesToEven:
+			return d128_toUInt64TiesToEvenSignalInexact_ctxnull(x.core, ctx)
+		case TiesToAway:
+			return d128_toUInt64TiesToAwaySignalInexact_ctxnull(x.core, ctx)
+		case TowardZero:
+			return d128_toUInt64TowardZeroSignalInexact_ctxnull(x.core, ctx)
+		case TowardPositive:
+			return d128_toUInt64TowardPositiveSignalInexact_ctxnull(x.core, ctx)
+		default:
+			return d128_toUInt64TowardNegativeSignalInexact_ctxnull(x.core, ctx)
+		}
+	}
+	switch r {
+	case TiesToEven:
+		return d128_toUInt64TiesToEven_ctxnull(x.core, ctx)
+	case TiesToAway:
+		return d128_toUInt64TiesToAway_ctxnull(x.core, ctx)
+	case TowardZero:
+		return d128_toUInt64TowardZero_ctxnull(x.core, ctx)
+	case TowardPositive:
+		return d128_toUInt64TowardPositive_ctxnull(x.core, ctx)
+	default:
+		return d128_toUInt64TowardNegative_ctxnull(x.core, ctx)
 	}
 }
