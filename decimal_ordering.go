@@ -20,8 +20,11 @@ func (d Decimal128) IsCanonical() bool { return d128_isCanonical(d.core) }
 // --- IEEE minimum / maximum (NaN-propagating) ---
 //
 // These are the IEEE 754-2019 minimum/maximum operations: if either operand is
-// NaN the result is NaN. They have no flag-tracking context form (no _ctx core
-// entry), so they are package functions rather than Context methods.
+// a quiet NaN the result is NaN. A signaling NaN operand still raises
+// InvalidOperation; use the flag-tracking (c *Context) forms below to capture
+// it. The propagating and "Number" families signal on sNaN identically and
+// differ only in how they treat a quiet NaN. The package-level value forms here
+// discard flags; the Context methods track them.
 
 // Minimum returns the lesser of x and y; NaN if either is NaN.
 func Minimum(x, y Decimal128) Decimal128 { return Decimal128{d128_minimum(x.core, y.core)} }
@@ -77,11 +80,36 @@ func (d Decimal128) Copysign(sign Decimal128) Decimal128 {
 	return Decimal128{d128_copySign(d.core, sign.core)}
 }
 
-// --- context-receiver minimumNumber / maximumNumber (flag-tracking) ---
+// --- context-receiver minimum / maximum (flag-tracking) ---
 //
-// The flag-tracking forms of the NaN-ignoring "Number" selections: a signaling
-// NaN operand raises InvalidOperation into the context. The NaN-propagating
-// Minimum/Maximum have no context form.
+// Flag-tracking forms of both selection families: a signaling NaN operand raises
+// InvalidOperation into the context. The NaN-propagating Minimum/Maximum and the
+// NaN-ignoring …Number forms signal on sNaN identically, differing only in
+// quiet-NaN handling (propagating returns NaN; …Number returns the number).
+
+// Minimum returns the lesser of x and y; NaN if either is a quiet NaN.
+// A signaling NaN operand raises InvalidOperation into this context.
+func (c *Context) Minimum(x, y Decimal128) Decimal128 {
+	return Decimal128{d128_minimum_ctx(x.core, y.core, c.core)}
+}
+
+// Maximum returns the greater of x and y; NaN if either is a quiet NaN.
+// A signaling NaN operand raises InvalidOperation into this context.
+func (c *Context) Maximum(x, y Decimal128) Decimal128 {
+	return Decimal128{d128_maximum_ctx(x.core, y.core, c.core)}
+}
+
+// MinimumMagnitude returns the lesser-magnitude operand; NaN if either is a
+// quiet NaN. A signaling NaN operand raises InvalidOperation into this context.
+func (c *Context) MinimumMagnitude(x, y Decimal128) Decimal128 {
+	return Decimal128{d128_minimumMagnitude_ctx(x.core, y.core, c.core)}
+}
+
+// MaximumMagnitude returns the greater-magnitude operand; NaN if either is a
+// quiet NaN. A signaling NaN operand raises InvalidOperation into this context.
+func (c *Context) MaximumMagnitude(x, y Decimal128) Decimal128 {
+	return Decimal128{d128_maximumMagnitude_ctx(x.core, y.core, c.core)}
+}
 
 // MinimumNumber returns the lesser of x and y, ignoring a single NaN operand;
 // flag-tracked through this context.

@@ -768,6 +768,26 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapMinMaxNumber(c, (*Context).MinimumMagnitudeNumber)
 	case "maxmag":
 		return wrapMinMaxNumber(c, (*Context).MaximumMagnitudeNumber)
+	// Native minmax corpus (754-2019 semantics, flag-checked via *Context).
+	// The NaN-propagating forms and the NaN-ignoring "Number" forms both signal
+	// on sNaN identically; the native vectors are quiet-only so they run through
+	// wrapBinaryCtx directly (value + flags).
+	case "d128_minimum_ctx":
+		return wrapBinaryCtx(c, (*Context).Minimum)
+	case "d128_maximum_ctx":
+		return wrapBinaryCtx(c, (*Context).Maximum)
+	case "d128_minimumMagnitude_ctx":
+		return wrapBinaryCtx(c, (*Context).MinimumMagnitude)
+	case "d128_maximumMagnitude_ctx":
+		return wrapBinaryCtx(c, (*Context).MaximumMagnitude)
+	case "d128_minimumNumber_ctx":
+		return wrapBinaryCtx(c, (*Context).MinimumNumber)
+	case "d128_maximumNumber_ctx":
+		return wrapBinaryCtx(c, (*Context).MaximumNumber)
+	case "d128_minimumMagnitudeNumber_ctx":
+		return wrapBinaryCtx(c, (*Context).MinimumMagnitudeNumber)
+	case "d128_maximumMagnitudeNumber_ctx":
+		return wrapBinaryCtx(c, (*Context).MaximumMagnitudeNumber)
 	case "scaleb":
 		return wrapScaleBIntel(c)
 	case "d128_round_integral_nearest_even":
