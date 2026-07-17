@@ -14,9 +14,13 @@ func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	yHi49 := d128_hi49(y)
 	hi49Sum := xHi49 + yHi49
 	if ushr_64_64(hi49Sum, 48) == 0 && d128_qExpAndSignBit(x) == d128_qExpAndSignBit(y) {
-		// Fast path: same sign and exponent, sum fits in 112 bits. No rounding.
-		coeffSum := add_128_128x128(x.ubdLo64, xHi49, y.ubdLo64, yHi49)
-		return d128FromQExpSignBit(d128_qExpAndSignBit(x), coeffSum.dw0, coeffSum.dw1)
+		// Same sign and exponent; sum fits in 112 bits (+ carry). No rounding.
+		// Add y's coefficient (its top 15 bits are zero) straight onto x's full
+		// UBD word: qExpAndSign(x) rides along untouched, so there is no
+		// re-extract/rebuild. The guard above (hi49Sum < 2^48) guarantees the
+		// coefficient carry cannot reach the qExp/sign field.
+		sum := add_128_128x128(x.ubdLo64, x.ubdHi64, y.ubdLo64, yHi49)
+		return d128{ubdLo64: sum.dw0, ubdHi64: sum.dw1}
 	}
 	return d128_add_slow_rnd_ctxnull(x, y, rounding, ctxnull)
 }
