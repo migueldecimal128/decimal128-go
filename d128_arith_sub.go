@@ -28,6 +28,10 @@ func d128_subtract_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 	return d128_subtract_slow_rnd_ctxnull(x, y, rounding, ctxnull)
 }
 
+// Cold path, kept out of line (see d128_add_slow_rnd_ctxnull). //go:noinline
+// pins it out of line so the fast entry stays the small hot function.
+//
+//go:noinline
 func d128_subtract_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	if d128_isNAN(x) || d128_isNAN(y) {
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)

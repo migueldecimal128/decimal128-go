@@ -21,6 +21,13 @@ func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	return d128_add_slow_rnd_ctxnull(x, y, rounding, ctxnull)
 }
 
+// Cold path, kept out of line so the fast entry above stays a small, i-cache-
+// friendly hot function. Go has no always_inline, and the fast entry's
+// guard + inline arithmetic already exceeds the ~80 inline budget, so it does
+// not collapse into Add (unlike the native ports' operators); the split's Go
+// payoff is hot/cold code separation. //go:noinline pins that contract.
+//
+//go:noinline
 func d128_add_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	if d128_isNonFinite(x) || d128_isNonFinite(y) {
 		return addNonFinite_rnd_ctxnull(x, y, ctxnull)
