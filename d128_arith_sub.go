@@ -16,8 +16,13 @@ func d128_subtract_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 	hi49Sum := xHi49 + yHi49
 	if ushr_64_64(hi49Sum, 48) == 0 && d128_qExp(x) == d128_qExp(y) {
 		if d128_qExpAndSignBit(x) != d128_qExpAndSignBit(y) {
-			coeffSum := add_128_128x128(x.ubdLo64, xHi49, y.ubdLo64, yHi49)
-			return d128FromQExpSignBit(d128_qExpAndSignBit(x), coeffSum.dw0, coeffSum.dw1)
+			// Opposite signs, same exponent: this is a magnitude add. Only the sign
+			// differs, and x's full UBD word already carries the correct qExp+sign,
+			// so add y's coefficient (its top 15 bits are zero) straight onto x's
+			// full word and return raw -- no re-extract/rebuild. The guard above
+			// (hi49Sum < 2^48) keeps the coefficient carry out of the qExp/sign field.
+			sum := add_128_128x128(x.ubdLo64, x.ubdHi64, y.ubdLo64, yHi49)
+			return d128{ubdLo64: sum.dw0, ubdHi64: sum.dw1}
 		}
 		ds := subAbs_d128swap_128x128(x.ubdLo64, xHi49, y.ubdLo64, yHi49)
 		if !isZero_bool_128(ds.diffDw0, ds.diffDw1) {
