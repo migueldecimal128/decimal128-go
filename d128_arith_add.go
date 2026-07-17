@@ -1,7 +1,8 @@
-// Add and subtract. The general bodies (d128_add_rnd_ctxnull /
-// d128_subtract_rnd_ctxnull) underlie the _tte/_rnd/_ctx forms. Aligned same-
-// exponent sums take a flag-free fast path; otherwise the FNZ×FNZ paths align
-// (near) or use the unaligned far-exponent helpers with the FE finalize entries.
+// Add. The general body (d128_add_rnd_ctxnull) underlies the _tte/_rnd/_ctx
+// forms. Aligned same-exponent sums take a flag-free fast path; otherwise the
+// FNZ×FNZ paths align (near) or use the unaligned far-exponent helpers with the
+// FE finalize entries. The shared addFnzFnz_rnd_ctxnull helper is also reached
+// from subtract's negate-and-add path (see d128_arith_sub.go).
 
 package decimal128
 
@@ -78,39 +79,6 @@ func addFnzFnz_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 		return addFnzFnzUnalignedLikeSign_rnd_ctxnull(x, y, rounding, ctxnull)
 	}
 	return addFnzFnzUnalignedUnlikeSign_rnd_ctxnull(x, y, rounding, ctxnull)
-}
-
-func d128_subtract_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
-	xHi49 := d128_hi49(x)
-	yHi49 := d128_hi49(y)
-	hi49Sum := xHi49 + yHi49
-	if ushr_64_64(hi49Sum, 48) == 0 && d128_qExp(x) == d128_qExp(y) {
-		if d128_qExpAndSignBit(x) != d128_qExpAndSignBit(y) {
-			coeffSum := add_128_128x128(x.ubdLo64, xHi49, y.ubdLo64, yHi49)
-			return d128FromQExpSignBit(d128_qExpAndSignBit(x), coeffSum.dw0, coeffSum.dw1)
-		}
-		ds := subAbs_d128swap_128x128(x.ubdLo64, xHi49, y.ubdLo64, yHi49)
-		if !isZero_bool_128(ds.diffDw0, ds.diffDw1) {
-			resultQExpAndSignBit := d128_qExpAndSignBit(x) ^ boolToInt64(ds.swap)
-			return d128FromQExpSignBit(resultQExpAndSignBit, ds.diffDw0, ds.diffDw1)
-		}
-	}
-	if d128_isNAN(x) || d128_isNAN(y) {
-		return ctxNanOperand2_ctxnull(ctxnull, x, y)
-	}
-	yNeg := d128_negate(y)
-	if d128_isNonFinite(x) || d128_isNonFinite(yNeg) || d128_isZER(x) || d128_isZER(yNeg) {
-		return d128_add_rnd_ctxnull(x, yNeg, rounding, ctxnull)
-	}
-	return addFnzFnz_rnd_ctxnull(x, yNeg, rounding, ctxnull)
-}
-
-func d128_subtract_tte(x, y d128) d128 {
-	return d128_subtract_rnd_ctxnull(x, y, ROUND_TIES_TO_EVEN, nil)
-}
-func d128_subtract_rnd(x, y d128, rnd round) d128 { return d128_subtract_rnd_ctxnull(x, y, rnd, nil) }
-func d128_subtract_ctx(x, y d128, ctx *context) d128 {
-	return d128_subtract_rnd_ctxnull(x, y, ctx.round, ctx)
 }
 
 func addFnzFnzUnalignedLikeSign_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
@@ -206,76 +174,4 @@ func preferMinimumQExp_exact(x d128, otherExp int) d128 {
 	zQ := xQ - shiftLeft
 	verify("", func() bool { return isCanonical34_128(zQ, zCoeff) })
 	return d128Pack(xSign, zQ, zCoeff.dw0, zCoeff.dw1)
-}
-
-func subMagUnalignedFnzFnz_rnd_ctxnull(zSign bool, m, s d128, rounding round, ctxnull *context) d128 {
-	verify("", func() bool { return d128_isFNZ(m) && d128_isFNZ(s) })
-	verify("", func() bool { return d128_qExp(m) != d128_qExp(s) })
-	verify("", func() bool { return cmpMagFnzFnz(m, s) > 0 })
-	mQ := d128_qExp(m)
-	mCoeff := d128_u128(m)
-	mDigitLen := digitLen_int_128(mCoeff.dw0, mCoeff.dw1)
-	sQ := d128_qExp(s)
-	sCoeff := d128_u128(s)
-	sDigitLen := -1
-	gap := mQ - sQ
-	if gap < 0 {
-		prod := mulPow10_128_128(sCoeff.dw0, sCoeff.dw1, -gap)
-		diff := sub_128_128x128(mCoeff.dw0, mCoeff.dw1, prod.dw0, prod.dw1)
-		return finalize_128_ctxnull(zSign, mQ, diff, RESIDUE_EXACT, rounding, ctxnull)
-	}
-	verify("", func() bool { return mDigitLen <= 34 })
-
-	// Fully/Borderline swamped fast path at 34-digit scale.
-	headroom := 34 - mDigitLen
-	shiftM34 := min(gap, headroom)
-	qAlign34 := mQ - shiftM34
-	shiftS34 := qAlign34 - sQ
-	isSwamped := (shiftS34 >= 35)
-	if !isSwamped {
-		sDigitLen = digitLen_int_128(sCoeff.dw0, sCoeff.dw1)
-		isSwamped = (shiftS34 >= sDigitLen)
-	}
-	if isSwamped {
-		var mScaled u128
-		if shiftM34 == 0 {
-			mScaled = mCoeff
-		} else {
-			mScaled = mulPow10_128_128(mCoeff.dw0, mCoeff.dw1, shiftM34)
-		}
-		if cmp_int_128x128_pow10(mScaled.dw0, mScaled.dw1, 33) != 0 { // not 10^33
-			raw := RESIDUE_LT_HALF
-			if !(shiftS34 >= 35 || shiftS34 > sDigitLen) {
-				raw = residueFromDecadeWithDigitLen_128(sCoeff.dw0, sCoeff.dw1, sDigitLen)
-			}
-			z := sub_128_128x128(mScaled.dw0, mScaled.dw1, 1, 0)
-			return finalizeSwampedFnz_128_ctxnull(zSign, qAlign34, z, residueSubtractionInverse(raw), rounding, ctxnull)
-		}
-		// mScaled == 10^33: fall through to the guard path.
-	}
-
-	// Guard-digit path (the 10^33 exception and partial overlap).
-	headroomWithGuard := 1 + headroom
-	shiftMLeft := min(gap, headroomWithGuard)
-	qAlign := mQ - shiftMLeft
-	shiftSRight := qAlign - sQ
-	verify("", func() bool { return shiftSRight >= 0 })
-
-	zCoeff := mulPow10_128_128(mCoeff.dw0, mCoeff.dw1, shiftMLeft)
-	if sDigitLen == -1 {
-		sDigitLen = digitLen_int_128(sCoeff.dw0, sCoeff.dw1)
-	}
-	if shiftSRight > sDigitLen {
-		borrowed := sub_128_128x128(zCoeff.dw0, zCoeff.dw1, 1, 0)
-		return finalizeAddSubFnz_128_ctxnull(zSign, qAlign, borrowed, residueSubtractionInverse(RESIDUE_LT_HALF), rounding, ctxnull)
-	}
-	qr := div_128_pow10_checked_q128res(sCoeff, shiftSRight)
-	rawResidue := qr.residue
-	zCoeff = sub_128_128x128(zCoeff.dw0, zCoeff.dw1, qr.quotDw0, qr.quotDw1)
-	res := RESIDUE_EXACT
-	if rawResidue != RESIDUE_EXACT {
-		res = residueSubtractionInverse(rawResidue)
-		zCoeff = sub_128_128x128(zCoeff.dw0, zCoeff.dw1, 1, 0)
-	}
-	return finalizeAddSubFnz_128_ctxnull(zSign, qAlign, zCoeff, res, rounding, ctxnull)
 }
