@@ -6,6 +6,10 @@
 
 package decimal128
 
+// Fast path: same exponent. Opposite signs -> magnitude add; same signs ->
+// magnitude subtract. A zero magnitude-subtract result falls through to the
+// (cold) d128_subtract_slow_rnd_ctxnull, as does any non-fast case, so this
+// body stays tiny and inlines (via _tte/_rnd/_ctx) into the - operator.
 func d128_subtract_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	xHi49 := d128_hi49(x)
 	yHi49 := d128_hi49(y)
@@ -21,6 +25,10 @@ func d128_subtract_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 			return d128FromQExpSignBit(resultQExpAndSignBit, ds.diffDw0, ds.diffDw1)
 		}
 	}
+	return d128_subtract_slow_rnd_ctxnull(x, y, rounding, ctxnull)
+}
+
+func d128_subtract_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	if d128_isNAN(x) || d128_isNAN(y) {
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}

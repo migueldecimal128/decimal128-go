@@ -6,6 +6,9 @@
 
 package decimal128
 
+// Fast path: same sign and exponent, coefficient sum fits. Everything else
+// tail-calls the (cold) d128_add_slow_rnd_ctxnull, so this body stays tiny and
+// inlines (through the _tte/_rnd/_ctx wrappers) into the + operator.
 func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	xHi49 := d128_hi49(x)
 	yHi49 := d128_hi49(y)
@@ -15,6 +18,10 @@ func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 		coeffSum := add_128_128x128(x.ubdLo64, xHi49, y.ubdLo64, yHi49)
 		return d128FromQExpSignBit(d128_qExpAndSignBit(x), coeffSum.dw0, coeffSum.dw1)
 	}
+	return d128_add_slow_rnd_ctxnull(x, y, rounding, ctxnull)
+}
+
+func d128_add_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	if d128_isNonFinite(x) || d128_isNonFinite(y) {
 		return addNonFinite_rnd_ctxnull(x, y, ctxnull)
 	}
