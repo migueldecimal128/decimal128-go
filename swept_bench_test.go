@@ -17,12 +17,15 @@
 // CD/WD/ET/PT), or P-max (wide-path stress: SQ/OQ/FQ + XP + XD); each profile
 // gates which bands are feasible, so the bench sweeps only that profile's set.
 //
-// Each timed b.Loop() body is ONE op indexed by a counter cycling through the
-// 4096 pairs, so Go's reported ns/op is the swept per-op average directly. The
-// operand indexing (bounds-checked slice load) is inherent to a swept bench and
-// matches the C harness's d.dx[i] access.
+// Each subtest self-times a MEDIAN over sweptReps fixed-workload sweeps (see
+// sweptMedianNS) and publishes it via b.ReportMetric(..,"ns/op") — NOT testing.B's
+// auto-scaled mean over one b.Loop run. This matches the zig/rust/swift/JVM manual
+// harnesses (fixed-workload samples → median), so the cross-port estimator is
+// identical. The operand indexing (bounds-checked slice load) is inherent to a swept
+// bench and matches the C harness's d.dx[i] access; -benchtime=1x runs each subtest
+// once (our internal reps do the sampling).
 //
-// Run: cd go && go test -bench='^BenchmarkSwept$' -run='^$'   (add -count=N for reps)
+// Run: cd go && go test -bench='^BenchmarkSwept$' -run='^$' -benchtime=1x
 
 package decimal128
 
@@ -30,9 +33,55 @@ import (
 	"bufio"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
+	"time"
 )
+
+// Manual timing (matching the zig/rust/swift/java/kotlin swept harnesses): sweep a
+// fixed workload sweptReps times, each its own clock bracket, and report the MEDIAN
+// of the per-rep ns/op samples — NOT testing.B's auto-scaled mean over one run. The
+// median is the cross-port estimator: robust to the one-sided right tail of
+// scheduler/interrupt contamination without reporting an unachievable best case,
+// matching Google Benchmark's median aggregate. Odd rep count ⇒ the median is a true
+// single order statistic (no averaging of the two central samples).
+const sweptReps = 15
+
+func median(xs []float64) float64 {
+	sort.Float64s(xs)
+	m := len(xs) / 2
+	if len(xs)%2 == 1 {
+		return xs[m]
+	}
+	return (xs[m-1] + xs[m]) / 2
+}
+
+// sweptMedianNS runs `sweep` (one full pass over the n-pair band) repeatedly: one
+// warmup/calibration sweep sizes the pass count to ~30 ms/measurement, then median
+// over sweptReps timed measurements. ns/op = total_ns / (passes * n).
+func sweptMedianNS(n int, sweep func()) float64 {
+	t0 := time.Now()
+	sweep() // warmup + calibrate
+	one := time.Since(t0).Nanoseconds()
+	if one < 1 {
+		one = 1
+	}
+	passes := int(30_000_000 / one)
+	if passes < 1 {
+		passes = 1
+	}
+	samples := make([]float64, sweptReps)
+	for r := 0; r < sweptReps; r++ {
+		s0 := time.Now()
+		for p := 0; p < passes; p++ {
+			sweep()
+		}
+		dt := time.Since(s0).Nanoseconds()
+		samples[r] = float64(dt) / float64(passes*n)
+	}
+	return median(samples)
+}
 
 // The band set feasible under each magnitude profile (BenchmarkMatrix.md §2.1;
 // see decimal128-resources/swept/README.md). P-gen = all 12; P-fin folds add/sub
@@ -131,13 +180,11 @@ func BenchmarkSwept(b *testing.B) {
 			ss, ls, rs := loadSweptBand3(b, profile, band)
 			n := len(ss)
 			b.Run("fma/"+band, func(b *testing.B) {
-				i := 0
-				for b.Loop() {
-					benchSink = ss[i].FMA(ls[i], rs[i])
-					if i++; i == n {
-						i = 0
+				b.ReportMetric(sweptMedianNS(n, func() {
+					for i := 0; i < n; i++ {
+						benchSink = ss[i].FMA(ls[i], rs[i])
 					}
-				}
+				}), "ns/op")
 			})
 			continue
 		}
@@ -146,42 +193,34 @@ func BenchmarkSwept(b *testing.B) {
 		switch band {
 		case "SQ", "NQ", "MQ", "OQ", "FQ", "MIX":
 			b.Run("add/"+band, func(b *testing.B) {
-				i := 0
-				for b.Loop() {
-					benchSink = xs[i].Add(ys[i])
-					if i++; i == n {
-						i = 0
+				b.ReportMetric(sweptMedianNS(n, func() {
+					for i := 0; i < n; i++ {
+						benchSink = xs[i].Add(ys[i])
 					}
-				}
+				}), "ns/op")
 			})
 			b.Run("sub/"+band, func(b *testing.B) {
-				i := 0
-				for b.Loop() {
-					benchSink = xs[i].Sub(ys[i])
-					if i++; i == n {
-						i = 0
+				b.ReportMetric(sweptMedianNS(n, func() {
+					for i := 0; i < n; i++ {
+						benchSink = xs[i].Sub(ys[i])
 					}
-				}
+				}), "ns/op")
 			})
 		case "CP", "WP", "XP":
 			b.Run("mul/"+band, func(b *testing.B) {
-				i := 0
-				for b.Loop() {
-					benchSink = xs[i].Mul(ys[i])
-					if i++; i == n {
-						i = 0
+				b.ReportMetric(sweptMedianNS(n, func() {
+					for i := 0; i < n; i++ {
+						benchSink = xs[i].Mul(ys[i])
 					}
-				}
+				}), "ns/op")
 			})
 		case "CD", "WD", "XD", "ET", "PT":
 			b.Run("div/"+band, func(b *testing.B) {
-				i := 0
-				for b.Loop() {
-					benchSink = xs[i].Quo(ys[i])
-					if i++; i == n {
-						i = 0
+				b.ReportMetric(sweptMedianNS(n, func() {
+					for i := 0; i < n; i++ {
+						benchSink = xs[i].Quo(ys[i])
 					}
-				}
+				}), "ns/op")
 			})
 		}
 	}
