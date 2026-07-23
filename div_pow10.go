@@ -98,6 +98,13 @@ func div_256_pow10_q128res(x u256, pow10 int) quot128Residue {
 	if isZero_bool_128(x.dw2, x.dw3) {
 		return div_128_pow10_q128res(x.lo(), pow10)
 	}
+	// 3x3 fast path: when the stripped dividend A = x>>(pow10-1) fits 3 limbs
+	// (A < 2^191) the reciprocal also fits 3 limbs, so the recip multiply is a
+	// 192x192 comba -- 9 macs vs the 4x4's 16 (DivPow10RecipMul192WorkOrder.md).
+	// aBits(A) = bitLen(x)-(pow10-1), so A < 2^191  <=>  bitLen(x) <= 190 + pow10.
+	if bitLen_int_256(x.dw0, x.dw1, x.dw2, x.dw3) <= 190+pow10 {
+		return divPow10_q128res_192_recipmul(x, pow10)
+	}
 	// A single reciprocal-multiply kernel (D47) covers the whole 256-bit-dividend
 	// q128res range pow10 1..77, replacing the former barrett(<=13)/barrett-loop(>13)
 	// split: it is flat in k where the barrett-loop grew with k, so it is a win

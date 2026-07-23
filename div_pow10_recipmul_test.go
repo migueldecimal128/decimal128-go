@@ -83,3 +83,52 @@ func TestDivPow10Recipmul256(t *testing.T) {
 		}
 	}
 }
+
+func TestDivPow10Recipmul192(t *testing.T) {
+	r := rand.New(rand.NewSource(192))
+	two128 := new(big.Int).Lsh(big.NewInt(1), 128)
+	two256 := new(big.Int).Lsh(big.NewInt(1), 256)
+	for i := 0; i < oracleIters; i++ {
+		p := r.Intn(77) + 1 // 1..77
+		div := pow10big(p)
+
+		// 3x3 domain: quotient < 2^128 (x < 10^p·2^128), x < 2^256, AND the gate
+		// A = x>>(p-1) < 2^191  <=>  x < 2^(190+p).
+		xMax := new(big.Int).Mul(div, two128)
+		if xMax.Cmp(two256) > 0 {
+			xMax.Set(two256)
+		}
+		aCap := new(big.Int).Lsh(big.NewInt(1), uint(190+p))
+		if aCap.Cmp(xMax) < 0 {
+			xMax.Set(aCap)
+		}
+		xMax.Sub(xMax, big.NewInt(1))
+
+		// Uniform bx in [2^128, xMax] (x.hi != 0 -> the 256-dividend path).
+		span := new(big.Int).Sub(xMax, two128)
+		span.Add(span, big.NewInt(1))
+		if span.Sign() <= 0 {
+			continue
+		}
+		bx := new(big.Int).Rand(r, span)
+		bx.Add(bx, two128)
+
+		x := u256FromBig(bx)
+		wantQ, wantR := new(big.Int).QuoRem(bx, div, new(big.Int))
+
+		got := divPow10_q128res_192_recipmul(x, p)
+		gotQ := bigU128(u128{got.quotDw0, got.quotDw1})
+		if gotQ.Cmp(wantQ) != 0 {
+			t.Fatalf("recipmul192 quotient: x=%s 10^%d got %s want %s", bx, p, gotQ, wantQ)
+		}
+		if got.residue != refResidue(wantR, div) {
+			t.Fatalf("recipmul192 residue: x=%s 10^%d got %s want %s",
+				bx, p, residueName(got.residue), residueName(refResidue(wantR, div)))
+		}
+		// PRIMARY: bit-identical to the 4x4 256-kernel.
+		g256 := divPow10_q128res_256_recipmul(x, p)
+		if got.quotDw0 != g256.quotDw0 || got.quotDw1 != g256.quotDw1 || got.residue != g256.residue {
+			t.Fatalf("3x3 != 4x4: x=%s 10^%d", bx, p)
+		}
+	}
+}
