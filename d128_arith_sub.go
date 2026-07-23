@@ -73,9 +73,22 @@ func subMagUnalignedFnzFnz_rnd_ctxnull(zSign bool, m, s d128, rounding round, ct
 		return finalize_128_ctxnull(zSign, mQ, diff, RESIDUE_EXACT, rounding, ctxnull)
 	}
 	verify("", func() bool { return mDigitLen <= 34 })
+	headroom := 34 - mDigitLen
+	// MQ FAST TAIL (magnitude subtraction): gap fully absorbed into m's headroom
+	// (gap <= headroom), so s already sits at the result scale and m*10^gap - s is
+	// EXACT — no guard digit, no divide, no residue. diff < 10^34 because |m| > |s|
+	// and m*10^gap has <= 34 digits; result exponent sQ is the preferred (minimum)
+	// exponent for an exact subtraction.
+	if gap <= headroom {
+		mScaled := mulPow10_128_128(mCoeff.dw0, mCoeff.dw1, gap)
+		diff := sub_128_128x128(mScaled.dw0, mScaled.dw1, sCoeff.dw0, sCoeff.dw1)
+		if isLt_pow10_34_bool_128(diff.dw0, diff.dw1) {
+			return d128Pack(zSign, sQ, diff.dw0, diff.dw1)
+		}
+		return finalize_128_ctxnull(zSign, sQ, diff, RESIDUE_EXACT, rounding, ctxnull)
+	}
 
 	// Fully/Borderline swamped fast path at 34-digit scale.
-	headroom := 34 - mDigitLen
 	shiftM34 := min(gap, headroom)
 	qAlign34 := mQ - shiftM34
 	shiftS34 := qAlign34 - sQ

@@ -129,6 +129,17 @@ func addFnzFnzUnalignedLikeSign_rnd_ctxnull(x, y d128, rounding round, ctxnull *
 	}
 	qAlign := mQ - shiftLeft
 	shiftRight := qAlign - nQ
+	// MQ FAST TAIL: gap fully absorbed into m's headroom (shiftRight == 0), so n
+	// already sits at the result scale and, being the same sign, its coefficient
+	// simply adds. The sum is EXACT: skip the div-by-zero and residue finalize.
+	if shiftRight == 0 {
+		nCoeff := d128_u128(n)
+		sum := add_128_128x128(zCoeff.dw0, zCoeff.dw1, nCoeff.dw0, nCoeff.dw1)
+		if isLt_pow10_34_bool_128(sum.dw0, sum.dw1) {
+			return d128Pack(d128_signFlag(m), qAlign, sum.dw0, sum.dw1)
+		}
+		return finalize_128_ctxnull(d128_signFlag(m), qAlign, sum, RESIDUE_EXACT, rounding, ctxnull)
+	}
 	// Swamped fast path: n lies strictly below the result's LSD (LT_HALF residue).
 	if shiftRight >= 35 || shiftRight > d128_digitLen(n) {
 		return finalizeSwampedFnz_128_ctxnull(d128_signFlag(m), qAlign, zCoeff, RESIDUE_LT_HALF, rounding, ctxnull)
