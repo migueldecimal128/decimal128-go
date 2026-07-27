@@ -20,7 +20,7 @@ const (
 )
 
 // core bridges to the package-internal round value (identical ordering).
-func (r Rounding) core() round { return round{int(r)} }
+func (r Rounding) core() round { return round(r) }
 
 // String returns a short name for the rounding direction.
 func (r Rounding) String() string {

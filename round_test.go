@@ -34,10 +34,10 @@ func TestNeedsRoundUp(t *testing.T) {
 			for _, isOdd := range []bool{false, true} {
 				for res := 0; res <= 3; res++ {
 					got := needsRoundUp(rnd, sign, isOdd, res)
-					want := refNeedsRoundUp(rnd.code, sign, isOdd, res)
+					want := refNeedsRoundUp(int(rnd), sign, isOdd, res)
 					if got != want {
 						t.Fatalf("needsRoundUp(code=%d sign=%v odd=%v res=%d) = %v want %v",
-							rnd.code, sign, isOdd, res, got, want)
+							int(rnd), sign, isOdd, res, got, want)
 					}
 				}
 			}
@@ -50,7 +50,7 @@ func TestRoundingOverflowUnderflow(t *testing.T) {
 	for _, rnd := range codes {
 		for _, sign := range []bool{false, true} {
 			var wantOvf, wantUnf bool
-			switch rnd.code {
+			switch int(rnd) {
 			case 0, 1:
 				wantOvf, wantUnf = true, true
 			case 2:
@@ -61,10 +61,10 @@ func TestRoundingOverflowUnderflow(t *testing.T) {
 				wantOvf, wantUnf = sign, !sign
 			}
 			if roundingOverflowsToInfinity(rnd, sign) != wantOvf {
-				t.Fatalf("overflowsToInfinity(code=%d sign=%v) wrong", rnd.code, sign)
+				t.Fatalf("overflowsToInfinity(code=%d sign=%v) wrong", int(rnd), sign)
 			}
 			if roundingUnderflowsToZero(rnd, sign) != wantUnf {
-				t.Fatalf("underflowsToZero(code=%d sign=%v) wrong", rnd.code, sign)
+				t.Fatalf("underflowsToZero(code=%d sign=%v) wrong", int(rnd), sign)
 			}
 		}
 	}

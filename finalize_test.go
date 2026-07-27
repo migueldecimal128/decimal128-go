@@ -29,7 +29,7 @@ func refFinalize(sign bool, coeff *big.Int, qExp int, inRes residue, rnd round) 
 		res = inRes
 		eQExp = qExp
 	}
-	if res != RESIDUE_EXACT && refNeedsRoundUp(rnd.code, sign, q.Bit(0) == 1, res) {
+	if res != RESIDUE_EXACT && refNeedsRoundUp(int(rnd), sign, q.Bit(0) == 1, res) {
 		q.Add(q, big.NewInt(1))
 		if q.Cmp(pow10big(34)) == 0 {
 			q = pow10big(33)

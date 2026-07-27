@@ -5,14 +5,18 @@
 
 package decimal128
 
-type round struct{ code int }
+// round is a C-style int-backed selector: the constants are true compile-time
+// constants (immutable, foldable immediates), and the named type keeps the
+// selector out of plain-int positions. The values are load-bearing: they index
+// the packed bit-tables below (§6.4), so do not reorder.
+type round int
 
-var (
-	ROUND_TIES_TO_EVEN    = round{0}
-	ROUND_TIES_TO_AWAY    = round{1}
-	ROUND_TOWARD_ZERO     = round{2}
-	ROUND_TOWARD_POSITIVE = round{3}
-	ROUND_TOWARD_NEGATIVE = round{4}
+const (
+	ROUND_TIES_TO_EVEN    round = 0
+	ROUND_TIES_TO_AWAY    round = 1
+	ROUND_TOWARD_ZERO     round = 2
+	ROUND_TOWARD_POSITIVE round = 3
+	ROUND_TOWARD_NEGATIVE round = 4
 )
 
 func roundName(r round) string {
@@ -43,7 +47,7 @@ func needsRoundUp(rounding round, sign, isOdd bool, res residue) bool {
 func ulpBias(rounding round, isOdd bool, res residue) int64 {
 	verify("", func() bool { return res&^3 == 0 })
 	biasMapEvenOdd := ulpBiasMap | (boolToInt64(isOdd) << 2)
-	bitIndex := (rounding.code << 3) + res
+	bitIndex := (int(rounding) << 3) + res
 	return (biasMapEvenOdd >> uint(bitIndex)) & 1
 }
 
@@ -52,17 +56,17 @@ func ulpBias(rounding round, isOdd bool, res residue) int64 {
 // sign-symmetric rules are unchanged. Branchless via a packed nybble map.
 func forMagnitude(rounding round, sign bool) round {
 	magnitudeMap := int64(0x0003421000043210)
-	index := (signBitOf(sign) << 3) | rounding.code
+	index := (signBitOf(sign) << 3) | int(rounding)
 	shift := index << 2
 	result := int((magnitudeMap >> uint(shift)) & 0xF)
-	return round{result}
+	return round(result)
 }
 
 // roundingOverflowsToInfinity reports whether overflow under this direction
 // yields infinity (vs the largest finite value).
 func roundingOverflowsToInfinity(rounding round, sign bool) bool {
 	table := 0x21033
-	shift := (rounding.code << 2) + signBitOf(sign)
+	shift := (int(rounding) << 2) + signBitOf(sign)
 	return ((table >> uint(shift)) & 1) != 0
 }
 
@@ -70,6 +74,6 @@ func roundingOverflowsToInfinity(rounding round, sign bool) bool {
 // collapses to zero (vs the smallest subnormal magnitude).
 func roundingUnderflowsToZero(rounding round, sign bool) bool {
 	table := 0x12333
-	shift := (rounding.code << 2) + signBitOf(sign)
+	shift := (int(rounding) << 2) + signBitOf(sign)
 	return ((table >> uint(shift)) & 1) != 0
 }
