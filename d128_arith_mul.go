@@ -13,13 +13,14 @@ package decimal128
 // the ~80 inline budget, so (as with add) it does not collapse into Multiply; the
 // split's Go payoff is hot/cold code separation.
 func d128_multiply_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
-	x128 := d128_u128(x)
-	y128 := d128_u128(y)
-	allHiBits := x128.dw1 | y128.dw1
+	// ubdHi64 is [ qExp:14 | sign:1 | coeffHi:49 ]; a 15-bit left shift drops
+	// sign+qExp, so the OR is zero iff both coeffHi49 fields are zero (both
+	// coefficients fit in 64 bits) -> no per-operand mask needed.
+	allHiBits := (x.ubdHi64 | y.ubdHi64) << 15
 	prodQExp := d128_qExp(x) + d128_qExp(y)
 	if allHiBits == 0 && prodQExp >= -6176 && prodQExp <= 6111 {
 		prodSignFlag := d128_signFlag(x) != d128_signFlag(y)
-		prod := mul_128_64x64(x128.dw0, y128.dw0)
+		prod := mul_128_64x64(x.ubdLo64, y.ubdLo64)
 		if ushr_64_64(prod.dw1, 48) == 0 {
 			return d128Pack(prodSignFlag, prodQExp, prod.dw0, prod.dw1)
 		}
@@ -75,11 +76,13 @@ func d128_multiply_ctx(x, y d128, ctx *context) d128 {
 // operand check, sign always non-negative) and tail-calls the shared multiply
 // cold body for everything else.
 func d128_square_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
-	x128 := d128_u128(x)
+	// See d128_multiply_rnd_ctxnull: the 15-bit left shift drops sign+qExp, so
+	// this is zero iff x's coeffHi49 is zero (x fits in 64 bits).
+	allHiBits := x.ubdHi64 << 15
 	xQ := d128_qExp(x)
 	prodQExp := xQ + xQ
-	if x128.dw1 == 0 && prodQExp >= -6176 && prodQExp <= 6111 {
-		prod := mul_128_64x64(x128.dw0, x128.dw0)
+	if allHiBits == 0 && prodQExp >= -6176 && prodQExp <= 6111 {
+		prod := mul_128_64x64(x.ubdLo64, x.ubdLo64)
 		if ushr_64_64(prod.dw1, 48) == 0 {
 			return d128Pack(false, prodQExp, prod.dw0, prod.dw1) // a square is non-negative
 		}
