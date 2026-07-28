@@ -86,16 +86,19 @@ func sweptMedianNS(n int, sweep func()) float64 {
 // The band set feasible under each magnitude profile (BenchmarkMatrix.md §2.1;
 // see decimal128-resources/swept/README.md). P-gen = all 12; P-fin folds add/sub
 // into the single realistic MIX stream and drops the >19-digit XP/XD; P-max keeps
-// only the wide-path bands.
+// only the wide-path bands. Add/sub alignment bands are sign-split dataset pairs
+// (AddSubSignSplitWorkOrder): <band>_ss (same-sign) / <band>_os (opposite-sign),
+// identical magnitudes; each runs on BOTH add and sub so every cell is one path.
+// MIX stays blended by design (workload realism).
 func profileBands(tb testing.TB, profile string) []string {
 	tb.Helper()
 	switch profile {
 	case "P-gen":
-		return []string{"SQ", "NQ", "MQ", "OQ", "FQ", "CP", "WP", "XP", "CD", "WD", "XD", "ET", "PT"}
+		return []string{"SQ_ss", "SQ_os", "NQ_ss", "NQ_os", "MQ_ss", "MQ_os", "OQ_ss", "OQ_os", "FQ_ss", "FQ_os", "CP", "WP", "XP", "CD", "WD", "XD", "ET", "PT"}
 	case "P-fin":
 		return []string{"MIX", "CP", "WP", "CD", "WD", "ET", "PT"}
 	case "P-max":
-		return []string{"SQ", "OQ", "FQ", "XP", "XD"}
+		return []string{"SQ_ss", "SQ_os", "OQ_ss", "OQ_os", "FQ_ss", "FQ_os", "XP", "XD"}
 	case "FMA":
 		// regime-based (3-operand self+lhs*rhs): FN (near ⇒ Barrett), FF (far ⇒ fits-128)
 		return []string{"FN", "FF"}
@@ -190,32 +193,40 @@ func BenchmarkSwept(b *testing.B) {
 		}
 		xs, ys := loadSweptBand(b, profile, band)
 		n := len(xs)
-		switch band {
-		case "SQ", "NQ", "MQ", "OQ", "FQ", "MIX":
-			b.Run("add/"+band, func(b *testing.B) {
+		// Store cat = band file name minus the underscore ("SQ_ss" -> "SQss").
+		cat := strings.ReplaceAll(band, "_", "")
+		addsub := band == "MIX"
+		for _, pfx := range []string{"SQ", "NQ", "MQ", "OQ", "FQ"} {
+			if strings.HasPrefix(band, pfx) && len(band) > 2 {
+				addsub = true
+			}
+		}
+		switch {
+		case addsub:
+			b.Run("add/"+cat, func(b *testing.B) {
 				b.ReportMetric(sweptMedianNS(n, func() {
 					for i := 0; i < n; i++ {
 						benchSink = xs[i].Add(ys[i])
 					}
 				}), "ns/op")
 			})
-			b.Run("sub/"+band, func(b *testing.B) {
+			b.Run("sub/"+cat, func(b *testing.B) {
 				b.ReportMetric(sweptMedianNS(n, func() {
 					for i := 0; i < n; i++ {
 						benchSink = xs[i].Sub(ys[i])
 					}
 				}), "ns/op")
 			})
-		case "CP", "WP", "XP":
-			b.Run("mul/"+band, func(b *testing.B) {
+		case band == "CP" || band == "WP" || band == "XP":
+			b.Run("mul/"+cat, func(b *testing.B) {
 				b.ReportMetric(sweptMedianNS(n, func() {
 					for i := 0; i < n; i++ {
 						benchSink = xs[i].Mul(ys[i])
 					}
 				}), "ns/op")
 			})
-		case "CD", "WD", "XD", "ET", "PT":
-			b.Run("div/"+band, func(b *testing.B) {
+		case band == "CD" || band == "WD" || band == "XD" || band == "ET" || band == "PT":
+			b.Run("div/"+cat, func(b *testing.B) {
 				b.ReportMetric(sweptMedianNS(n, func() {
 					for i := 0; i < n; i++ {
 						benchSink = xs[i].Quo(ys[i])
