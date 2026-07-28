@@ -33,6 +33,26 @@ func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 //
 //go:noinline
 func d128_add_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
+	// Aligned unlike-sign magnitude subtraction, hoisted ahead of the cold
+	// ladder. hi49Sum fitting in 48 bits proves BOTH operands finite (nonfinite
+	// coefficients are >= 10^34, whose bit 48 is set), and the sole caller is
+	// the fast entry, which consumed every aligned like-sign pair with this
+	// property — so the signs differ here. Both coefficients are canonical and
+	// unscaled, so the difference is < 10^34 and packs raw; swapped means
+	// |x| < |y|, and the result takes the larger magnitude's sign. Mirror of
+	// the subtract fast path's subAbs arm.
+	xHi49 := d128_hi49(x)
+	yHi49 := d128_hi49(y)
+	hi49Sum := xHi49 + yHi49
+	if ushr_64_64(hi49Sum, 48) == 0 && d128_qExp(x) == d128_qExp(y) {
+		verify("", func() bool { return d128_signFlag(x) != d128_signFlag(y) })
+		ds := subAbs_d128swap_128x128(x.ubdLo64, xHi49, y.ubdLo64, yHi49)
+		if isZero_bool_128(ds.diffDw0, ds.diffDw1) {
+			return d128_zero(rounding == ROUND_TOWARD_NEGATIVE, d128_qExp(x))
+		}
+		resultQExpAndSignBit := d128_qExpAndSignBit(x) ^ boolToInt64(ds.swap)
+		return d128FromQExpSignBit(resultQExpAndSignBit, ds.diffDw0, ds.diffDw1)
+	}
 	if d128_isNonFinite(x) || d128_isNonFinite(y) {
 		return addNonFinite_rnd_ctxnull(x, y, ctxnull)
 	}
