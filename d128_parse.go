@@ -246,6 +246,9 @@ func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) fini
 			if hasDot {
 				return finiteFailure(psDoubleDot)
 			}
+			if chPrev == ascii_underbar {
+				return finiteFailure(psInvalidUnderscoreLocation)
+			}
 			hasDot = true
 		} else if ch == ascii_underbar {
 			if chPrev < ascii_0 || chPrev > ascii_9 {
@@ -259,6 +262,9 @@ func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) fini
 	}
 	if !hasCoefficientDigit {
 		return finiteFailure(psNoCoefficientDigit)
+	}
+	if chPrev == ascii_underbar {
+		return finiteFailure(psInvalidUnderscoreLocation)
 	}
 	if (ch | 0x20) == ascii_e {
 		if chPrev == ascii_underbar {
