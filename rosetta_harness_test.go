@@ -134,7 +134,7 @@ func parseWord64(s string) uint64 {
 
 // dispatch runs one case against the engine and reports its Outcome. Arms are
 // added as operators land; unsupported operations report outUnsupported (not a
-// failure). Currently wired: the serde/parse/print/predicate ops.
+// failure). Currently wired: the codec/parse/print/predicate ops.
 func dispatch(c *rosettaCase) (outcome, string) {
 	switch c.operation {
 	case "d128_toString":
@@ -874,7 +874,7 @@ func checkBinaryBoolCtx(c *rosettaCase, op func(x, y d128, ctx *context) bool) (
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q", got, ctx.exceptionLetters(), c.result, c.expectedFlags)
 }
 
-// dispatchApply handles the dectest serde round-trip op: a "#…" result means
+// dispatchApply handles the dectest codec round-trip op: a "#…" result means
 // encode (decimal -> DPD hex); otherwise decode (DPD hex -> decimal string).
 func dispatchApply(c *rosettaCase) (outcome, string) {
 	if len(c.operands) != 1 {

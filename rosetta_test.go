@@ -60,7 +60,7 @@ func sampleFailures(r rosettaResult) []string {
 }
 
 // TestRosettaNative runs every native-corpus file through the harness. Wired ops
-// (serde/parse/print/predicate) must pass; arithmetic ops are still Unsupported
+// (codec/parse/print/predicate) must pass; arithmetic ops are still Unsupported
 // (Phase 3) and are counted, not failed.
 func TestRosettaNative(t *testing.T) {
 	files, err := filepath.Glob(filepath.Join(resourcesDir(), "native", "*.txt"))
@@ -91,7 +91,7 @@ func TestRosettaNative(t *testing.T) {
 }
 
 // TestRosettaDectestEncode runs the IBM dectest DPD encode/decode vectors
-// (dqEncode.decTest) through the serde dispatch — the first validation against
+// (dqEncode.decTest) through the codec dispatch — the first validation against
 // real IBM conformance data.
 func TestRosettaDectestEncode(t *testing.T) {
 	cases, err := loadDectestFile(filepath.Join(resourcesDir(), "dectest", "dqEncode.decTest"))

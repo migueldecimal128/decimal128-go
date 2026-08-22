@@ -1,9 +1,9 @@
 package decimal128
 
 // Test-corpus operand hex parsers. These decode the Intel BID readtest and IBM
-// dectest DPD hex dialects used only by the test corpora (serde_test.go,
+// dectest DPD hex dialects used only by the test corpora (codec_test.go,
 // rosetta_harness_test.go, wrapper_rosetta_test.go); they are not part of the
-// core interchange serde surface, so they live in the test harness.
+// core interchange codec surface, so they live in the test harness.
 
 // --- Intel BID test-vector hex parser ---
 //

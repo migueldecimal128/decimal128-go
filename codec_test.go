@@ -50,7 +50,7 @@ func TestDPDRoundTrip(t *testing.T) {
 	}
 }
 
-func TestSerdeKnownVectors(t *testing.T) {
+func TestCodecKnownVectors(t *testing.T) {
 	one := decimalFNZ_64x64(false, 0, 1, 0)
 	posZero := d128_zero(false, 0)
 
@@ -78,7 +78,7 @@ func TestSerdeKnownVectors(t *testing.T) {
 	}
 }
 
-func TestSerdeHexParsers(t *testing.T) {
+func TestCodecHexParsers(t *testing.T) {
 	wantOne := u128{dw0: 1, dw1: int64(0x3040000000000000)}
 	if got, ok := bid128ParseIntelHex("[3040000000000000,0000000000000001]"); !ok || got != wantOne {
 		t.Fatalf("bid Intel comma form: %v ok=%v", got, ok)
