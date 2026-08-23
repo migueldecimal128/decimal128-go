@@ -147,6 +147,19 @@ func parseInfinityText(sign bool, chFirst byte, t *txt) d128ParseResult {
 	return parseSuccess(d128_infinity(sign))
 }
 
+// Parse "NaN", "qNaN" or "sNaN" (case-insensitive) with an optional decimal
+// payload. The payload may be written bare (NaN123) or parenthesised
+// (NaN(123)); the two spellings produce bit-identical values.
+//
+// The parenthesised form is positional and balanced: the '(' must follow the
+// word immediately, at least one digit must appear, and the ')' must be the
+// last character of the input. So "NaN()", "NaN(1", "NaN(1]", "NaN(1)2(3)"
+// and "NaN (1)" are all rejected, and "NaN[1]" / "NaN{1}" are not this form
+// at all. The payload alphabet stays decimal digits -- this is a
+// paren-tolerant spelling of our own payload syntax, not C strtod's
+// NAN(n-char-sequence), which reads letters and underscores too.
+//
+// Rendering never emits parentheses: NaN(123) prints back as NaN123.
 func parseNanText(sign bool, chFirst byte, t *txt) d128ParseResult {
 	ch := chFirst | 0x20
 	hasS := ch == ascii_s
@@ -161,11 +174,14 @@ func parseNanText(sign bool, chFirst byte, t *txt) d128ParseResult {
 	var first19accumulator int64 = 0
 	remainingDigitCount := 0
 	ch = t.nextChar()
+	hasParen := ch == ascii_lParen
+	if hasParen {
+		ch = t.nextChar()
+	}
 	payloadDigitCount := 0
-	for ch != 0 {
-		if ch < ascii_0 || ch > ascii_9 {
-			return parseFailure(psFailureParsingNan)
-		}
+	// The loop stops ON the first non-digit rather than failing there, so the
+	// terminating character is available to the balance check below.
+	for ch >= ascii_0 && ch <= ascii_9 {
 		if payloadDigitCount < 33 {
 			d := ch - ascii_0
 			if payloadDigitCount < 19 {
@@ -185,6 +201,15 @@ func parseNanText(sign bool, chFirst byte, t *txt) d128ParseResult {
 		}
 		payloadDigitCount++
 		ch = t.nextChar()
+	}
+	if hasParen {
+		// at least one digit, and the ')' must be the last character of the input
+		if payloadDigitCount == 0 || ch != ascii_rParen || t.nextChar() != 0 {
+			return parseFailure(psFailureParsingNan)
+		}
+	} else if ch != 0 {
+		// unchanged: a bare payload runs to end of input
+		return parseFailure(psFailureParsingNan)
 	}
 	payload := u128{0, 0}
 	if first19accumulator == 0 {

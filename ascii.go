@@ -7,6 +7,8 @@ const (
 	ascii_plus     byte = 0x2B
 	ascii_dot      byte = 0x2E
 	ascii_underbar byte = 0x5F
+	ascii_lParen   byte = 0x28
+	ascii_rParen   byte = 0x29
 
 	ascii_0 byte = 0x30
 	ascii_1 byte = 0x31
