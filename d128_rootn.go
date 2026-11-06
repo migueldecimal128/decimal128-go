@@ -87,7 +87,7 @@ func rootnFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 	// General case: |x|^(1/n), with the sign restored for odd n.
 	absX := d128_abs(x)
 	nReciprocal := d128_divide_tte(d128RootnOne, d128_fromInt64(n))
-	z := d128_pow_rnd_ctxnull(absX, nReciprocal, rounding, ctxnull)
+	z := d128_pow_rnd_ctxnull(absX, nReciprocal, forMagnitude(rounding, d128_signFlag(x)), ctxnull)
 	if d128_signFlag(x) {
 		return d128_negate(z)
 	}
