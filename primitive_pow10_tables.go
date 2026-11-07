@@ -80,12 +80,10 @@ func pow10U128(p int) u128 {
 	return u128{dw0: pow10_128_dw0(p), dw1: pow10_128_dw1(p)}
 }
 
-// POW10_34 / POW10_38 are the whole-value constants the core finalize/D38 paths
-// compare against (10^34 = the canonical coefficient bound; 10^38 = D38 bound).
-var (
-	POW10_34 = pow10U128(34)
-	POW10_38 = pow10U128(38)
-)
+// u128_POW10_38 is the whole-value D38 coefficient bound (10^38), used by D38
+// verify checks. The 10^34 canonical bound has no constant: use
+// isLt_pow10_34_bool_128 / isGe_pow10_34_bool_128 below.
+var u128_POW10_38 = pow10U128(38)
 
 // isLt_pow10_34_bool_128 / isGe_pow10_34_bool_128 are the FNZ/canonical
 // coefficient-bound predicates over 10^34 (the seam form of core's

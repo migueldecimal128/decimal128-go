@@ -18,7 +18,7 @@ func d128_logB_ctxnull(x d128, ctxnull *context) d128 {
 		return d128_fromInt64(d128_sciExp(x))
 	}
 	if d128_isINF(x) {
-		return D128_POS_INFINITY
+		return d128_POS_INFINITY()
 	}
 	// NaN: qNaN propagates, sNaN signals invalid_operation.
 	return ctxNanOperand1_ctxnull(ctxnull, x)

@@ -99,8 +99,8 @@ func TestPrintKnown(t *testing.T) {
 		{d128_zero(true, 0), FORMAT_AUTO, "-0"},
 		{d128_infinity(false), FORMAT_AUTO, "Infinity"},
 		{d128_infinity(true), FORMAT_AUTO, "-Infinity"},
-		{D128_QNAN0, FORMAT_AUTO, "NaN"},
-		{D128_SNAN0, FORMAT_AUTO, "sNaN"},
+		{d128_QNAN0(), FORMAT_AUTO, "NaN"},
+		{d128_SNAN0(), FORMAT_AUTO, "sNaN"},
 		{decimalFNZ_64x64(false, 0, 1, 0), FORMAT_EXPONENTIAL, "1E+0"},
 		{decimalFNZ_64x64(false, 0, 1, 0), FORMAT_COEFFICIENT_QEXP, "1E+0"},
 	}

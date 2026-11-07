@@ -11,12 +11,12 @@ func d38_finalize_128(sign bool, qExp int, u128v u128, res residue) d38 {
 		}
 		rounded := add_128_128x128(u128v.dw0, u128v.dw1, roundUp, 0)
 		if isZero_bool_128(rounded.dw0, rounded.dw1) {
-			return D38_ZERO
+			return d38_ZERO
 		}
 		if cmp_int_128x128_pow10(rounded.dw0, rounded.dw1, 38) < 0 {
 			return d38Pack(sign, qExp, rounded.dw0, rounded.dw1)
 		}
-		verify("", func() bool { return rounded == POW10_38 })
+		verify("", func() bool { return rounded == u128_POW10_38 })
 		return d38Pack(sign, qExp+1, pow10_128_dw0(37), pow10_128_dw1(37))
 	}
 	// u128 >= 10^38: scale down by 10, merging residues.
@@ -45,10 +45,10 @@ func d38_scaleDownTail(sign bool, qExp int, u128Dw0, u128Dw1 int64, res residue)
 	candidate := add_128_128x128(u128Dw0, u128Dw1, roundUp, 0)
 	if cmp_int_128x128_pow10(candidate.dw0, candidate.dw1, 38) < 0 {
 		if isZero_bool_128(candidate.dw0, candidate.dw1) {
-			return D38_ZERO
+			return d38_ZERO
 		}
 		return d38Pack(sign, qExp, candidate.dw0, candidate.dw1)
 	}
-	verify("", func() bool { return candidate == POW10_38 })
+	verify("", func() bool { return candidate == u128_POW10_38 })
 	return d38Pack(sign, qExp+1, pow10_128_dw0(37), pow10_128_dw1(37))
 }

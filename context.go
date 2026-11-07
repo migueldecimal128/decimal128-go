@@ -54,16 +54,16 @@ func ctxSignalDivByZero_ctxnull(ctxnull *context, sign bool) d128 {
 		ctxnull.flags.set(DIVISION_BY_ZERO)
 	}
 	if sign {
-		return D128_NEG_INFINITY
+		return d128_NEG_INFINITY()
 	}
-	return D128_POS_INFINITY
+	return d128_POS_INFINITY()
 }
 
 func signalDivByZero_quiet(resultSign bool) d128 {
 	if resultSign {
-		return D128_NEG_INFINITY
+		return d128_NEG_INFINITY()
 	}
-	return D128_POS_INFINITY
+	return d128_POS_INFINITY()
 }
 
 func signalInexactOverflow_quiet(dec d128) d128  { return dec }
@@ -76,7 +76,7 @@ func ctxSignalInvalidOperation_ctxnull(ctxnull *context, cause invalidCause) d12
 	if ctxnull != nil {
 		ctxnull.flags.set(INVALID_OPERATION)
 	}
-	return D128_QNAN0
+	return d128_QNAN0()
 }
 
 // ctxSignalInvalidOperationResult is ctxSignalInvalidOperation_ctxnull with an explicit

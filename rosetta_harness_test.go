@@ -104,7 +104,7 @@ func decodeOperand(s string) d128 {
 	if s == "#" {
 		// dectest's bare "#" is an operand syntax-error marker: an op receiving it
 		// must raise invalidOperation. A signaling NaN produces exactly that.
-		return D128_SNAN0
+		return d128_SNAN0()
 	}
 	if len(s) > 0 {
 		if s[0] == '#' {
@@ -586,9 +586,9 @@ func checkFromWord64(c *rosettaCase, op func(u uint64) d128) (outcome, string) {
 func decodeNativeResult(s string) d128 {
 	switch s {
 	case "Q":
-		return D128_QNAN0
+		return d128_QNAN0()
 	case "S":
-		return D128_SNAN0
+		return d128_SNAN0()
 	default:
 		return decodeOperand(s)
 	}
@@ -615,7 +615,7 @@ func checkParse(c *rosettaCase) (outcome, string) {
 	// Success line: a failed parse here is an impl error; poison with sNaN0 so it
 	// mismatches the authored expected (never collides except a literal sNaN).
 	if !ok {
-		z = D128_SNAN0
+		z = d128_SNAN0()
 	}
 	expected := decodeNativeResult(c.result)
 	if d128_bitwiseEQ(z, expected) && c.expectedFlags == "" {

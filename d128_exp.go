@@ -48,7 +48,7 @@ func expDispatch(x d128, isExp10 bool, rounding round, ctxnull *context) d128 {
 	if d128_signFlag(x) {
 		return d128_zero(false, 0) // exp(−∞) = +0
 	}
-	return D128_POS_INFINITY // exp(+∞) = +∞
+	return d128_POS_INFINITY() // exp(+∞) = +∞
 }
 
 // --- exp magnitude ---
@@ -65,14 +65,14 @@ func expImplFNZ(x d128, rounding round, ctxnull *context) d128 {
 	xd := d38Pack(d128_signFlag(x), d128_qExp(x), x.ubdLo64, d128_hi49(x))
 
 	// Range reduction: n = round(x / ln10), r = x − n·ln10 ∈ [−ln10/2, ln10/2].
-	nDec := d38_roundToIntegralTiesToAway(d38_divide(xd, LN10))
+	nDec := d38_roundToIntegralTiesToAway(d38_divide(xd, d38_LN10))
 	n := int(d38_toLongOrMin(nDec))
 	r := xd
 	if n != 0 {
 		// n·ln10 with the 50-digit ln10; r = x − n·ln10 via the wide signed add.
 		nMag := int64(absInt(n))
 		nLn10 := mul_256_256x256(
-			LN10_50_COEFF.dw0, LN10_50_COEFF.dw1, LN10_50_COEFF.dw2, LN10_50_COEFF.dw3,
+			u256_LN10_50_COEFF.dw0, u256_LN10_50_COEFF.dw1, u256_LN10_50_COEFF.dw2, u256_LN10_50_COEFF.dw3,
 			nMag, 0, 0, 0)
 		r = d38_addWide(
 			d38_signFlag(xd), d38_qExp(xd), u256FromU128(d38_u128(xd)),
@@ -80,7 +80,7 @@ func expImplFNZ(x d128, rounding round, ctxnull *context) d128 {
 	}
 
 	// exp(r) = exp(r/8)^8 — three squarings.
-	rPrime := d38_divide(r, D38_EIGHT)
+	rPrime := d38_divide(r, d38_EIGHT)
 	e := d38_padeEval(rPrime, padeExpPWeights, padeExpQWeights)
 	e = d38_square(e)
 	e = d38_square(e)
@@ -133,7 +133,7 @@ func d128_exp10_from_d38(xd d38, rounding round, ctxnull *context) d128 {
 	r := d38_subtract(xd, nDec)
 
 	// 10^r = 10^(r/8)^8 — three squarings.
-	rPrime := d38_divide(r, D38_EIGHT)
+	rPrime := d38_divide(r, d38_EIGHT)
 	z := d38_padeEval(rPrime, padeExp10PWeights, padeExp10QWeights)
 	z = d38_square(z)
 	z = d38_square(z)

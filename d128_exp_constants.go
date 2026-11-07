@@ -16,16 +16,16 @@ func u256c(dw0, dw1, dw2, dw3 uint64) u256 {
 	return u256{int64(dw0), int64(dw1), int64(dw2), int64(dw3)}
 }
 
-var D38_EIGHT = d38c(0, 0x8, 0) // 8
+var d38_EIGHT = d38c(0, 0x8, 0) // 8
 
-// LN10 — ln(10) to 38 significant digits, used by the exp range reduction
+// d38_LN10 — ln(10) to 38 significant digits, used by the exp range reduction
 // n = round(x / ln10). (Defined here for exp; shared with the log kernels.)
-var LN10 = d38c(-74, 0x00f92d091faa68dc, 0x11529e19baaed959) // 2.3025850929940456840179914546843642076
+var d38_LN10 = d38c(-74, 0x00f92d091faa68dc, 0x11529e19baaed959) // 2.3025850929940456840179914546843642076
 
 // ln(10) to 50 significant digits as a U256 coefficient × 10^-49. The range
 // reduction r = x − n·ln10 cancels ~5 leading digits of x, so a 38-digit ln10
 // would lose precision; this carries enough guard digits.
-var LN10_50_COEFF = u256c(15733924570658476943, 10197472284333201977, 67666894227, 0)
+var u256_LN10_50_COEFF = u256c(15733924570658476943, 10197472284333201977, 67666894227, 0)
 
 const LN10_50_QEXP = -49
 

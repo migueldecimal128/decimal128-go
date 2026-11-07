@@ -22,7 +22,7 @@ func d38Raw(qExpAndSignBit int32, coeffLo64, coeffHi64 int64) d38 {
 	return d38{coeffLo64, coeffHi64, qExpAndSignBit}
 }
 
-var D38_ZERO = d38{0, 0, 0}
+var d38_ZERO = d38{0, 0, 0}
 
 func d38_qExp(x d38) int { return int(x.qExpAndSignBit >> 1) }
 

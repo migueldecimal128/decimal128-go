@@ -46,7 +46,7 @@ func d128_rootn_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d12
 		if n < 0 {
 			return d128_zero(true, 0)
 		}
-		return D128_NEG_INFINITY // -∞, odd n
+		return d128_NEG_INFINITY() // -∞, odd n
 	}
 	if xSign {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeRootnBadArgs) // -∞, even n
@@ -54,7 +54,7 @@ func d128_rootn_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d12
 	if n < 0 {
 		return d128_zero(false, 0)
 	}
-	return D128_POS_INFINITY // +∞
+	return d128_POS_INFINITY() // +∞
 }
 
 func rootnFNZ(x d128, n int, rounding round, ctxnull *context) d128 {

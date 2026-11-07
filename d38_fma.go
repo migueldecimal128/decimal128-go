@@ -95,7 +95,7 @@ func d38_addWideUnlikeSign(mSign bool, mQ int, mCoeff u256, nSign bool, nQ int, 
 	ds := subAbs_d256swap_256x256(mAligned.dw0, mAligned.dw1, mAligned.dw2, mAligned.dw3, nAligned.dw0, nAligned.dw1, nAligned.dw2, nAligned.dw3)
 	diff := u256{ds.diffDw0, ds.diffDw1, ds.diffDw2, ds.diffDw3}
 	if diff == (u256{}) && res == RESIDUE_EXACT {
-		return D38_ZERO
+		return d38_ZERO
 	}
 	if ds.swap {
 		// |n| > |m|: result takes n's sign; m was exact, no inversion.

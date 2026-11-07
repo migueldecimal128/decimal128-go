@@ -37,7 +37,7 @@ func d128_compound_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) 
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne)
 	}
 	if n > 0 {
-		return D128_POS_INFINITY // (1 + ∞)^(n>0) = +∞
+		return d128_POS_INFINITY() // (1 + ∞)^(n>0) = +∞
 	}
 	if n == 0 {
 		return d128_fromInt64(1) // compound(+∞, 0) = 1

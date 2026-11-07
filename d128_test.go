@@ -66,17 +66,17 @@ func TestD128NonFinite(t *testing.T) {
 	if d128_ieeeClass(posInf) != CLASS_POSITIVE_INFINITY || d128_ieeeClass(negInf) != CLASS_NEGATIVE_INFINITY {
 		t.Fatalf("inf class wrong")
 	}
-	if !d128_bitwiseEQ(posInf, D128_POS_INFINITY) || !d128_bitwiseEQ(negInf, D128_NEG_INFINITY) {
+	if !d128_bitwiseEQ(posInf, d128_POS_INFINITY()) || !d128_bitwiseEQ(negInf, d128_NEG_INFINITY()) {
 		t.Fatalf("inf constants mismatch")
 	}
 
-	if !d128_isQNAN(D128_QNAN0) || !d128_isNAN(D128_QNAN0) || d128_isSNAN(D128_QNAN0) {
+	if !d128_isQNAN(d128_QNAN0()) || !d128_isNAN(d128_QNAN0()) || d128_isSNAN(d128_QNAN0()) {
 		t.Fatalf("QNAN0 predicates wrong")
 	}
-	if !d128_isSNAN(D128_SNAN0) || !d128_isNAN(D128_SNAN0) || d128_isQNAN(D128_SNAN0) {
+	if !d128_isSNAN(d128_SNAN0()) || !d128_isNAN(d128_SNAN0()) || d128_isQNAN(d128_SNAN0()) {
 		t.Fatalf("SNAN0 predicates wrong")
 	}
-	if d128_ieeeClass(D128_QNAN0) != CLASS_QUIET_NAN || d128_ieeeClass(D128_SNAN0) != CLASS_SIGNALING_NAN {
+	if d128_ieeeClass(d128_QNAN0()) != CLASS_QUIET_NAN || d128_ieeeClass(d128_SNAN0()) != CLASS_SIGNALING_NAN {
 		t.Fatalf("nan class wrong")
 	}
 }

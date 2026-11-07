@@ -12,7 +12,7 @@ package decimal128
 func d38_divide(x, y d38) d38 {
 	verify("", func() bool { return !d38_isZero(y) })
 	if d38_isZero(x) {
-		return D38_ZERO
+		return d38_ZERO
 	}
 	zSign := d38_signFlag(x) != d38_signFlag(y)
 	digitLenDelta := d38_digitLen(x) - d38_digitLen(y)

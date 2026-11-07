@@ -28,7 +28,7 @@ func d128_sqrt_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 	if d128_signFlag(x) {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeSquareRootOfNegInfinity)
 	}
-	return D128_POS_INFINITY
+	return d128_POS_INFINITY()
 }
 
 func sqrtMagnitudeFnz_ctxnull(x d128, rounding round, ctxnull *context) d128 {

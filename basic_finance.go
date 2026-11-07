@@ -146,7 +146,7 @@ func d128_irr_tte(cashFlows []d128, guess, tolerance d128, maxIter int) d128 {
 			divisor = d128_multiply_tte(divisor, onePlusR)
 		}
 		if d128_isZER(npvDeriv) {
-			return D128_QNAN0
+			return d128_QNAN0()
 		}
 		step := d128_divide_tte(npvVal, npvDeriv)
 		rate = d128_subtract_tte(rate, step)
@@ -154,7 +154,7 @@ func d128_irr_tte(cashFlows []d128, guess, tolerance d128, maxIter int) d128 {
 			return rate
 		}
 	}
-	return D128_QNAN0 // did not converge
+	return d128_QNAN0() // did not converge
 }
 
 // d128_mirr_tte: (FV_pos / |PV_neg|)^(1/(n−1)) − 1 — positive flows reinvested at

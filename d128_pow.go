@@ -54,7 +54,7 @@ func d128_pow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 		if d128_isINF(y) {
 			// pow(±0, ±∞): y > 0 → +0, y < 0 → +∞ (no divideByZero, per §9.2).
 			if d128_signFlag(y) {
-				return D128_POS_INFINITY
+				return d128_POS_INFINITY()
 			}
 			return d128_zero(false, 0)
 		}
@@ -88,7 +88,7 @@ func powInfFnz(y d128) d128 {
 	if d128_signFlag(y) {
 		return d128_zero(false, 0) // y < 0 → +0
 	}
-	return D128_POS_INFINITY // y > 0 → +∞
+	return d128_POS_INFINITY() // y > 0 → +∞
 }
 
 // powFnzInf: pow(x, ±∞), x finite non-zero or ±∞.
@@ -101,7 +101,7 @@ func powFnzInf(x, y d128) d128 {
 	if xLessThanOne != yNeg {
 		return d128_zero(false, 0)
 	}
-	return D128_POS_INFINITY
+	return d128_POS_INFINITY()
 }
 
 // --- finite non-zero core ---

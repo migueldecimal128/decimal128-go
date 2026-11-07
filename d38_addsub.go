@@ -44,7 +44,7 @@ func d38_addAlignedUnlikeSign(x, y d38) d38 {
 	verify("", func() bool { return d38_signFlag(x) != d38_signFlag(y) })
 	ds := subAbs_d128swap_128x128(x.coeffLo64, x.coeffHi64, y.coeffLo64, y.coeffHi64)
 	if isZero_bool_128(ds.diffDw0, ds.diffDw1) {
-		return D38_ZERO
+		return d38_ZERO
 	}
 	// swapped means |x| < |y|: flip the sign
 	var flip int32
@@ -108,7 +108,7 @@ func d38_addUnalignedUnlikeSign(x, y d38) d38 {
 	} else if cmp < 0 {
 		return d38_subMagUnalignedFnzFnz(d38_signFlag(y), y, x)
 	}
-	return D38_ZERO
+	return d38_ZERO
 }
 
 func d38_subMagUnalignedFnzFnz(zSign bool, m, s d38) d38 {
@@ -128,7 +128,7 @@ func d38_subMagUnalignedFnzFnz(zSign bool, m, s d38) d38 {
 		sScaled := mulPow10_256_128(sU128.dw0, sU128.dw1, -gap)
 		diff := sub_256_256x256(mU128.dw0, mU128.dw1, 0, 0, sScaled.dw0, sScaled.dw1, sScaled.dw2, sScaled.dw3)
 		verify("", func() bool { return isZero_bool_128(diff.dw2, diff.dw3) })
-		verify("", func() bool { return cmp_int_128x128(diff.dw0, diff.dw1, POW10_38.dw0, POW10_38.dw1) < 0 })
+		verify("", func() bool { return cmp_int_128x128(diff.dw0, diff.dw1, u128_POW10_38.dw0, u128_POW10_38.dw1) < 0 })
 		return d38Pack(zSign, mQ, diff.dw0, diff.dw1)
 	}
 

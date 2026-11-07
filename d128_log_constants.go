@@ -1,15 +1,15 @@
 // D38 constants for the ln / log10 Padé kernels, transliterated byte-for-byte
 // from the gen_pade.c output (raw limbs + pre-packed qExpAndSignBit). Each
-// entry's trailing comment is the 38-digit decimal it encodes. (LN10 lives in
+// entry's trailing comment is the 38-digit decimal it encodes. (d38_LN10 lives in
 // d128_exp_constants.go, shared with the exp kernels.)
 
 package decimal128
 
-var D38_ONE = d38c(0, 0x1, 0) // 1
+var d38_ONE = d38c(0, 0x1, 0) // 1
 
-// Z_THRESHOLD — the √-reduction stops once |c'−1| < this, so the [9,9] Padé
+// d38_Z_THRESHOLD — the √-reduction stops once |c'−1| < this, so the [9,9] Padé
 // delivers ≥34 correct digits.
-var Z_THRESHOLD = d38c(-4, 0x2, 0) // 0.02
+var d38_Z_THRESHOLD = d38c(-4, 0x2, 0) // 0.02
 
 // d38_fromInt32 builds a D38 from a signed integer (exact, qExp 0).
 func d38_fromInt32(n int) d38 {
@@ -60,7 +60,7 @@ var padeLogQWeights = []d38{
 }
 
 // ln(k) for the leading digit k ∈ [1,9]; indices 0 and 1 are zero.
-var LN_TABLE = []d38{
+var d38_LN_TABLE = []d38{
 	d38c(0, 0, 0), // 0
 	d38c(0, 0, 0), // 0
 	d38c(-76, 0x43d4c3f714899de8, 0x34258773b151f6b7), // 0.69314718055994530941723212145817656808
@@ -74,7 +74,7 @@ var LN_TABLE = []d38{
 }
 
 // log10(k) for the leading digit k ∈ [1,9]; indices 0 and 1 are zero.
-var LOG10_TABLE = []d38{
+var d38_LOG10_TABLE = []d38{
 	d38c(0, 0, 0), // 0
 	d38c(0, 0, 0), // 0
 	d38c(-76, 0x68f5642dab7d5095, 0x16a5a077ce18b916), // 0.30102999566398119521373889472449302677

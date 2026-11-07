@@ -11,7 +11,7 @@ type d128ParseResult struct {
 
 func parseSuccess(value d128) d128ParseResult { return d128ParseResult{psSuccess, value} }
 func parseFailure(status parseStatus) d128ParseResult {
-	return d128ParseResult{status, D128_QNAN0}
+	return d128ParseResult{status, d128_QNAN0()}
 }
 
 type finiteParseResult struct {
@@ -36,7 +36,7 @@ func d128_parse_ctxnull(s string, ctxnull *context) (d128, bool) {
 	}
 	verify("", func() bool { return d128_isNAN(r.value) })
 	ctxSignalInvalidOperation_ctxnull(ctxnull, causeParseMalformed)
-	return D128_QNAN0, false
+	return d128_QNAN0(), false
 }
 
 func d128_parse(s string) (d128, bool)                   { return d128_parse_ctxnull(s, nil) }
@@ -47,7 +47,7 @@ func d128_parseOrNaN(s string) d128 {
 	if ok {
 		return d
 	}
-	return D128_QNAN0
+	return d128_QNAN0()
 }
 
 func d38_parse(s string) d38 {
@@ -62,7 +62,7 @@ func d38_parse(s string) d38 {
 		return d38Pack(r.sign, r.qExp, r.coeff.dw0, r.coeff.dw1)
 	}
 	impossible("D38 parse error")
-	return D38_ZERO
+	return d38_ZERO
 }
 
 type txt struct {

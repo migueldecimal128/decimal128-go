@@ -184,12 +184,20 @@ func d128_nan_64x64(sign, signaling bool, payloadDw0, payloadDw1 int64) d128 {
 	return d128{ubdLo64: payloadLo64, ubdHi64: ubdHi}
 }
 
-var (
-	D128_QNAN0        = d128{ubdLo64: 0, ubdHi64: d128NanHi64 | d128NonFiniteBias}
-	D128_SNAN0        = d128{ubdLo64: 0, ubdHi64: d128NanHi64 | (1 << 58) | d128NonFiniteBias}
-	D128_POS_INFINITY = d128_infinity(false)
-	D128_NEG_INFINITY = d128_infinity(true)
-)
+// Special-value getters (Swift: computed `D128_QNAN0` etc.). Functions, not
+// package vars: Go has no struct constants, and an exported var could be
+// reassigned by any caller. Each inlines to immediate words.
+func d128_QNAN0() d128 {
+	return d128{ubdLo64: 0, ubdHi64: d128NanHi64 | d128NonFiniteBias}
+}
+
+func d128_SNAN0() d128 {
+	return d128{ubdLo64: 0, ubdHi64: d128NanHi64 | (1 << 58) | d128NonFiniteBias}
+}
+
+func d128_POS_INFINITY() d128 { return d128_infinity(false) }
+
+func d128_NEG_INFINITY() d128 { return d128_infinity(true) }
 
 func d128_nanPayload(x d128) u128 {
 	if !d128_isNAN(x) {

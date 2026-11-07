@@ -53,7 +53,7 @@ func logDispatch(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 	if d128_signFlag(x) {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeLogOfNegNumber)
 	}
-	return D128_POS_INFINITY // log(+∞) = +∞
+	return d128_POS_INFINITY() // log(+∞) = +∞
 }
 
 // --- magnitude ---
@@ -97,11 +97,11 @@ func d38_logMagnitude(xd d38, isLog10 bool) d38 {
 	// distance to 1 — until z = c'−1 is small enough for the [9,9] Padé to be
 	// correct to ≥34 digits. ln(c') = 2^N·ln(c'^(1/2^N)), so the reconstruction
 	// multiplier is 2^N.
-	zArg := d38_subtract(cPrime, D38_ONE)
+	zArg := d38_subtract(cPrime, d38_ONE)
 	sqrtCount := 0
-	for d38_cmpMag(zArg, Z_THRESHOLD) >= 0 {
+	for d38_cmpMag(zArg, d38_Z_THRESHOLD) >= 0 {
 		cPrime = d38_sqrt(cPrime)
-		zArg = d38_subtract(cPrime, D38_ONE)
+		zArg = d38_subtract(cPrime, d38_ONE)
 		sqrtCount++
 	}
 
@@ -116,12 +116,12 @@ func d38_logMagnitude(xd d38, isLog10 bool) d38 {
 
 	if isLog10 {
 		// log10(x) = 2^N·r + log10(k) + e
-		r = d38_fma(r, twoPowN, LOG10_TABLE[k])
+		r = d38_fma(r, twoPowN, d38_LOG10_TABLE[k])
 		r = d38_add(r, eVal)
 	} else {
 		// ln(x) = 2^N·r + ln(k) + e·ln(10)
-		r = d38_fma(r, twoPowN, LN_TABLE[k])
-		r = d38_fma(eVal, LN10, r)
+		r = d38_fma(r, twoPowN, d38_LN_TABLE[k])
+		r = d38_fma(eVal, d38_LN10, r)
 	}
 	return r
 }
