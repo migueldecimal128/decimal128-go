@@ -24,7 +24,7 @@ func d38_fma(x, y, c d38) d38 {
 	return d38_addWide(prodSign, prodQ, prod, d38_signFlag(c), d38_qExp(c), u256FromU128(d38_u128(c)))
 }
 
-// d38_addWide adds two wide signed values (sign, qExp, ≤77-digit U256 coefficient)
+// d38_addWide adds two wide signed values (sign, qExp, ≤76-digit U256 coefficient)
 // and rounds the sum to a 38-digit D38 (round-half-even). Shared by the FMA
 // product/addend path and the exp range reduction (x − n·ln10 with a 50-digit
 // ln10).
