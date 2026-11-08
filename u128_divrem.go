@@ -22,6 +22,19 @@ func divRem_q128r64_128x64(xDw0, xDw1, y int64) quot128Rem64 {
 	return quot128Rem64{int64(q0), int64(q1), int64(r0)}
 }
 
+// divRem_q128r64_192x64 returns (x / y, x % y) for a 192-bit dividend
+// (xDw2:xDw1:xDw0) and a 64-bit divisor, when the quotient fits 128 bits
+// (PrimitiveLayer.md D54). Precondition: xDw2 <u y, which is exactly that bound
+// and also excludes y == 0. Two quotient words, high first: two chained
+// bits.Div64 steps, each with high word < y.
+func divRem_q128r64_192x64(xDw0, xDw1, xDw2, y int64) quot128Rem64 {
+	verify("quotient exceeds 128 bits", func() bool { return uint64(xDw2) < uint64(y) })
+	d := uint64(y)
+	q1, r := bits.Div64(uint64(xDw2), uint64(xDw1), d)
+	q0, r := bits.Div64(r, uint64(xDw0), d)
+	return quot128Rem64{int64(q0), int64(q1), int64(r)}
+}
+
 // divRem_q128r128_128x128 returns (x / y, x % y); y nonzero (D15).
 func divRem_q128r128_128x128(xDw0, xDw1, yDw0, yDw1 int64) quot128Rem128 {
 	demand("division by zero", !isZero_bool_128(yDw0, yDw1))
