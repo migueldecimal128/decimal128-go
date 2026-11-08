@@ -131,6 +131,16 @@ func fmaFnzFnzZer_ctxnull(prodSign bool, prodQ int, prodHi, prodLo u128, a d128,
 	return productD128
 }
 
+// fmaExactAlignDigits is how far the larger-exponent operand may be scaled up so
+// that alignment is exact. If scaling m by the whole exponent gap keeps it within
+// this many digits, m is scaled all the way, nothing is shifted off n, and
+// finalize_256 does the one and only divide. Any bound up to 76 is correct (both
+// aligned operands are then below 10^76, so their sum is below 2*10^76 < 2^256);
+// 69 covers the product's 68 digits plus one, and measured the same as 71.
+// Past it, m is scaled only toward the 34-digit result precision and n is shifted
+// right with a residue, which keeps the far-addend case on finalize's 128-bit path.
+const fmaExactAlignDigits = 69
+
 func addWideAndFinalize_rnd_ctxnull(prodSign bool, prodQ int, prodCoeff u256, aSign bool, aQ int, aCoeff u256, zeroSign bool, rounding round, ctxnull *context) d128 {
 	var mSign, nSign bool
 	var mQ, nQ int
@@ -152,8 +162,10 @@ func addWideAndFinalizeLikeSign_rnd_ctxnull(sign bool, mQ int, mCoeff u256, nQ i
 	qDelta := mQ - nQ
 	verify("", func() bool { return qDelta >= 0 })
 	mDigitLen := digitLen_int_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3)
-	headroom := max(0, 34-mDigitLen)
-	shiftLeft := min(qDelta, headroom)
+	shiftLeft := qDelta
+	if qDelta > fmaExactAlignDigits-mDigitLen {
+		shiftLeft = min(qDelta, max(0, 34-mDigitLen))
+	}
 	mAligned := mCoeff
 	if shiftLeft != 0 {
 		mAligned = mulPow10_256_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3, shiftLeft)
@@ -171,10 +183,12 @@ func addWideAndFinalizeUnlikeSign_rnd_ctxnull(mSign bool, mQ int, mCoeff u256, n
 	qDelta := mQ - nQ
 	verify("", func() bool { return qDelta >= 0 })
 	mDigitLen := digitLen_int_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3)
-	nDigitLen := digitLen_int_256(nCoeff.dw0, nCoeff.dw1, nCoeff.dw2, nCoeff.dw3)
-	maxCancellation := min(mDigitLen, nDigitLen)
-	headroom := max(0, 34+maxCancellation+1-mDigitLen)
-	shiftLeft := min(qDelta, headroom)
+	shiftLeft := qDelta
+	if qDelta > fmaExactAlignDigits-mDigitLen {
+		nDigitLen := digitLen_int_256(nCoeff.dw0, nCoeff.dw1, nCoeff.dw2, nCoeff.dw3)
+		maxCancellation := min(mDigitLen, nDigitLen)
+		shiftLeft = min(qDelta, max(0, 34+maxCancellation+1-mDigitLen))
+	}
 	mAligned := mCoeff
 	if shiftLeft != 0 {
 		mAligned = mulPow10_256_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3, shiftLeft)
