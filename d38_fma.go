@@ -46,14 +46,23 @@ func d38_addWide(prodSign bool, prodQ int, prodCoeff u256, cSign bool, cQ int, c
 	return d38_addWideUnlikeSign(mSign, mQ, mCoeff, nSign, nQ, nCoeff)
 }
 
-// d38_addWideLikeSign: |m| + |n| ≥ |m|, no cancellation. Keep m's digits, align n
-// down (its truncated tail ≤ half a ULP at qAlign, captured as residue).
+// d38ExactAlignDigits bounds how far m may be scaled up so that alignment is exact.
+// Both operands are then below 10^76 (callers pass at most 76-digit coefficients),
+// so their sum is below 2*10^76 < 2^256.
+const d38ExactAlignDigits = 76
+
+// d38_addWideLikeSign: |m| + |n| ≥ |m|, no cancellation. If scaling m by the whole
+// exponent gap keeps it within d38ExactAlignDigits, the alignment is exact and
+// d38_finalize_256 does the only divide. Otherwise m is scaled toward 38 digits and
+// n is aligned down (its truncated tail captured as residue).
 func d38_addWideLikeSign(sign bool, mQ int, mCoeff u256, nQ int, nCoeff u256) d38 {
 	qDelta := mQ - nQ
 	verify("", func() bool { return qDelta >= 0 })
 	mDigitLen := digitLen_int_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3)
-	headroom := max(0, 38-mDigitLen)
-	shiftLeft := min(qDelta, headroom)
+	shiftLeft := qDelta
+	if qDelta > d38ExactAlignDigits-mDigitLen {
+		shiftLeft = min(qDelta, max(0, 38-mDigitLen))
+	}
 
 	mAligned := mCoeff
 	if shiftLeft != 0 {
