@@ -59,14 +59,12 @@ func sampleFailures(r rosettaResult) []string {
 	return r.failures[:min(len(r.failures), 10)]
 }
 
-// TestRosettaNative runs every native-corpus file through the harness. Wired ops
+// TestRosettaNative runs the native-corpus files (native.index minus this
+// port's exclusions) through the harness. Wired ops
 // (codec/parse/print/predicate) must pass; arithmetic ops are still Unsupported
 // (Phase 3) and are counted, not failed.
 func TestRosettaNative(t *testing.T) {
-	files, err := filepath.Glob(filepath.Join(resourcesDir(), "native", "*.txt"))
-	if err != nil || len(files) == 0 {
-		t.Fatalf("glob native: %v (%d files)", err, len(files))
-	}
+	files := nativeCorpusFiles(t, "core") // native.index minus our exclusions
 	var total rosettaResult
 	for _, f := range files {
 		cases, err := loadNativeFile(f)

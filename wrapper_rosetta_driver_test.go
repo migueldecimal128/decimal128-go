@@ -19,11 +19,8 @@ var wrapperDectestFiles = []string{
 func TestWrapperRosetta(t *testing.T) {
 	var total rosettaResult
 
-	// Native corpus.
-	natFiles, err := filepath.Glob(filepath.Join(resourcesDir(), "native", "*.txt"))
-	if err != nil || len(natFiles) == 0 {
-		t.Fatalf("glob native: %v (%d files)", err, len(natFiles))
-	}
+	// Native corpus: native.index minus this port's wrapper exclusions.
+	natFiles := nativeCorpusFiles(t, "wrapper")
 	for _, f := range natFiles {
 		cases, err := loadNativeFile(f)
 		if err != nil {
