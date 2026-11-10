@@ -34,24 +34,79 @@ func recipmul320(x u320, k int) quot320Residue {
 	verify("", func() bool { return (s >= 322) && (s <= 447) }) // gen_recipmul320: S - 320 in 2..127
 
 	// Strip k-1 low bits (the 2^(k-1) factor of 10^k); track them as sticky.
-	a := shr_320_320(x, k-1)
-	stickyAlfa := lowBitsNonZero_320(x, k-1)
+	// shr_320_320 and lowBitsNonZero_320 written out (they don't fit Go's inline
+	// budget; D48GoWorkOrder.md Phase 5, option 1): k-1 is 0..95, so the shift
+	// moves whole limbs by 0 or 1.
+	x0, x1, x2, x3, x4 := uint64(x.dw0), uint64(x.dw1), uint64(x.dw2), uint64(x.dw3), uint64(x.dw4)
+	na := uint(k - 1)
+	sa := na & 63
+	ta := 63 - sa
+	maskA := (uint64(1) << sa) - 1
+	var a u320
+	var stickyAlfa bool
+	if na < 64 {
+		a = u320{
+			int64((x0 >> sa) | ((x1 << 1) << ta)),
+			int64((x1 >> sa) | ((x2 << 1) << ta)),
+			int64((x2 >> sa) | ((x3 << 1) << ta)),
+			int64((x3 >> sa) | ((x4 << 1) << ta)),
+			int64(x4 >> sa),
+		}
+		stickyAlfa = (x0 & maskA) != 0
+	} else {
+		a = u320{
+			int64((x1 >> sa) | ((x2 << 1) << ta)),
+			int64((x2 >> sa) | ((x3 << 1) << ta)),
+			int64((x3 >> sa) | ((x4 << 1) << ta)),
+			int64(x4 >> sa),
+			0,
+		}
+		stickyAlfa = (x0 | (x1 & maskA)) != 0
+	}
 
 	// P = A * M (640-bit), P >> S = pHi >> (S - 320) = 2q + roundBit: q is pHi
 	// shifted one bit further, and the round bit is bit S - 320 of pHi (S - 320
 	// is 2..127, so it is in limb 0 or 1).
 	pLo, pHi := mulWide_640_320x320(a, m)
-	sh := s - 320
-	q := shr_320_320(pHi, sh+1)
-	roundLimb := uint64(pHi.dw1)
-	if sh < 64 {
-		roundLimb = uint64(pHi.dw0)
+	sh := uint(s - 320)
+	h0, h1, h2, h3, h4 := uint64(pHi.dw0), uint64(pHi.dw1), uint64(pHi.dw2), uint64(pHi.dw3), uint64(pHi.dw4)
+
+	// q = pHi >> (sh + 1), written out: sh + 1 is 3..128, a whole-limb move of
+	// 0, 1 or 2.
+	nq := sh + 1
+	q0, q1, q2, q3, q4 := h0, h1, h2, h3, h4
+	if nq >= 128 {
+		q0, q1, q2, q3, q4 = h2, h3, h4, 0, 0
+	} else if nq >= 64 {
+		q0, q1, q2, q3, q4 = h1, h2, h3, h4, 0
 	}
-	roundBit := ((roundLimb >> uint(sh&63)) & 1) != 0
+	sq := nq & 63
+	tq := 63 - sq
+	q := u320{
+		int64((q0 >> sq) | ((q1 << 1) << tq)),
+		int64((q1 >> sq) | ((q2 << 1) << tq)),
+		int64((q2 >> sq) | ((q3 << 1) << tq)),
+		int64((q3 >> sq) | ((q4 << 1) << tq)),
+		int64(q4 >> sq),
+	}
+
+	// The round bit (bit sh of pHi) and the fraction bits below it (pHi mod
+	// 2^sh), from limb 0 or 1.
+	maskB := (uint64(1) << (sh & 63)) - 1
+	var roundLimb uint64
+	var lowFraction bool
+	if sh < 64 {
+		roundLimb = h0
+		lowFraction = (h0 & maskB) != 0
+	} else {
+		roundLimb = h1
+		lowFraction = (h0 | (h1 & maskB)) != 0
+	}
+	roundBit := ((roundLimb >> (sh & 63)) & 1) != 0
 
 	// stickyBeta = (P mod 2^S) >= M, without a 640-bit compare: high fraction
 	// bits (pHi mod 2^(S-320)) nonzero -> >= 2^320 > M; else compare pLo with M.
-	stickyBeta := lowBitsNonZero_320(pHi, sh) || !lt_320(pLo, m)
+	stickyBeta := lowFraction || !lt_320(pLo, m)
 	sticky := stickyAlfa || stickyBeta
 
 	var res residue
