@@ -67,9 +67,67 @@ func recipmul320(x u320, k int) quot320Residue {
 	// P = A * M (640-bit), P >> S = pHi >> (S - 320) = 2q + roundBit: q is pHi
 	// shifted one bit further, and the round bit is bit S - 320 of pHi (S - 320
 	// is 2..127, so it is in limb 0 or 1).
-	pLo, pHi := mulWide_640_320x320(a, m)
+	// The 5x5 comba (mulWide_640_320x320) written out here, its only caller: no
+	// call, and A, M and the 640-bit product stay in registers
+	// (D48GoWorkOrder.md Phase 5, option A).
+	a0, a1, a2, a3, a4 := uint64(a.dw0), uint64(a.dw1), uint64(a.dw2), uint64(a.dw3), uint64(a.dw4)
+	m0, m1, m2, m3, m4 := uint64(m.dw0), uint64(m.dw1), uint64(m.dw2), uint64(m.dw3), uint64(m.dw4)
+	var acc0, acc1, acc2 uint64
+	macCol512(a0, m0, &acc0, &acc1, &acc2)
+	r0 := acc0
+	acc0, acc1, acc2 = acc1, acc2, 0
+
+	macCol512(a0, m1, &acc0, &acc1, &acc2)
+	macCol512(a1, m0, &acc0, &acc1, &acc2)
+	r1 := acc0
+	acc0, acc1, acc2 = acc1, acc2, 0
+
+	macCol512(a0, m2, &acc0, &acc1, &acc2)
+	macCol512(a1, m1, &acc0, &acc1, &acc2)
+	macCol512(a2, m0, &acc0, &acc1, &acc2)
+	r2 := acc0
+	acc0, acc1, acc2 = acc1, acc2, 0
+
+	macCol512(a0, m3, &acc0, &acc1, &acc2)
+	macCol512(a1, m2, &acc0, &acc1, &acc2)
+	macCol512(a2, m1, &acc0, &acc1, &acc2)
+	macCol512(a3, m0, &acc0, &acc1, &acc2)
+	r3 := acc0
+	acc0, acc1, acc2 = acc1, acc2, 0
+
+	macCol512(a0, m4, &acc0, &acc1, &acc2)
+	macCol512(a1, m3, &acc0, &acc1, &acc2)
+	macCol512(a2, m2, &acc0, &acc1, &acc2)
+	macCol512(a3, m1, &acc0, &acc1, &acc2)
+	macCol512(a4, m0, &acc0, &acc1, &acc2)
+	r4 := acc0
+	acc0, acc1, acc2 = acc1, acc2, 0
+
+	macCol512(a1, m4, &acc0, &acc1, &acc2)
+	macCol512(a2, m3, &acc0, &acc1, &acc2)
+	macCol512(a3, m2, &acc0, &acc1, &acc2)
+	macCol512(a4, m1, &acc0, &acc1, &acc2)
+	r5 := acc0
+	acc0, acc1, acc2 = acc1, acc2, 0
+
+	macCol512(a2, m4, &acc0, &acc1, &acc2)
+	macCol512(a3, m3, &acc0, &acc1, &acc2)
+	macCol512(a4, m2, &acc0, &acc1, &acc2)
+	r6 := acc0
+	acc0, acc1, acc2 = acc1, acc2, 0
+
+	macCol512(a3, m4, &acc0, &acc1, &acc2)
+	macCol512(a4, m3, &acc0, &acc1, &acc2)
+	r7 := acc0
+	acc0, acc1, acc2 = acc1, acc2, 0
+
+	macCol512(a4, m4, &acc0, &acc1, &acc2)
+	r8 := acc0
+
+	r9 := acc1
+	pLo := u320{int64(r0), int64(r1), int64(r2), int64(r3), int64(r4)}
 	sh := uint(s - 320)
-	h0, h1, h2, h3, h4 := uint64(pHi.dw0), uint64(pHi.dw1), uint64(pHi.dw2), uint64(pHi.dw3), uint64(pHi.dw4)
+	h0, h1, h2, h3, h4 := r5, r6, r7, r8, r9
 
 	// q = pHi >> (sh + 1), written out: sh + 1 is 3..128, a whole-limb move of
 	// 0, 1 or 2.
@@ -136,8 +194,13 @@ func divPow10_q320res(x u320, k int) quot320Residue {
 // zero.
 func divPow10_checked_q320res(x u320, k int) quot320Residue {
 	verify("", func() bool { return k >= 0 })
+	// The kernel directly, not through divPow10_q320res: one call layer fewer
+	// on the FMA alignment path (D48GoWorkOrder.md Phase 5, option A).
+	if k == 0 {
+		return quot320Residue{x.dw0, x.dw1, x.dw2, x.dw3, x.dw4, RESIDUE_EXACT}
+	}
 	if k <= 96 {
-		return divPow10_q320res(x, k)
+		return recipmul320(x, k)
 	}
 	if x.isZero() {
 		return quot320Residue{residue: RESIDUE_EXACT}

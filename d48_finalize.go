@@ -19,15 +19,17 @@ func d48RoundsHalfEven(res residue, coeff u320) bool {
 // rescales to 10^47 at qExp + 1.
 func d48_scaleDownTail(sign bool, qExp int, coeff u320, res residue) d48 {
 	verify("", func() bool { return lt_320(coeff, d48_POW10_48) })
-	candidate := coeff
-	if d48RoundsHalfEven(res, coeff) {
-		candidate = add_320_320x64(coeff, 1)
-	}
-	if lt_320(candidate, d48_POW10_48) {
-		if candidate.isZero() {
+	if !d48RoundsHalfEven(res, coeff) {
+		// No round-up: coeff < 10^48 stays in range (D48GoWorkOrder.md Phase 5,
+		// option A: the carry check runs only after a round-up).
+		if coeff.isZero() {
 			return d48_ZERO
 		}
-		return d48_fromSignQExp_160(sign, qExp, candidate.u192())
+		return d48_fromSignQExp_160(sign, qExp, u192{coeff.dw0, coeff.dw1, coeff.dw2})
+	}
+	candidate := add_320_320x64(coeff, 1)
+	if lt_320(candidate, d48_POW10_48) {
+		return d48_fromSignQExp_160(sign, qExp, u192{candidate.dw0, candidate.dw1, candidate.dw2})
 	}
 	// Round pushed us to == 10^48: scale down by 10 (exact).
 	verify("", func() bool { return candidate == d48_POW10_48 })

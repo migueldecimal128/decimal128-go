@@ -122,6 +122,18 @@ func mulPow10_320(x u320, k int) u320 {
 	if k == 0 {
 		return x
 	}
+	// A three-limb x (every D48 coefficient) times a three-limb 10^k (k <= 57):
+	// the straight-line 3x3 product (D48GoWorkOrder.md Phase 5, option A; Go
+	// won't inline the mulTrunc_320 loop).
+	if ((x.dw3 | x.dw4) == 0) && (k <= 57) {
+		var p u192
+		if k <= 38 {
+			p = u192{pow10_128_dw0(k), pow10_128_dw1(k), 0}
+		} else {
+			p = u192{pow10_256_dw0(k - 39), pow10_256_dw1(k - 39), pow10_256_dw2(k - 39)}
+		}
+		return mul_320_192x192(u192{x.dw0, x.dw1, x.dw2}, p)
+	}
 	var m [5]uint64
 	var mLen int
 	if k <= 38 {
