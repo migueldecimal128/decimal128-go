@@ -30,7 +30,7 @@ var u256_LN10_50_COEFF = u256c(15733924570658476943, 10197472284333201977, 67666
 const LN10_50_QEXP = -49
 
 // [9,9] Padé numerator weights for exp(z).
-var padeExpPWeights = []d38{
+var d38PadeExpPWeights = []d38{
 	d38c(0, 0x1, 0),  // 1
 	d38c(-2, 0x5, 0), // 0.5
 	d38c(-76, 0x3d5b8b8f0f0f0f0f, 0x08d9ccc8831ee9f0), // 0.11764705882352941176470588235294117647
@@ -44,7 +44,7 @@ var padeExpPWeights = []d38{
 }
 
 // Q(z) = P(−z): odd-index weights negated.
-var padeExpQWeights = []d38{
+var d38PadeExpQWeights = []d38{
 	d38c(0, 0x1, 0),
 	d38c(-1, 0x5, 0),
 	d38c(-76, 0x3d5b8b8f0f0f0f0f, 0x08d9ccc8831ee9f0),
@@ -58,7 +58,7 @@ var padeExpQWeights = []d38{
 }
 
 // [9,9] Padé numerator weights for 10^z.
-var padeExp10PWeights = []d38{
+var d38PadeExp10PWeights = []d38{
 	d38c(0, 0x1, 0), // 1
 	d38c(-74, 0x807c96848fd5346e, 0x08a94f0cdd576cac), // 1.1512925464970228420089957273421821038
 	d38c(-76, 0x21cc2113a7fd8d45, 0x2eed0a571e8de5b0), // 0.62375271887981153065431369277576678725
@@ -71,7 +71,7 @@ var padeExp10PWeights = []d38{
 	d38c(-88, 0x53324cc0c47f6de9, 0x07c21ca062c8cf5b), // 0.00000010312482175597367540252796938795052521
 }
 
-var padeExp10QWeights = []d38{
+var d38PadeExp10QWeights = []d38{
 	d38c(0, 0x1, 0),
 	d38c(-73, 0x807c96848fd5346e, 0x08a94f0cdd576cac),
 	d38c(-76, 0x21cc2113a7fd8d45, 0x2eed0a571e8de5b0),

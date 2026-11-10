@@ -36,6 +36,12 @@ func expDispatch(x d128, isExp10 bool, rounding round, ctxnull *context) d128 {
 		if d128_isZER(x) {
 			return d128_fromInt64(1) // exp(±0) = 1 exactly
 		}
+		if useD48 { // D48GoWorkOrder.md G-14: Phase 4 keeps this arm only
+			if isExp10 {
+				return exp10ImplFNZ_d48(x, rounding, ctxnull)
+			}
+			return expImplFNZ_d48(x, rounding, ctxnull)
+		}
 		if isExp10 {
 			return exp10ImplFNZ(x, rounding, ctxnull)
 		}
@@ -81,7 +87,7 @@ func expImplFNZ(x d128, rounding round, ctxnull *context) d128 {
 
 	// exp(r) = exp(r/8)^8 — three squarings.
 	rPrime := d38_divide(r, d38_EIGHT)
-	e := d38_padeEval(rPrime, padeExpPWeights, padeExpQWeights)
+	e := d38_padeEval(rPrime, d38PadeExpPWeights, d38PadeExpQWeights)
 	e = d38_square(e)
 	e = d38_square(e)
 	e = d38_square(e)
@@ -134,7 +140,7 @@ func d128_exp10_from_d38(xd d38, rounding round, ctxnull *context) d128 {
 
 	// 10^r = 10^(r/8)^8 — three squarings.
 	rPrime := d38_divide(r, d38_EIGHT)
-	z := d38_padeEval(rPrime, padeExp10PWeights, padeExp10QWeights)
+	z := d38_padeEval(rPrime, d38PadeExp10PWeights, d38PadeExp10QWeights)
 	z = d38_square(z)
 	z = d38_square(z)
 	z = d38_square(z)

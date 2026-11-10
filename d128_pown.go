@@ -22,7 +22,10 @@ func d128_pown_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d128
 		if d128_isZER(x) {
 			return pownZER(x, n, ctxnull)
 		}
-		return pownFNZ(x, n, rounding, ctxnull)
+		if useD48 { // D48GoWorkOrder.md G-14: Phase 4 keeps this arm only
+			return pownFNZ(x, n, rounding, ctxnull)
+		}
+		return d38_pownFNZ(x, n, rounding, ctxnull)
 	}
 	if d128_isNAN(x) {
 		// pown(x, 0) is 1 unless x is a signaling NaN (§9.2).
@@ -62,9 +65,9 @@ func pownZER(x d128, n int, ctxnull *context) d128 {
 	return d128_fromInt64(1)
 }
 
-// --- finite non-zero magnitude ---
+// --- finite non-zero magnitude, D38 (removed at the D48 switch, Phase 4) ---
 
-func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
+func d38_pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 	if n == 0 {
 		return d128_fromInt64(1)
 	}
@@ -104,14 +107,14 @@ func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 		absPow := -n
 		estimatedResultExp := int64(d128_sciExp(x)) * int64(absPow)
 		if estimatedResultExp < 6100 {
-			raised := pownFNZ(x, absPow, rounding, ctxnull)
+			raised := d38_pownFNZ(x, absPow, rounding, ctxnull)
 			return d128_divide_rnd_ctxnull(d128PownOne, raised, rounding, ctxnull)
 		}
 		reciprocal := d128_divide_rnd_ctxnull(d128PownOne, x, rounding, ctxnull)
-		return pownFNZ(reciprocal, absPow, rounding, ctxnull)
+		return d38_pownFNZ(reciprocal, absPow, rounding, ctxnull)
 	}
 
-	return pownFNZ_powGE3(x, n, rounding, ctxnull)
+	return d38_pownFNZ_powGE3(x, n, rounding, ctxnull)
 }
 
 // Quantum-exponent guard band on the running d38 ladder value. d38 is a bare
@@ -126,7 +129,7 @@ func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 const pownQExpOver = 6200
 const pownQExpUnder = -6250
 
-func pownFNZ_powGE3(x d128, n int, rounding round, ctxnull *context) d128 {
+func d38_pownFNZ_powGE3(x d128, n int, rounding round, ctxnull *context) d128 {
 	verify("", func() bool { return n >= 3 })
 	resultSign := d128_signFlag(x) && (n&1) != 0
 	// Left-to-right binary exponentiation in the 38-digit d38 domain (4 guard
@@ -153,6 +156,246 @@ func pownFNZ_powGE3(x d128, n int, rounding round, ctxnull *context) d128 {
 		bit >>= 1
 	}
 	return finalize_128_ctxnull(d38_signFlag(z), d38_qExp(z), d38_u128(z), RESIDUE_EXACT, rounding, ctxnull)
+}
+
+// --- finite non-zero magnitude, D48 (Swift D128Pown.swift) ---
+//
+// n is an int (64-bit); |n| is taken as a uint64 (unsigned negation, so
+// math.MinInt is safe) and every product with n or |n| is bounded or saturated
+// (D48GoWorkOrder.md G-9; Rust R-9, Zig Z-8). Swift traps at Int.min instead.
+
+func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
+	if n == 0 {
+		return d128_fromInt64(1)
+	}
+	if n == 1 {
+		return x
+	}
+	if n == 2 {
+		return d128_square_rnd_ctxnull(x, rounding, ctxnull)
+	}
+
+	negative := d128_signFlag(x) && (n&1) != 0
+
+	// |x| == 1: result is ±1 carrying the preferred exponent n·Q(x), clamped to
+	// [-33, 0] (the product saturated: n may be math.MinInt).
+	if cmpMagFnzFnz(x, d128PownOne) == 0 {
+		resultQExp := max(min(satMulSigned(n, d128_qExp(x)), 0), -33)
+		return d128_oneWithQExp(negative, resultQExp)
+	}
+
+	// |x| == 10: an exact power of ten, carrying the preferred cohort exponent.
+	if cmpMagFnzFnz(x, d128PownTen) == 0 {
+		if n > 6144 {
+			return finalizeOverflow_ctxnull(negative, rounding, ctxnull)
+		}
+		if n < -6176 {
+			return finalizeUnderflowFullySwamped(negative, rounding, ctxnull)
+		}
+		preferredQExpLong := int64(n) * int64(d128_qExp(x)) // |n| <= 6176 here
+		minPreferredQExp := minI64(maxI64(int64(n)-33, -32), 0)
+		preferredQExp := int(maxI64(preferredQExpLong, minPreferredQExp))
+		return tenPowN(negative, n, preferredQExp, rounding, ctxnull)
+	}
+
+	// n <= −2: |x|^|n| and the reciprocal in D48, rounded once
+	// (pownFNZ_negative_d48). n = −1 is a single correctly rounded divide, so it
+	// keeps the D128 path below.
+	if n < -1 {
+		return pownFNZ_negative_d48(x, -uint64(n), rounding, ctxnull)
+	}
+	// n = −1: raise to |n| then reciprocate. Choosing raise-first vs
+	// reciprocate-first by the estimated result exponent avoids a spurious
+	// subnormal underflow on the intermediate.
+	if n < 0 {
+		absPow := -n // n == -1
+		estimatedResultExp := int64(d128_sciExp(x)) * int64(absPow)
+		if estimatedResultExp < 6100 {
+			raised := pownFNZ(x, absPow, rounding, ctxnull)
+			return d128_divide_rnd_ctxnull(d128PownOne, raised, rounding, ctxnull)
+		}
+		reciprocal := d128_divide_rnd_ctxnull(d128PownOne, x, rounding, ctxnull)
+		return pownFNZ(reciprocal, absPow, rounding, ctxnull)
+	}
+
+	return pownFNZ_powGE3(x, uint64(n), rounding, ctxnull)
+}
+
+// Quantum-exponent guard band on the running D48 ladder value. D48 is a bare
+// finite carrier -- it has no infinity -- so the ladder guards qExp instead of
+// relying on saturation. A D48 coefficient is at most 48 digits, so a value
+// with qExp > OVER has magnitude ≥ 10^6200 and one with qExp < UNDER has
+// magnitude < 10^-6203 -- both unrepresentable in every decimal128 cohort --
+// hence clamping here never drops a representable result. The ladder magnitude
+// is monotonic, so the first band crossing is terminal → the correctly-signed
+// overflow / underflow.
+const (
+	POWN_QEXP_OVER  = 6200
+	POWN_QEXP_UNDER = -6250
+)
+
+// ladderStartBit is the bit below |n|'s top bit (n >= 2): the left-to-right
+// ladder starts from x and walks the remaining bits.
+func ladderStartBit(n uint64) uint64 {
+	return uint64(1) << (62 - bits.LeadingZeros64(n))
+}
+
+func pownFNZ_powGE3(x d128, n uint64, rounding round, ctxnull *context) d128 {
+	verify("", func() bool { return n >= 3 })
+	resultSign := d128_signFlag(x) && (n&1) != 0
+	// Left-to-right binary exponentiation in the 48-digit D48 domain, rounded
+	// once into the result (the round-once discipline of pow).
+	m := d48_fromD128(x, d128_signFlag(x))
+	z := m
+	for bit := ladderStartBit(n); bit != 0; bit >>= 1 {
+		z = d48_square(z)
+		if (n & bit) != 0 {
+			z = d48_multiply(z, m)
+		}
+		if d48_qExp(z) > POWN_QEXP_OVER {
+			return finalizeOverflow_ctxnull(resultSign, rounding, ctxnull)
+		}
+		if d48_qExp(z) < POWN_QEXP_UNDER {
+			return finalizeUnderflowFullySwamped(resultSign, rounding, ctxnull)
+		}
+	}
+	// No boundary test: pown n >= 3 has no exact rule to gate (an exact x^n
+	// never leaves 48 digits, so the ladder never rounded it), so z is rounded
+	// as is (the documented 1-ulp gap near 1). Its tail can still fall below 48
+	// digits and land z on a decimal128 point: Inexact comes from the operands,
+	// not z.
+	r := finalizeD48_ctxnull(z, rounding, ctxnull)
+	if pownPositiveExact(x, n) {
+		return r
+	}
+	return d48_forceInexact(r, ctxnull)
+}
+
+// pownPositiveExact is true if x^n (n >= 3) has at most 34 significant digits,
+// i.e. is exact in decimal128 before range limits: c'^n < 10^34 with c' the
+// coefficient of x stripped of trailing zeros (c' not a multiple of 10, so
+// neither is c'^n).
+func pownPositiveExact(x d128, n uint64) bool {
+	c, _ := stripTens(d128_u128(x), 0)
+	if c == (u128{1, 0}) {
+		return true
+	}
+	p := u128{1, 0}
+	for i := uint64(0); i < n; i++ { // c >= 2: at most 113 rounds before p >= 10^34
+		t, ok := u128MulChecked(p, c)
+		if !ok || !isLt_pow10_34_bool_128(t.dw0, t.dw1) {
+			return false
+		}
+		p = t
+	}
+	return true
+}
+
+// saturate clamps an exponent to ±10^9 (finalize turns it into the overflow /
+// underflow it is).
+func saturate(v int) int {
+	return max(-1_000_000_000, min(1_000_000_000, v))
+}
+
+// satMul is a·m clamped to ±2·10^9 (m unsigned, so |math.MinInt| is exact):
+// wide enough that saturate of a sum with a small term is unchanged.
+func satMul(a int, m uint64) int {
+	const lim = 2_000_000_000
+	ua := uint64(a)
+	if a < 0 {
+		ua = -ua
+	}
+	hi, lo := bits.Mul64(ua, m)
+	if (hi != 0) || (lo > lim) {
+		lo = lim
+	}
+	if a < 0 {
+		return -int(lo)
+	}
+	return int(lo)
+}
+
+// satMulSigned is n·q clamped to ±2·10^9, for any int n.
+func satMulSigned(n, q int) int {
+	if n < 0 {
+		return -satMul(q, -uint64(n))
+	}
+	return satMul(q, uint64(n))
+}
+
+// pownNegativeExact is the exact 1/x^m (m >= 2) when it exists in decimal128,
+// else ok = false. Strip x's trailing zeros: x = c'·10^e. 1/x^m is a
+// terminating decimal iff c' = 2^a or 5^b (or 1), and fits 34 digits iff
+// a·m <= 48 (5^48 < 10^34) or b·m <= 112 (2^112 < 10^34). The result takes the
+// exponent closest to the preferred n·Q(x).
+func pownNegativeExact(x d128, m uint64, rounding round, ctxnull *context) (d128, bool) {
+	c := d128_u128(x)
+	p2 := u128TrailingZeros(c)
+	odd := shrU128(c, p2)
+	q5 := 0
+	for {
+		q, r := u128DivRemSmall(odd, 5)
+		if r != 0 {
+			break
+		}
+		odd = q
+		q5++
+	}
+	if odd != (u128{1, 0}) {
+		return d128{}, false // c' has a prime factor other than 2 and 5
+	}
+	t := min(p2, q5)
+	a := p2 - t // power of two left after stripping tens
+	b := q5 - t // power of five left (a and b are not both > 0)
+	e := d128_qExp(x) + t
+	coeff := u128{1, 0}
+	k := 0 // 1/x^m = coeff · 10^(−k − e·m)
+	if a > 0 {
+		if m > 48 || uint64(a)*m > 48 { // a >= 1; the first test keeps a·m from wrapping
+			return d128{}, false
+		}
+		k = a * int(m)
+		for i := 0; i < k; i++ {
+			coeff = mul_128_128x128(coeff.dw0, coeff.dw1, 5, 0)
+		}
+	} else if b > 0 {
+		if m > 112 || uint64(b)*m > 112 {
+			return d128{}, false
+		}
+		k = b * int(m)
+		coeff = shlU128(coeff, k)
+	}
+	sign := d128_signFlag(x) && ((m & 1) != 0)
+	return d48_exactWithPreferred(sign, coeff, saturate(-k-satMul(e, m)), saturate(-satMul(d128_qExp(x), m)),
+		rounding, ctxnull), true
+}
+
+// pownFNZ_negative_d48 is pown for n <= −2 over D48 (m = |n|): ladder on m,
+// one D48 divide 1/z, one final rounding. The guard bands are inverted: a huge
+// z means 1/z fully underflows, a tiny z means 1/z overflows.
+func pownFNZ_negative_d48(x d128, m uint64, rounding round, ctxnull *context) d128 {
+	verify("", func() bool { return m >= 2 })
+	if exact, ok := pownNegativeExact(x, m, rounding, ctxnull); ok {
+		return exact
+	}
+	resultSign := d128_signFlag(x) && (m&1) != 0
+	mm := d48_fromD128(x, d128_signFlag(x))
+	z := mm
+	for bit := ladderStartBit(m); bit != 0; bit >>= 1 {
+		z = d48_square(z)
+		if (m & bit) != 0 {
+			z = d48_multiply(z, mm)
+		}
+		if d48_qExp(z) > POWN_QEXP_OVER {
+			return finalizeUnderflowFullySwamped(resultSign, rounding, ctxnull)
+		}
+		if d48_qExp(z) < POWN_QEXP_UNDER {
+			return finalizeOverflow_ctxnull(resultSign, rounding, ctxnull)
+		}
+	}
+	// The exact rule ran first, so 1/x^m is inexact.
+	r := finalizeD48_ctxnull(d48_divide(d48_fromInt32(1), z), rounding, ctxnull)
+	return d48_forceInexact(r, ctxnull)
 }
 
 // --- exact builders ---

@@ -20,7 +20,7 @@ func d38_fromInt32(n int) d38 {
 func d38_sciExp(x d38) int { return d38_qExp(x) + d38_digitLen(x) - 1 }
 
 // [9,9] Padé numerator weights for ln(1+z).
-var padeLnPWeights = []d38{
+var d38PadeLnPWeights = []d38{
 	d38c(0, 0x1, 0), // 1
 	d38c(0, 0x4, 0), // 4
 	d38c(-74, 0xbc36842028282828, 0x314e64d038518c90), // 6.5539215686274509803921568627450980392
@@ -33,7 +33,7 @@ var padeLnPWeights = []d38{
 }
 
 // [9,9] Padé numerator weights for log10(1+z) (= padeLnP / ln(10)).
-var padeLog10PWeights = []d38{
+var d38PadeLog10PWeights = []d38{
 	d38c(-76, 0x28178c5edd064c45, 0x20ac351d00b129f6), // 0.43429448190325182765112891891660508229
 	d38c(-74, 0x10096b592535b81c, 0x0d11aed866ad43fc), // 1.7371779276130073106045156756664203292
 	d38c(-74, 0xa591f174e2edaa35, 0x1569d60291a54dd2), // 2.8463319720816063410272517872132401717
@@ -46,7 +46,7 @@ var padeLog10PWeights = []d38{
 }
 
 // Shared [9,9] Padé denominator weights (ln and log10).
-var padeLogQWeights = []d38{
+var d38PadeLogQWeights = []d38{
 	d38c(0, 0x1, 0),   // 1
 	d38c(-2, 0x2d, 0), // 4.5
 	d38c(-74, 0x535fecd2d2d2d2d3, 0x3fb9c2707cde945b), // 8.4705882352941176470588235294117647059

@@ -44,7 +44,10 @@ func logDispatch(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 			// log10(10^n) = n exactly — no rounding, no inexact flag.
 			return d128_fromInt64(d128_sciExp(x))
 		}
-		return logImplFNZ(x, isLog10, rounding, ctxnull)
+		if useD48 { // D48GoWorkOrder.md G-14: Phase 4 keeps this arm only
+			return logImplFNZ(x, isLog10, rounding, ctxnull)
+		}
+		return d38_logImplFNZ(x, isLog10, rounding, ctxnull)
 	}
 	if d128_isNAN(x) {
 		return ctxNanOperand1_ctxnull(ctxnull, x)
@@ -59,6 +62,24 @@ func logDispatch(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 // --- magnitude ---
 
 func logImplFNZ(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
+	r := d48_logMagnitude(d48_fromD128(x, false), isLog10)
+	result := finalizeD48_ctxnull(r, rounding, ctxnull)
+
+	// A non-zero ln/log10 of a finite value is irrational -- always INEXACT. The
+	// final round usually sets it, but when the 48-digit value lands on an
+	// exact-looking value the round sees no residue, so force the flag. (r == 0
+	// is the lone exact case, ln(1) = 0; log10 exacts are power-of-10
+	// fast-pathed in logDispatch.) ln / log10 have no exact rule beyond those,
+	// so they don't run the boundary test: a result near a rounding boundary is
+	// rounded as is (the documented 1-ulp gap near 1, CrossPlatformArchitecture.md).
+	if d48_isZero(r) {
+		return result
+	}
+	return d48_forceInexact(result, ctxnull)
+}
+
+// d38_logImplFNZ is the D38 magnitude (removed at the D48 switch, Phase 4).
+func d38_logImplFNZ(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 	xd := d38Pack(false, d128_qExp(x), x.ubdLo64, d128_hi49(x))
 	r := d38_logMagnitude(xd, isLog10)
 
@@ -84,7 +105,7 @@ func d38_logMagnitude(xd d38, isLog10 bool) d38 {
 	// Argument reduction: x = k·10^e with k the rounded leading digit, so
 	// c' = x / (k·10^e) ∈ [~0.75, 1.5).
 	eExp := d38_sciExp(xd)
-	k := extractKMostSigDigitRounded(xd)
+	k := d38_extractKMostSigDigitRounded(xd)
 	if k == 10 {
 		k = 1
 		eExp++
@@ -105,11 +126,11 @@ func d38_logMagnitude(xd d38, isLog10 bool) d38 {
 		sqrtCount++
 	}
 
-	pWeights := padeLnPWeights
+	pWeights := d38PadeLnPWeights
 	if isLog10 {
-		pWeights = padeLog10PWeights
+		pWeights = d38PadeLog10PWeights
 	}
-	r := d38_padeEval(zArg, pWeights, padeLogQWeights)
+	r := d38_padeEval(zArg, pWeights, d38PadeLogQWeights)
 	r = d38_multiply(r, zArg) // log(c'^(1/2^N)) ≈ z·P(z)/Q(z)
 	twoPowN := d38_fromInt32(1 << sqrtCount)
 	eVal := d38_fromInt32(eExp)
@@ -126,9 +147,9 @@ func d38_logMagnitude(xd d38, isLog10 bool) d38 {
 	return r
 }
 
-// extractKMostSigDigitRounded returns the leading decimal digit of x rounded to
+// d38_extractKMostSigDigitRounded returns the leading decimal digit of x rounded to
 // nearest (ties away), in [1,10]; callers treat 10 as 1 with the exponent bumped.
-func extractKMostSigDigitRounded(x d38) int {
+func d38_extractKMostSigDigitRounded(x d38) int {
 	digitLen := d38_digitLen(x)
 	if digitLen == 1 {
 		return int(x.coeffLo64)
