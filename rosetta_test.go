@@ -59,33 +59,21 @@ func sampleFailures(r rosettaResult) []string {
 	return r.failures[:min(len(r.failures), 10)]
 }
 
+// nativeCoreFloor is the core runner's native case count at D48GoWorkOrder.md
+// Phase 0b (36 files, the four D48 files excluded); raised at the D48 switch.
+const nativeCoreFloor = 2184
+
 // TestRosettaNative runs the native-corpus files (native.index minus this
-// port's exclusions) through the harness. Wired ops
-// (codec/parse/print/predicate) must pass; arithmetic ops are still Unsupported
-// (Phase 3) and are counted, not failed.
+// port's exclusions) through the core harness. Every case must pass: a
+// malformed line, an unknown op or an unsupported case is a failure (G-10).
 func TestRosettaNative(t *testing.T) {
-	files := nativeCorpusFiles(t, "core") // native.index minus our exclusions
-	var total rosettaResult
-	for _, f := range files {
-		cases, err := loadNativeFile(f)
-		if err != nil {
-			t.Fatalf("load %s: %v", f, err)
-		}
-		r := runRosetta(cases)
-		total.total += r.total
-		total.passed += r.passed
-		total.failed += r.failed
-		total.unsupported += r.unsupported
-		total.failures = append(total.failures, r.failures...)
-	}
+	total := runNativeCorpus(t, "core", nativeCorpusFiles(t, "core"), dispatch)
 	if total.failed != 0 {
-		t.Fatalf("native corpus: %d/%d failed: %v", total.failed, total.total, sampleFailures(total))
+		t.Fatalf("native core: %d/%d failed: %v", total.failed, total.total, sampleFailures(total))
 	}
-	if total.passed == 0 {
-		t.Fatal("expected some supported native cases to pass")
+	if total.total < nativeCoreFloor {
+		t.Fatalf("native core: %d cases, below the floor %d", total.total, nativeCoreFloor)
 	}
-	t.Logf("native corpus: %d cases — %d passed, %d unsupported (arithmetic awaits Phase 3)",
-		total.total, total.passed, total.unsupported)
 }
 
 // TestRosettaDectestEncode runs the IBM dectest DPD encode/decode vectors

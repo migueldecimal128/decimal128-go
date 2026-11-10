@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -37,6 +38,7 @@ type rosettaCase struct {
 	expectedFlags string // canonical xuozi
 	rounding      string // canonical rounding token
 	traps         string // fptest trap column; empty elsewhere
+	line          int    // 1-based source line (native corpus; 0 elsewhere)
 }
 
 // outcome is the result of running one case.
@@ -937,7 +939,16 @@ func parseNativeLine(line string) (rosettaCase, bool) {
 	return c, true
 }
 
-// loadNativeFile reads all native-corpus cases from a file.
+// isNativeNonCase reports whether a native-corpus line is blank or a "//"
+// comment: the only lines that are not cases.
+func isNativeNonCase(line string) bool {
+	t := strings.TrimSpace(line)
+	return (t == "") || strings.HasPrefix(t, "//")
+}
+
+// loadNativeFile reads all native-corpus cases from a file. Every line that is
+// not blank or a "//" comment must parse as a case: a malformed line is an
+// error naming file:line, never a silent drop (D48GoWorkOrder.md G-10).
 func loadNativeFile(path string) ([]rosettaCase, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -948,10 +959,20 @@ func loadNativeFile(path string) ([]rosettaCase, error) {
 	var cases []rosettaCase
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 0, 1<<20), 1<<20)
+	lineNo := 0
 	for sc.Scan() {
-		if c, ok := parseNativeLine(sc.Text()); ok {
-			cases = append(cases, c)
+		lineNo++
+		text := sc.Text()
+		c, ok := parseNativeLine(text)
+		if !ok {
+			if isNativeNonCase(text) {
+				continue
+			}
+			return nil, fmt.Errorf("%s:%d: not a native case (want `op ROUNDING operand... -> result [flags]`): %s",
+				filepath.Base(path), lineNo, strings.TrimSpace(text))
 		}
+		c.line = lineNo
+		cases = append(cases, c)
 	}
 	if err := sc.Err(); err != nil {
 		return nil, err

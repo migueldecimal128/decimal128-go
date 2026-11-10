@@ -854,9 +854,47 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapToUInt64(c, TowardNegative, true)
 	case "d128_to_uint64_xint":
 		return wrapToUInt64(c, TowardZero, true)
+	case "d128_compare_ctx":
+		return wrapComparePartial(c, (*Context).ComparePartial)
+	case "d128_compareSignaling_ctx":
+		return wrapComparePartial(c, (*Context).ComparePartialSignaling)
 	default:
 		return outUnsupported, "no public-API arm for " + c.operation
 	}
+}
+
+// wrapComparePartial runs a three-way numeric comparison through the public
+// Context method and checks the Comparison and the flags. The corpus gives
+// -1 / 0 / 1, or for a NaN operand GDAS compare's NaN result ("that NaN"),
+// which the wrapper reports as CmpUnordered (Swift WrapperRosetta compareCmp).
+func wrapComparePartial(c *rosettaCase, op func(*Context, Decimal128, Decimal128) Comparison) (outcome, string) {
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	rnd, ok := tokenToRounding(c.rounding)
+	if !ok {
+		return outUnsupported, "rounding mode not representable"
+	}
+	var want Comparison
+	switch {
+	case c.result == "-1":
+		want = CmpLess
+	case c.result == "0":
+		want = CmpEqual
+	case c.result == "1":
+		want = CmpGreater
+	case strings.Contains(strings.ToUpper(c.result), "NAN"):
+		want = CmpUnordered
+	default:
+		return outUnsupported, "compare result form " + c.result
+	}
+	ctx := NewContextWithRounding(rnd)
+	got := op(ctx, decodeOperandWrapper(c.operands[0]), decodeOperandWrapper(c.operands[1]))
+	flags := wrapperFlagLetters(ctx.RaisedFlags())
+	if (got == want) && (flags == c.expectedFlags) {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %v flags=%q want %v flags=%q", got, flags, want, c.expectedFlags)
 }
 
 func runWrapperRosetta(cases []rosettaCase) rosettaResult {

@@ -134,6 +134,66 @@ func nativeCorpusFiles(t *testing.T, runner string) []string {
 	return paths
 }
 
+// nativeActiveLines counts the lines of a native file that are not blank or a
+// "//" comment, read independently of the loader.
+func nativeActiveLines(t *testing.T, path string) int {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	n := 0
+	for _, line := range strings.Split(string(data), "\n") {
+		if !isNativeNonCase(line) {
+			n++
+		}
+	}
+	return n
+}
+
+// runNativeCorpus runs the native files through one runner's dispatch, with no
+// silent loss (D48GoWorkOrder.md G-10): a malformed line fails the load with
+// file:line; a case the runner reports unsupported (including an op with no
+// dispatch arm) is a failure; each file's case count must equal its active
+// lines. Logs per-file counts and returns the total.
+func runNativeCorpus(t *testing.T, runner string, paths []string,
+	dispatchFn func(*rosettaCase) (outcome, string)) rosettaResult {
+	t.Helper()
+	var total rosettaResult
+	for _, p := range paths {
+		name := filepath.Base(p)
+		cases, err := loadNativeFile(p)
+		if err != nil {
+			t.Fatalf("native %s: %v", runner, err)
+		}
+		if active := nativeActiveLines(t, p); len(cases) != active {
+			t.Fatalf("native %s %s: %d cases loaded, %d active lines", runner, name, len(cases), active)
+		}
+		var r rosettaResult
+		r.total = len(cases)
+		for i := range cases {
+			c := &cases[i]
+			out, diag := dispatchFn(c)
+			if out == outPass {
+				r.passed++
+				continue
+			}
+			r.failed++
+			if out == outUnsupported {
+				diag = "unsupported: " + diag
+			}
+			if len(r.failures) < maxRecordedFailures {
+				r.failures = append(r.failures, fmt.Sprintf("%s:%d: %s :: %s", name, c.line, c.text, diag))
+			}
+		}
+		t.Logf("native %-7s %-24s %5d cases, %5d passed, %d failed", runner, name, r.total, r.passed, r.failed)
+		mergeResult(&total, r)
+	}
+	t.Logf("native %-7s TOTAL: %d files, %d cases, %d passed, %d failed",
+		runner, len(paths), total.total, total.passed, total.failed)
+	return total
+}
+
 // MARK: - Tests
 
 const testNativeIndex = "# header comment\nadd.txt\npow.txt\n\npown.txt\n"

@@ -13,24 +13,30 @@ var wrapperDectestFiles = []string{
 	"dqQuantize.decTest", "dqReduce.decTest", "dqToIntegral.decTest", "dqEncode.decTest",
 }
 
+// Floors at D48GoWorkOrder.md Phase 0b (the four D48 native files excluded);
+// raised at the D48 switch.
+const (
+	nativeWrapperFloor = 2184
+	wrapperTotalFloor  = 53257
+	wrapperPassedFloor = 42023
+)
+
 // TestWrapperRosetta drives the conformance corpora through the public
 // Decimal128 / Context API. The gate is zero failures; operations without a
 // public-API arm are reported unsupported (and covered by the engine harness).
 func TestWrapperRosetta(t *testing.T) {
 	var total rosettaResult
 
-	// Native corpus: native.index minus this port's wrapper exclusions.
-	natFiles := nativeCorpusFiles(t, "wrapper")
-	for _, f := range natFiles {
-		cases, err := loadNativeFile(f)
-		if err != nil {
-			t.Fatalf("load %s: %v", f, err)
-		}
-		r := runWrapperRosetta(cases)
-		mergeResult(&total, r)
-		t.Logf("native %-18s %d cases — %d passed, %d unsupported, %d failed",
-			filepath.Base(f), r.total, r.passed, r.unsupported, r.failed)
+	// Native corpus: native.index minus this port's wrapper exclusions. Every
+	// case must pass (G-10); per-file counts are logged.
+	nat := runNativeCorpus(t, "wrapper", nativeCorpusFiles(t, "wrapper"), dispatchWrapper)
+	if nat.failed != 0 {
+		t.Fatalf("native wrapper: %d/%d failed: %v", nat.failed, nat.total, sampleFailures(nat))
 	}
+	if nat.total < nativeWrapperFloor {
+		t.Fatalf("native wrapper: %d cases, below the floor %d", nat.total, nativeWrapperFloor)
+	}
+	mergeResult(&total, nat)
 
 	// dectest corpora.
 	for _, name := range wrapperDectestFiles {
@@ -79,6 +85,10 @@ func TestWrapperRosetta(t *testing.T) {
 	}
 	t.Logf("WrapperRosetta TOTAL: %d cases — %d passed, %d unsupported, 0 failed",
 		total.total, total.passed, total.unsupported)
+	if (total.total < wrapperTotalFloor) || (total.passed < wrapperPassedFloor) {
+		t.Fatalf("WrapperRosetta: %d cases / %d passed, below the floors %d / %d",
+			total.total, total.passed, wrapperTotalFloor, wrapperPassedFloor)
+	}
 }
 
 func mergeResult(total *rosettaResult, r rosettaResult) {
