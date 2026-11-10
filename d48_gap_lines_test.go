@@ -69,13 +69,14 @@ func gapLineEvaluate(t *testing.T, op string, mode round, args []string) d128 {
 
 func TestD48GapLinesEveryRecordedD48AnswerMatches(t *testing.T) {
 	tags := []string{"gap", "pow-cohort", "compound-1+x"}
-	// Swift / C / Rust / Zig: gap 49 / 350 / 5, pow-cohort 238 / 36 / 16,
-	// compound-1+x 1,330 / 0 / 0 -- 2,024 lines in all.
+	// Swift / C / Rust / Zig: gap 49 / 350 / 5, pow-cohort 238 / 36 / 16 -- 694
+	// lines in all. The 1,330 compound-1+x lines moved to transccompound.txt
+	// (CompoundD48OnePlusXWorkOrder.md CX-6), where they are active.
 	expected := []struct {
 		file   string
 		counts [3]int
 	}{
-		{"transcsweep.txt", [3]int{49, 238, 1330}},
+		{"transcsweep.txt", [3]int{49, 238, 0}},
 		{"transcstress.txt", [3]int{350, 36, 0}},
 		{"transcoracle.txt", [3]int{5, 16, 0}},
 	}
@@ -141,8 +142,8 @@ func TestD48GapLinesEveryRecordedD48AnswerMatches(t *testing.T) {
 		total += counts[0] + counts[1] + counts[2]
 		diffs += fileDiffs
 	}
-	if total != 2024 {
-		t.Errorf("%d recorded lines, want 2024", total)
+	if total != 694 {
+		t.Errorf("%d recorded lines, want 694", total)
 	}
 	if diffs != 0 {
 		t.Errorf("%d lines where Go differs from the recorded D48 answer", diffs)
