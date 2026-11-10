@@ -14,15 +14,16 @@ func divPow10_q320res_320_recipmul(x u320, k int) quot320Residue {
 }
 
 // Fixed-k entry points for d48_finalize_320's common drops: a 95-96-digit
-// product loses 47 or 48 digits, a 49-digit quotient 1. Swift's shape (G-7):
-// Go does not fold the literal k into recipmul320 (the body is over the
-// inliner's budget); Phase 5 decides whether specialized bodies are worth it.
+// product loses 47 or 48 digits, a 49-digit quotient 1. Go does not fold a
+// literal k into recipmul320 (the body is over the inliner's budget), so each
+// entry calls a generated body with k, S and M folded in
+// (div_pow10_recipmul320_fixedk.go; D48GoWorkOrder.md G-7, Phase 5 option B).
 
-func divPow10_q320res_320_recipmul_48(x u320) quot320Residue { return recipmul320(x, 48) }
+func divPow10_q320res_320_recipmul_48(x u320) quot320Residue { return recipmul320_k48(x) }
 
-func divPow10_q320res_320_recipmul_47(x u320) quot320Residue { return recipmul320(x, 47) }
+func divPow10_q320res_320_recipmul_47(x u320) quot320Residue { return recipmul320_k47(x) }
 
-func divPow10_q320res_320_recipmul_1(x u320) quot320Residue { return recipmul320(x, 1) }
+func divPow10_q320res_320_recipmul_1(x u320) quot320Residue { return recipmul320_k1(x) }
 
 func recipmul320(x u320, k int) quot320Residue {
 	verify("", func() bool { return (k >= 1) && (k <= 96) })
@@ -198,6 +199,9 @@ func divPow10_checked_q320res(x u320, k int) quot320Residue {
 	// on the FMA alignment path (D48GoWorkOrder.md Phase 5, option A).
 	if k == 0 {
 		return quot320Residue{x.dw0, x.dw1, x.dw2, x.dw3, x.dw4, RESIDUE_EXACT}
+	}
+	if k == 1 {
+		return recipmul320_k1(x) // the FMA alignment's common gap of one digit
 	}
 	if k <= 96 {
 		return recipmul320(x, k)

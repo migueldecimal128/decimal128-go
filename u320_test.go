@@ -382,6 +382,29 @@ func TestU320RecipmulBoundaryAndRandomEveryK(t *testing.T) {
 	c.done("recipmulBoundaryAndRandomEveryK")
 }
 
+// The stripped low bits alone decide stickiness: x = c·10^k + 2^j with
+// j < k−1 has every bit of x >> (k−1) a multiple of 5^k, so only the
+// stickyAlfa test sees the remainder. Swift's random and boundary draws never
+// reach this; deterministic, after Swift's tests (no draws), every k and j, the
+// general kernel and the fixed-k entries.
+func TestU320RecipmulStrippedBitsSticky(t *testing.T) {
+	c := &expectCounter{t: t}
+	for k := 2; k <= 96; k++ {
+		d := bigTen(k)
+		for _, cf := range []int64{0, 1, 7, 12345} {
+			base := bigMul(big.NewInt(cf), d)
+			for j := 0; j < k-1; j++ {
+				x := bigAdd(base, bigPow2(j))
+				if x.Cmp(bigTen(96)) >= 0 {
+					continue
+				}
+				checkDivPow10_320(c, x, k)
+			}
+		}
+	}
+	c.done("recipmulStrippedBitsSticky")
+}
+
 func TestU320DivPow10Wrappers(t *testing.T) {
 	c := &expectCounter{t: t}
 	x := u320Of(bigSub(bigTen(96), bigOne()))
