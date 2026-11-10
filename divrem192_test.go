@@ -7,7 +7,7 @@ import (
 
 // divRem_q128r64_192x64 (PrimitiveLayer.md D54) against a math/big oracle, and
 // the one-word-divisor branch of u256DivRem_128 / u256DivResidue_128 against
-// the old full-quotient path (u256DivRem128 + 128-bit residue) that sqrt/D38 keep.
+// the old full-quotient path (u256DivRem128 + 128-bit residue) that sqrt keeps.
 
 var div192Rng uint64 = 0x0D54D54D54D54D54
 

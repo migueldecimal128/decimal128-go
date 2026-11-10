@@ -1,6 +1,9 @@
 // IEEE 754-2019 §9.2 rootn(x, n) = x^(1/n) for integer n ≠ 0. When |n| is a
-// power of two, take √ repeatedly (then reciprocal for n < 0); otherwise
-// |x|^(1/n) via pow, restoring the sign for odd n.
+// power of two, take √ repeatedly (then the reciprocal for n < 0): in D48 with
+// one final round when that is two or more steps, as single D128 operations for
+// n = 2 and n = ±1. Otherwise |x|^(1/n) via pow, restoring the sign for odd n.
+// Correctly rounded except in the documented 1-ulp gap near 1 in directed modes
+// (CrossPlatformArchitecture.md §12, "Transcendental accuracy").
 
 package decimal128
 
@@ -35,10 +38,7 @@ func d128_rootn_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d12
 		if xSign && !nIsOdd {
 			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeRootnBadArgs) // even root of a negative
 		}
-		if useD48 { // D48GoWorkOrder.md G-14: Phase 4 keeps this arm only
-			return rootnFNZ(x, n, rounding, ctxnull)
-		}
-		return d38_rootnFNZ(x, n, rounding, ctxnull)
+		return rootnFNZ(x, n, rounding, ctxnull)
 	}
 	if d128_isNAN(x) {
 		return ctxNanOperand1_ctxnull(ctxnull, x)
@@ -59,46 +59,6 @@ func d128_rootn_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d12
 	}
 	return d128_POS_INFINITY() // +∞
 }
-
-// d38_rootnFNZ is the D38 magnitude (removed at the D48 switch, Phase 4).
-func d38_rootnFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
-	// |n| as an unsigned magnitude (handles n == math.MinInt32 without overflow).
-	var nAbs uint64
-	if n < 0 {
-		nAbs = -uint64(int64(n))
-	} else {
-		nAbs = uint64(int64(n))
-	}
-
-	if bits.OnesCount64(nAbs) == 1 {
-		// |n| is a power of two: x^(1/n) = √ applied `shifts` times. Intermediate
-		// roots are quiet/ties-to-even; the last honors the caller's rounding+flags.
-		shifts := bits.TrailingZeros64(nAbs)
-		z := x
-		for i := 0; i < shifts; i++ {
-			if i == shifts-1 {
-				z = d128_sqrt_rnd_ctxnull(z, rounding, ctxnull)
-			} else {
-				z = d128_sqrt_tte(z)
-			}
-		}
-		if n < 0 {
-			z = d128_divide_rnd_ctxnull(d128RootnOne, z, rounding, ctxnull)
-		}
-		return z
-	}
-
-	// General case: |x|^(1/n), with the sign restored for odd n.
-	absX := d128_abs(x)
-	nReciprocal := d128_divide_tte(d128RootnOne, d128_fromInt64(n))
-	z := d128_pow_rnd_ctxnull(absX, nReciprocal, forMagnitude(rounding, d128_signFlag(x)), ctxnull)
-	if d128_signFlag(x) {
-		return d128_negate(z)
-	}
-	return z
-}
-
-// --- finite non-zero magnitude, D48 (Swift D128Rootn.swift) ---
 
 func rootnFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 	// |n| as an unsigned magnitude (handles n == math.MinInt without overflow).

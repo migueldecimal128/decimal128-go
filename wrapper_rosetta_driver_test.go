@@ -13,12 +13,12 @@ var wrapperDectestFiles = []string{
 	"dqQuantize.decTest", "dqReduce.decTest", "dqToIntegral.decTest", "dqEncode.decTest",
 }
 
-// Floors at D48GoWorkOrder.md Phase 0b (the four D48 native files excluded);
-// raised at the D48 switch.
+// Floors at the D48 switch (D48GoWorkOrder.md Phase 4): all 40 native files,
+// nothing excluded.
 const (
-	nativeWrapperFloor = 2184
-	wrapperTotalFloor  = 53257
-	wrapperPassedFloor = 42023
+	nativeWrapperFloor = 30981
+	wrapperTotalFloor  = 82054
+	wrapperPassedFloor = 70820
 )
 
 // TestWrapperRosetta drives the conformance corpora through the public

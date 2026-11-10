@@ -3,7 +3,7 @@
 // Möller–Granlund reciprocal divide for the wide case (x > 2^128, y > 2^64).
 // Two MG wrappers: a branch-light 2-step form for the ≤128-bit quotient the D128
 // divide contract guarantees, and a schoolbook loop for the full U256 quotient
-// (sqrt / D38). 128-bit rem intermediates are synthesized from (remHi, remLo).
+// (sqrt). 128-bit rem intermediates are synthesized from (remHi, remLo).
 
 package decimal128
 
@@ -28,7 +28,7 @@ func u256DivRem_128(x u256, y u128) quot128Rem128 {
 	// The D128 divide path (quotient <= 128 bits by contract) routes a one-word
 	// divisor through the 192/64 primitive (D54) and its class-N case
 	// (x > 2^128, y > 2^64) through the branch-light 2-step M&G divide;
-	// sqrt/D38 reach the wide-quotient loop via u256DivRem128 directly.
+	// sqrt reaches the wide-quotient loop via u256DivRem128 directly.
 	if y.dw1 == 0 {
 		// The 128-bit quotient bound means x.dw3 == 0 and x.dw2 <u y, so two
 		// chained 128/64 steps suffice.
@@ -80,7 +80,7 @@ func div_256_128_q128r128_mg(x u256, y u128) quot128Rem128 {
 	return quot128Rem128{int64(qLo), int64(qHi), int64(remLo), int64(remHi)}
 }
 
-// div_256_128_q256r128_mg: x > 2^128, y > 2^64, full quotient (sqrt / D38).
+// div_256_128_q256r128_mg: x > 2^128, y > 2^64, full quotient (sqrt).
 func div_256_128_q256r128_mg(x u256, y u128) quot256Rem128 {
 	verify("", func() bool { return y.dw1 != 0 })
 	shift := bits.LeadingZeros64(uint64(y.dw1))

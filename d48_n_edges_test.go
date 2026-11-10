@@ -1,5 +1,3 @@
-//go:build d48
-
 package decimal128
 
 // pown / rootn at the int edges of n (D48GoWorkOrder.md G-9; Zig
@@ -9,8 +7,7 @@ package decimal128
 // arithmetic. D38 recursed until the stack was exhausted on pown(2, MinInt)
 // (Phase 0b). Expected values are written out from the rules; the rootn values
 // are Python decimal at 120 digits, rounded to 34 in each mode (Rust's / Zig's
-// values). No corpus lines: the 32-bit-n ports can't read them. Behind the d48
-// tag until the switch (Phase 4).
+// values). No corpus lines: the 32-bit-n ports can't read them.
 
 import (
 	"math"

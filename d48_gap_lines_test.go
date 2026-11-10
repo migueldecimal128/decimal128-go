@@ -1,8 +1,6 @@
-//go:build d48
-
 package decimal128
 
-// D48 gap-line identity (D48GoWorkOrder.md Phase 3 gate; Swift TestD48GapLines,
+// D48 gap-line identity (D48GoWorkOrder.md Phase 3 / 4 gate; Swift TestD48GapLines,
 // Zig d48_gap_lines_test.zig). The sweep files in resources/rosetta/native
 // comment out each line the D48 configuration doesn't get right, recording the
 // Zig prototype's D48 answer:
@@ -12,7 +10,7 @@ package decimal128
 //
 // Go must give exactly the recorded D48 answer on every such line (bitwise:
 // value and cohort). A difference -- including a line Go now gets right -- is
-// a bug in one of the ports. Behind the d48 tag until the switch (Phase 4).
+// a bug in one of the ports.
 
 import (
 	"os"

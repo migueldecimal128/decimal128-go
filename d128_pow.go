@@ -1,7 +1,10 @@
 // IEEE 754-2019 §9.2 pow(x, y): x raised to a decimal power. Integer exponents
 // delegate to pown; the finite-nonzero transcendental core computes
-// x^y = exp10(y · log10(x)) entirely in the 38-digit D38 intermediate (a single
-// final round), then applies the GDAS preferred exponent ⌊y·Q(x)⌋.
+// x^y = exp10(y · log10(x)) entirely in the 48-digit D48 intermediate (a single
+// final round), with an integer exactness test for results that are exact
+// decimals, then applies the GDAS preferred exponent ⌊y·Q(x)⌋. Correctly
+// rounded except in the documented 1-ulp gap for results very close to 1 in
+// directed modes (CrossPlatformArchitecture.md §12, "Transcendental accuracy").
 
 package decimal128
 
@@ -73,10 +76,7 @@ func d128_pow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	if d128_isINF(y) {
 		return powFnzInf(x, y)
 	}
-	if useD48 { // D48GoWorkOrder.md G-14: Phase 4 keeps this arm only
-		return powFnzFnz(x, y, rounding, ctxnull)
-	}
-	return d38_powFnzFnz(x, y, rounding, ctxnull)
+	return powFnzFnz(x, y, rounding, ctxnull)
 }
 
 // --- special classes (non-integer y) ---
@@ -111,46 +111,6 @@ func powFnzInf(x, y d128) d128 {
 }
 
 // --- finite non-zero core ---
-
-// d38_powFnzFnz is the D38 core (removed at the D48 switch, Phase 4).
-func d38_powFnzFnz(x, y d128, rounding round, ctxnull *context) d128 {
-	// Negative base with non-integer exponent → invalid.
-	if d128_signFlag(x) {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causePowerOfNegBaseNonIntegerExponent)
-	}
-	xd := d38Pack(false, d128_qExp(x), x.ubdLo64, d128_hi49(x))
-	yd := d38Pack(d128_signFlag(y), d128_qExp(y), y.ubdLo64, d128_hi49(y))
-
-	// x^y = exp10(y · log10(x)), full 38-digit precision through the product.
-	log10X := d38_logMagnitude(xd, true)
-	yLog10X := d38_multiply(yd, log10X)
-	result := d128_exp10_from_d38(yLog10X, rounding, ctxnull)
-
-	// GDAS preferred exponent ⌊y·Q(x)⌋ (only for a finite-nonzero result).
-	if d128_isFNZ(result) {
-		return applyPreferredScale(result, d38_powPreferredQExp(x, y, yd))
-	}
-	return result
-}
-
-func d38_powPreferredQExp(x, y d128, yd d38) int {
-	qX := d128_qExp(x)
-	if qX == 0 {
-		return 0
-	}
-	if d128_sciExp(y) >= 5 {
-		if d128_signFlag(y) {
-			return qTinyPow
-		}
-		return qMaxPow
-	}
-	prod := d38_multiply(yd, d38_fromInt32(qX))
-	floored := d38_roundToIntegralTowardNegative(prod)
-	l := d38_toLongOrMin(floored)
-	return int(maxI64(minI64(l, qMaxPow), qTinyPow))
-}
-
-// --- finite non-zero core, D48 (Swift D128Pow.swift) ---
 
 func powFnzFnz(x, y d128, rounding round, ctxnull *context) d128 {
 	// Negative base with non-integer exponent → invalid.

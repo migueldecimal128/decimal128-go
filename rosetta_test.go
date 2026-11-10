@@ -59,9 +59,9 @@ func sampleFailures(r rosettaResult) []string {
 	return r.failures[:min(len(r.failures), 10)]
 }
 
-// nativeCoreFloor is the core runner's native case count at D48GoWorkOrder.md
-// Phase 0b (36 files, the four D48 files excluded); raised at the D48 switch.
-const nativeCoreFloor = 2184
+// nativeCoreFloor is the core runner's native case count at the D48 switch
+// (D48GoWorkOrder.md Phase 4): all 40 native files, nothing excluded.
+const nativeCoreFloor = 30981
 
 // TestRosettaNative runs the native-corpus files (native.index minus this
 // port's exclusions) through the core harness. Every case must pass: a

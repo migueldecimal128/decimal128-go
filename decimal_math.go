@@ -21,23 +21,47 @@ func (d Decimal128) FMA(a, b Decimal128) Decimal128 {
 }
 
 // Exp returns e raised to d (eˣ), rounded ties-to-even.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (d Decimal128) Exp() Decimal128 { return Decimal128{d128_exp_tte(d.core)} }
 
 // Exp10 returns 10 raised to d (10ˣ), rounded ties-to-even.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (d Decimal128) Exp10() Decimal128 { return Decimal128{d128_exp10_tte(d.core)} }
 
 // Ln returns the natural logarithm of d, rounded ties-to-even.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (d Decimal128) Ln() Decimal128 { return Decimal128{d128_ln_tte(d.core)} }
 
 // Log10 returns the base-10 logarithm of d, rounded ties-to-even.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (d Decimal128) Log10() Decimal128 { return Decimal128{d128_log10_tte(d.core)} }
 
 // PowInt returns d raised to the integer power n (IEEE 754 pown), rounded
 // ties-to-even.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (d Decimal128) PowInt(n int) Decimal128 { return Decimal128{d128_pown_tte(d.core, n)} }
 
 // Pow returns d raised to the decimal power exponent (IEEE 754 pow), rounded
 // ties-to-even. A negative base with a non-integer exponent yields NaN.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (d Decimal128) Pow(exponent Decimal128) Decimal128 {
 	return Decimal128{d128_pow_tte(d.core, exponent.core)}
 }
@@ -45,6 +69,10 @@ func (d Decimal128) Pow(exponent Decimal128) Decimal128 {
 // Root returns the nth root of d (d^(1/n), IEEE 754 rootn), rounded
 // ties-to-even. An even-degree root of a negative value yields NaN; n must be
 // non-zero.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (d Decimal128) Root(n int) Decimal128 { return Decimal128{d128_rootn_tte(d.core, n)} }
 
 // Compound returns (1 + d) raised to the integer power n (IEEE 754 compound),
@@ -93,36 +121,64 @@ func (c *Context) FMA(a, b, addend Decimal128) Decimal128 {
 }
 
 // Exp returns eˣ, flag-tracked through this context.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (c *Context) Exp(x Decimal128) Decimal128 {
 	return Decimal128{d128_exp_ctx(x.core, c.core)}
 }
 
 // Exp10 returns 10ˣ, flag-tracked through this context.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (c *Context) Exp10(x Decimal128) Decimal128 {
 	return Decimal128{d128_exp10_ctx(x.core, c.core)}
 }
 
 // Ln returns ln x, flag-tracked through this context.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (c *Context) Ln(x Decimal128) Decimal128 {
 	return Decimal128{d128_ln_ctx(x.core, c.core)}
 }
 
 // Log10 returns log₁₀ x, flag-tracked through this context.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (c *Context) Log10(x Decimal128) Decimal128 {
 	return Decimal128{d128_log10_ctx(x.core, c.core)}
 }
 
 // PowInt returns xⁿ for an integer power n (IEEE 754 pown), flag-tracked.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (c *Context) PowInt(x Decimal128, n int) Decimal128 {
 	return Decimal128{d128_pown_ctx(x.core, n, c.core)}
 }
 
 // Pow returns x raised to the decimal power exponent (IEEE 754 pow), flag-tracked.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (c *Context) Pow(x, exponent Decimal128) Decimal128 {
 	return Decimal128{d128_pow_ctx(x.core, exponent.core, c.core)}
 }
 
 // Root returns the nth root of x (IEEE 754 rootn), flag-tracked.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (c *Context) Root(x Decimal128, n int) Decimal128 {
 	return Decimal128{d128_rootn_ctx(x.core, n, c.core)}
 }
@@ -179,38 +235,66 @@ func (r Rounding) Square(x Decimal128) Decimal128 {
 }
 
 // Exp returns eˣ, rounded in this direction.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (r Rounding) Exp(x Decimal128) Decimal128 {
 	return Decimal128{d128_exp_rnd(x.core, r.core())}
 }
 
 // Exp10 returns 10ˣ, rounded in this direction.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (r Rounding) Exp10(x Decimal128) Decimal128 {
 	return Decimal128{d128_exp10_rnd(x.core, r.core())}
 }
 
 // Ln returns ln x, rounded in this direction.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (r Rounding) Ln(x Decimal128) Decimal128 {
 	return Decimal128{d128_ln_rnd(x.core, r.core())}
 }
 
 // Log10 returns log₁₀ x, rounded in this direction.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (r Rounding) Log10(x Decimal128) Decimal128 {
 	return Decimal128{d128_log10_rnd(x.core, r.core())}
 }
 
 // PowInt returns xⁿ for an integer power n (IEEE 754 pown), rounded in this
 // direction.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (r Rounding) PowInt(x Decimal128, n int) Decimal128 {
 	return Decimal128{d128_pown_rnd(x.core, n, r.core())}
 }
 
 // Pow returns x raised to the decimal power exponent (IEEE 754 pow), rounded in
 // this direction.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (r Rounding) Pow(x, exponent Decimal128) Decimal128 {
 	return Decimal128{d128_pow_rnd(x.core, exponent.core, r.core())}
 }
 
 // Root returns the nth root of x (IEEE 754 rootn), rounded in this direction.
+// Correctly rounded, except that for arguments very close to 1 (for `exp`
+// and `exp10`, very close to 0) the result can be 1 ulp off, almost always in
+// a directed rounding mode (CrossPlatformArchitecture.md, "Transcendental
+// accuracy").
 func (r Rounding) Root(x Decimal128, n int) Decimal128 {
 	return Decimal128{d128_rootn_rnd(x.core, n, r.core())}
 }

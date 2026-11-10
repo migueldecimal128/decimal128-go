@@ -10,7 +10,7 @@
 //     u128*.go, u256*.go, div_pow10*.go, …). Dwords are signed int64 for
 //     cross-port field parity (D-G2); bodies cast to uint64 (math/bits) only
 //     where unsigned semantics are required.
-//   - Core layer — unexported, files prefixed d128_* / d38_* / finalize.go etc.
+//   - Core layer — unexported, files prefixed d128_* / d48_* / finalize.go etc.
 //   - Wrapper layer — the exported public surface: the Decimal128 value type and
 //     its methods, Context, Rounding, Finance.
 //

@@ -9,8 +9,8 @@ import (
 
 // The native logexp corpus pins exp/exp10 to a handful of exact 34-digit golden
 // values. This adds breadth: a float64 cross-check over thousands of random
-// arguments catches any kernel / constant / range-reduction error. (The D38
-// engine's own precision is validated exactly in d38_engine_test.go; here we
+// arguments catches any kernel / constant / range-reduction error. (The D48
+// engine's own precision is validated exactly in d48_test.go; here we
 // only need ~float64 agreement, well within the 34-digit result's accuracy.)
 
 func d128FromFloat(f float64) d128 {

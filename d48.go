@@ -7,7 +7,7 @@ package decimal128
 
 // d48 is the coefficient as three dword limbs (lo first, D23; < 10^48 < 2^160)
 // and qExpAndSignBit, the signed quantum exponent over the sign bit, last (the
-// small field last, as d38 and Swift's D48).
+// small field last, as Swift's D48).
 type d48 struct {
 	coeffDw0       int64
 	coeffDw1       int64

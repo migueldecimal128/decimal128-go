@@ -8,7 +8,7 @@
 package decimal128
 
 // d48c builds a D48 from a raw (qExpAndSignBit, dw0, dw1, dw2) literal. The
-// uint64 limbs sidestep Go's signed-constant-overflow rule (as d38c).
+// uint64 limbs sidestep Go's signed-constant-overflow rule.
 func d48c(qExpAndSignBit int32, dw0, dw1, dw2 uint64) d48 {
 	return d48{int64(dw0), int64(dw1), int64(dw2), qExpAndSignBit}
 }

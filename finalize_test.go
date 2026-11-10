@@ -121,50 +121,6 @@ func TestFinalizeFlags(t *testing.T) {
 	}
 }
 
-// refD38 is the ties-to-even rounding of coeff to <=38 digits (D38 form).
-func refD38(coeff *big.Int) (int, *big.Int) {
-	d := len(coeff.String())
-	excess := d - 38
-	if excess <= 0 {
-		return 0, new(big.Int).Set(coeff)
-	}
-	div := pow10big(excess)
-	q := new(big.Int)
-	rem := new(big.Int)
-	q.QuoRem(coeff, div, rem)
-	res := refResidue(rem, div)
-	if res == RESIDUE_GT_HALF || (res == RESIDUE_HALF && q.Bit(0) == 1) {
-		q.Add(q, big.NewInt(1))
-		if q.Cmp(pow10big(38)) == 0 {
-			q = pow10big(37)
-			excess++
-		}
-	}
-	return excess, q
-}
-
-func TestFinalize38(t *testing.T) {
-	r := rand.New(rand.NewSource(92))
-	for i := 0; i < oracleIters; i++ {
-		s := r.Intn(2) == 1
-		d := r.Intn(76) + 1
-		coeff := randBigDigits(r, d)
-		qExp := r.Intn(201) - 100
-
-		got := d38_finalize_256(s, qExp, u256FromBig(coeff), RESIDUE_EXACT)
-		dExcess, eCoeff := refD38(coeff)
-		if d38_signFlag(got) != s {
-			t.Fatalf("d38 sign mismatch")
-		}
-		if d38_qExp(got) != qExp+dExcess {
-			t.Fatalf("d38 qExp: got %d want %d (coeff=%s)", d38_qExp(got), qExp+dExcess, coeff)
-		}
-		if bigU128(d38_u128(got)).Cmp(eCoeff) != 0 {
-			t.Fatalf("d38 coeff: got %s want %s (in=%s)", bigU128(d38_u128(got)), eCoeff, coeff)
-		}
-	}
-}
-
 func randBigDigitsAt(d int) *big.Int {
 	r := rand.New(rand.NewSource(int64(d) * 7))
 	return randBigDigits(r, d)

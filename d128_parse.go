@@ -50,21 +50,6 @@ func d128_parseOrNaN(s string) d128 {
 	return d128_QNAN0()
 }
 
-func d38_parse(s string) d38 {
-	t := newTxt(s)
-	ch := t.nextChar()
-	sign := ch == ascii_minus
-	if ch == ascii_plus || ch == ascii_minus {
-		ch = t.nextChar()
-	}
-	r := parseFiniteValueText(sign, ch, &t, 38)
-	if r.status == psSuccess && r.residue == RESIDUE_EXACT {
-		return d38Pack(r.sign, r.qExp, r.coeff.dw0, r.coeff.dw1)
-	}
-	impossible("D38 parse error")
-	return d38_ZERO
-}
-
 // d48_parse parses a D48 exactly: an optional sign, digits with at most one
 // '.', an optional exponent; at most 48 significant digits. Panics (impossible)
 // on malformed or inexact input (Swift d48_parse). A zero parses to d48_ZERO
