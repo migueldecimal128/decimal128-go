@@ -65,6 +65,79 @@ func d38_parse(s string) d38 {
 	return d38_ZERO
 }
 
+// d48_parse parses a D48 exactly: an optional sign, digits with at most one
+// '.', an optional exponent; at most 48 significant digits. Panics (impossible)
+// on malformed or inexact input (Swift d48_parse). A zero parses to d48_ZERO
+// (no −0).
+func d48_parse(s string) d48 {
+	b := []byte(s)
+	i := 0
+	sign := false
+	if (i < len(b)) && ((b[i] == ascii_plus) || (b[i] == ascii_minus)) {
+		sign = b[i] == ascii_minus
+		i++
+	}
+	var coeff u320
+	sigDigits := 0
+	anyDigit := false
+	fracDigits := 0
+	hasDot := false
+	for i < len(b) {
+		ch := b[i]
+		if (ch >= ascii_0) && (ch <= ascii_9) {
+			anyDigit = true
+			if hasDot {
+				fracDigits++
+			}
+			if !coeff.isZero() || (ch != ascii_0) {
+				sigDigits++
+			}
+			if sigDigits > 48 {
+				impossible("D48 parse: more than 48 significant digits")
+			}
+			coeff = add_320_320x64(mulPow10_320(coeff, 1), int64(ch-ascii_0))
+		} else if (ch == ascii_dot) && !hasDot {
+			hasDot = true
+		} else {
+			break
+		}
+		i++
+	}
+	if !anyDigit {
+		impossible("D48 parse error")
+	}
+	exp := 0
+	if (i < len(b)) && ((b[i] == 'e') || (b[i] == 'E')) {
+		i++
+		expSign := false
+		if (i < len(b)) && ((b[i] == ascii_plus) || (b[i] == ascii_minus)) {
+			expSign = b[i] == ascii_minus
+			i++
+		}
+		start := i
+		for (i < len(b)) && (b[i] >= ascii_0) && (b[i] <= ascii_9) {
+			exp = exp*10 + int(b[i]-ascii_0)
+			if exp > 1_000_000_000 {
+				impossible("D48 parse: exponent out of range")
+			}
+			i++
+		}
+		if i == start {
+			impossible("D48 parse error")
+		}
+		if expSign {
+			exp = -exp
+		}
+	}
+	if i != len(b) {
+		impossible("D48 parse error")
+	}
+	if coeff.isZero() {
+		return d48_ZERO // the internal domain has no −0
+	}
+	return d48_fromSignQExp_160(sign, exp-fracDigits, coeff.u192())
+}
+
 type txt struct {
 	b   []byte
 	pos int
