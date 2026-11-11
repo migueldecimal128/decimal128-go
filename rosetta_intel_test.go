@@ -19,13 +19,15 @@ import (
 )
 
 // intelInclude is the set of bid128_* operations the Go core supports and that
-// the Intel operations runner exercises. Ops outside this set (the whole
-// transcendental family, etc.) are skipped at parse time.
+// the Intel operations runner exercises. Ops outside this set are skipped at
+// parse time.
 var intelInclude = map[string]bool{
 	"bid128_abs": true, "bid128_add": true, "bid128_class": true, "bid128_copySign": true,
-	"bid128_div": true, "bid128_fma": true, "bid128_isFinite": true, "bid128_isInf": true,
+	"bid128_div": true, "bid128_exp": true, "bid128_exp10": true, "bid128_expm1": true,
+	"bid128_fma": true, "bid128_isFinite": true, "bid128_isInf": true,
 	"bid128_isNaN": true, "bid128_isNormal": true, "bid128_isSignaling": true, "bid128_isSigned": true,
-	"bid128_isSubnormal": true, "bid128_isZero": true, "bid128_maxnum": true, "bid128_maxnum_mag": true,
+	"bid128_isSubnormal": true, "bid128_isZero": true, "bid128_log": true, "bid128_log10": true,
+	"bid128_log1p": true, "bid128_maxnum": true, "bid128_maxnum_mag": true,
 	"bid128_minnum": true, "bid128_minnum_mag": true, "bid128_mul": true, "bid128_nextdown": true,
 	"bid128_nextup": true, "bid128_quantexp": true, "bid128_quantize": true, "bid128_quiet_equal": true,
 	"bid128_quiet_greater": true, "bid128_quiet_greater_equal": true, "bid128_quiet_greater_unordered": true,
@@ -57,6 +59,9 @@ var intelOpMap = map[string]string{
 	"bid128_class":                       "class",
 	"bid128_copySign":                    "copysign",
 	"bid128_div":                         "divide",
+	"bid128_exp":                         "d128_exp_ctx",
+	"bid128_exp10":                       "d128_exp10_ctx",
+	"bid128_expm1":                       "d128_expm1_ctx",
 	"bid128_fma":                         "fma",
 	"bid128_isFinite":                    "d128_isFinite",
 	"bid128_isInf":                       "d128_isInf",
@@ -66,6 +71,9 @@ var intelOpMap = map[string]string{
 	"bid128_isSigned":                    "d128_isSigned",
 	"bid128_isSubnormal":                 "d128_isSubnormal",
 	"bid128_isZero":                      "d128_isZero",
+	"bid128_log":                         "d128_ln_ctx",
+	"bid128_log10":                       "d128_log10_ctx",
+	"bid128_log1p":                       "d128_lnp1_ctx",
 	"bid128_maxnum":                      "max",
 	"bid128_maxnum_mag":                  "maxmag",
 	"bid128_minnum":                      "min",
@@ -180,7 +188,8 @@ func getIntelOpCount(op string) int {
 	if op == "bid128_abs" || op == "bid128_class" || strings.HasPrefix(op, "bid128_is") ||
 		strings.HasPrefix(op, "bid128_round_integral_") || op == "bid128_sqrt" ||
 		strings.HasPrefix(op, "bid128_to_int64_") || strings.HasPrefix(op, "bid128_to_uint64_") ||
-		op == "bid128_quantexp" {
+		op == "bid128_quantexp" || op == "bid128_exp" || op == "bid128_exp10" || op == "bid128_expm1" ||
+		op == "bid128_log" || op == "bid128_log10" || op == "bid128_log1p" {
 		return 1
 	}
 	return 2
@@ -351,9 +360,38 @@ func intelNumber(op1, op2, expected d128, isMax bool) d128 {
 
 // intelSkips are per-line Intel cases skipped (counted, not failed): a handful
 // where Intel's recorded cohort/NaN choice cannot be reconciled with decNumber's
-// convention. Mirrors the C# intelSkips set (entries for non-included ops such
-// as bid128_exp are inert here — those ops never parse — but are kept for parity).
+// convention, and the exp / exp10 lines where Intel marks a tiny-input result
+// exact (flags 00) although it is inexact. Mirrors Swift's RosettaIntelSkips.
 var intelSkips = map[string]bool{
+	"bid128_exp 0 [00000000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 0 [00000000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 0 [0000106F4216D9DBBD95C90355555555] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 0 [00420000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 0 [00420000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 1 [00000000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 1 [00000000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 1 [0000106F4216D9DBBD95C90355555555] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 1 [00420000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 1 [00420000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 2 [00000000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 2 [00000000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 2 [0000106F4216D9DBBD95C90355555555] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 2 [00420000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 2 [00420000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 3 [00000000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 3 [00000000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 3 [0000106F4216D9DBBD95C90355555556] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 3 [00420000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp 3 [00420000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
+	"bid128_exp10 0 [b0058bf72fa4eea6e98489819368194d] [00000000000000000000000000000000] 20":                                                                        true,
+	"bid128_exp10 0 [b005db5e877e758bfe53dd5e06733086] [00000000000000000000000000000000] 20":                                                                        true,
+	"bid128_exp10 0 [b005b1d75299a5aa378acaa543a24b82] [00000000000000000000000000000000] 20":                                                                        true,
+	"bid128_exp10 0 [b0053af01b8a0125ac5437185b9f74bb] [00000000000000000000000000000000] 20":                                                                        true,
+	"bid128_exp10 0 [b0057e657e0fef7b8b7572acc164e1f3] [00000000000000000000000000000000] 20":                                                                        true,
+	"bid128_exp10 0 [b00552f25788a4e163d781ec08d2be04] [00000000000000000000000000000000] 20":                                                                        true,
+	"bid128_exp10 0 [3005da8d9306b37a08cd74840506b073] [78000000000000000000000000000000] 20":                                                                        true,
+	"bid128_exp10 0 [30059144adac675798f2764aabb361f2] [78000000000000000000000000000000] 20":                                                                        true,
+	"bid128_exp10 0 [3005967f3b6dc2b69607e01ce2a77a34] [78000000000000000000000000000000] 20":                                                                        true,
 	"bid128_fma 0 [7f06536efdedf3ef,a00d0c0a84122060] [0008101000000000,8c6de2c3707e636c] [fd1f7eefdffff377,023b4c28d1de82a0] [fc000000000000000000000000000000] 01": true,
 	"bid128_maxnum 0 [dbf2000000000000,0000000000000000] [9e06000000000000,0000000000000000] [dbf20000000000000000000000000000] 00":                                  true,
 	"bid128_maxnum_mag 0 [0ad6000000000000,0000000000000000] [a3f2000000000000,0000000000000000] [a3f20000000000000000000000000000] 00":                              true,
