@@ -153,7 +153,7 @@ func powPreferredQExp(x, y d128) int {
 func powFromD48(x, y d128, preferred int, rounding round, ctxnull *context) d128 {
 	log10X48 := d48_logMagnitude(d48_fromD128(x, false), true)
 	u := d48_multiply(d48_fromD128(y, d128_signFlag(y)), log10X48)
-	if t, ok := exp10Trivial(u, rounding, ctxnull); ok {
+	if t, ok := exp10Trivial(false, u, rounding, ctxnull); ok {
 		return t
 	}
 	s := exp10Scaled_d48(u)
@@ -166,7 +166,7 @@ func powFromD48(x, y d128, preferred int, rounding round, ctxnull *context) d128
 			return d48_forceInexact(d48_onePlusTiny(!d48_signFlag(u), rounding, ctxnull), ctxnull)
 		}
 	}
-	return finalizeScaled(s.z, s.n, rounding, ctxnull)
+	return finalizeScaled(false, s.z, s.n, rounding, ctxnull)
 }
 
 // powExact is x^y when it is exactly a decimal128 value

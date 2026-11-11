@@ -173,6 +173,21 @@ func compoundPowerD48(t d48, tExact bool, n int, rounding round, ctxnull *contex
 }
 
 func compoundFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
+	// |n| > 2^31: pown's log route on ε = x itself, with the tiny rule; neither
+	// t = 1 + x nor round-to-odd (PownLargeNWorkOrder.md LN-4).
+	if absU64(n) > POWN_LARGE_N {
+		if d128_signFlag(x) {
+			cmp := cmpMagFnzFnz(x, d128CompoundOne)
+			if cmp > 0 {
+				return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne) // x < -1
+			}
+			if cmp == 0 {
+				return compoundMinusOne(x, n, ctxnull)
+			}
+		}
+		eps := d48_fromD128(x, d128_signFlag(x))
+		return compoundZeroResult(x, n, pown_largeN(eps, n, false, true, rounding, ctxnull))
+	}
 	span := compoundOnePlusXSpan(x)
 	if span <= 34 {
 		// 1 + x is an exact D128: the add below never rounds.

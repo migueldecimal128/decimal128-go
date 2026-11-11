@@ -63,10 +63,12 @@ func exp10Scaled_d48(xd d48) scaled {
 // ×250 slack.
 var e_EXP_D48 = u320FromDw0(10_000)
 
-// finalizeScaled rounds exp(z)^8 scaled by 10^n once into decimal128; a
-// non-special exp / exp10 / pow result is irrational, hence Inexact.
-func finalizeScaled(e d48, n int, rounding round, ctxnull *context) d128 {
-	result := finalize_256_ctxnull(false, d48_qExp(e)+n, u256{e.coeffDw0, e.coeffDw1, e.coeffDw2, 0},
+// finalizeScaled rounds ±exp(z)^8 scaled by 10^n once into decimal128; a
+// non-special exp / exp10 / pow / large-n pown result is irrational, hence
+// Inexact. sign is the result's sign: false except for pown of a negative base
+// to an odd large n (PownLargeNWorkOrder.md LN-5).
+func finalizeScaled(sign bool, e d48, n int, rounding round, ctxnull *context) d128 {
+	result := finalize_256_ctxnull(sign, d48_qExp(e)+n, u256{e.coeffDw0, e.coeffDw1, e.coeffDw2, 0},
 		RESIDUE_EXACT, rounding, ctxnull)
 	return d48_forceInexact(result, ctxnull)
 }
@@ -75,31 +77,31 @@ func ambiguousScaled(s scaled, e u320) bool {
 	return d48_ambiguous(d48_u320(s.z), d48_qExp(s.z)+s.n, e)
 }
 
-// exp10Trivial is 10^xd when it needs no kernel: an exact integer power, or
-// certain overflow / underflow. ok = false otherwise.
-func exp10Trivial(xd d48, rounding round, ctxnull *context) (d128, bool) {
+// exp10Trivial is ±10^xd when it needs no kernel: an exact integer power, or
+// certain overflow / underflow. ok = false otherwise. sign as for finalizeScaled.
+func exp10Trivial(sign bool, xd d48, rounding round, ctxnull *context) (d128, bool) {
 	l := d48_toLongOrMin(xd)
 	if l != math.MinInt64 {
 		if l > 6144 {
-			return finalizeOverflow_ctxnull(false, rounding, ctxnull), true
+			return finalizeOverflow_ctxnull(sign, rounding, ctxnull), true
 		}
 		if l < -6176 {
-			return finalizeUnderflowFullySwamped(false, rounding, ctxnull), true
+			return finalizeUnderflowFullySwamped(sign, rounding, ctxnull), true
 		}
-		return finalize_128_ctxnull(false, int(l), u128{1, 0}, RESIDUE_EXACT, rounding, ctxnull), true
+		return finalize_128_ctxnull(sign, int(l), u128{1, 0}, RESIDUE_EXACT, rounding, ctxnull), true
 	}
 	nLong := d48_toLongOrMin(d48_roundToIntegralTiesToAway(xd))
 	if nLong == math.MinInt64 {
 		if d48_signFlag(xd) {
-			return finalizeUnderflowFullySwamped(false, rounding, ctxnull), true
+			return finalizeUnderflowFullySwamped(sign, rounding, ctxnull), true
 		}
-		return finalizeOverflow_ctxnull(false, rounding, ctxnull), true
+		return finalizeOverflow_ctxnull(sign, rounding, ctxnull), true
 	}
 	if nLong > 6200 {
-		return finalizeOverflow_ctxnull(false, rounding, ctxnull), true
+		return finalizeOverflow_ctxnull(sign, rounding, ctxnull), true
 	}
 	if nLong < -6200 {
-		return finalizeUnderflowFullySwamped(false, rounding, ctxnull), true
+		return finalizeUnderflowFullySwamped(sign, rounding, ctxnull), true
 	}
 	return d128{}, false
 }
@@ -119,29 +121,29 @@ func expImplFNZ_d48(x d128, rounding round, ctxnull *context) d128 {
 	if ambiguousScaled(s, e_EXP_D48) && (d128_sciExp(x) < TINY_SCI_EXP) {
 		return d48_forceInexact(d48_onePlusTiny(!d128_signFlag(x), rounding, ctxnull), ctxnull)
 	}
-	return finalizeScaled(s.z, s.n, rounding, ctxnull)
+	return finalizeScaled(false, s.z, s.n, rounding, ctxnull)
 }
 
 // d128_exp10_from_d48 is 10^xd for a D48 argument, rounded once (the exp10
 // entry; also tests).
 func d128_exp10_from_d48(xd d48, rounding round, ctxnull *context) d128 {
-	if t, ok := exp10Trivial(xd, rounding, ctxnull); ok {
+	if t, ok := exp10Trivial(false, xd, rounding, ctxnull); ok {
 		return t
 	}
 	s := exp10Scaled_d48(xd)
-	return finalizeScaled(s.z, s.n, rounding, ctxnull)
+	return finalizeScaled(false, s.z, s.n, rounding, ctxnull)
 }
 
 // exp10ImplFNZ_d48 is exp10(x) for a finite non-zero x; the tiny rule as for
 // exp, on u = x·ln10.
 func exp10ImplFNZ_d48(x d128, rounding round, ctxnull *context) d128 {
 	xd := d48_fromD128(x, d128_signFlag(x))
-	if t, ok := exp10Trivial(xd, rounding, ctxnull); ok {
+	if t, ok := exp10Trivial(false, xd, rounding, ctxnull); ok {
 		return t
 	}
 	s := exp10Scaled_d48(xd)
 	if ambiguousScaled(s, e_EXP_D48) && (d128_sciExp(x) < TINY_SCI_EXP-1) {
 		return d48_forceInexact(d48_onePlusTiny(!d128_signFlag(x), rounding, ctxnull), ctxnull)
 	}
-	return finalizeScaled(s.z, s.n, rounding, ctxnull)
+	return finalizeScaled(false, s.z, s.n, rounding, ctxnull)
 }
