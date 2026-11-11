@@ -5,20 +5,13 @@ import (
 	"testing"
 )
 
-// The dectest corpora driven through the public API (same files as the
-// white-box gate that have a public-API arm).
-var wrapperDectestFiles = []string{
-	"dqAdd.decTest", "dqSubtract.decTest", "dqMultiply.decTest", "dqDivide.decTest",
-	"dqFMA.decTest", "dqDivideInt.decTest", "dqRemainder.decTest", "dqRemainderNear.decTest",
-	"dqQuantize.decTest", "dqReduce.decTest", "dqToIntegral.decTest", "dqEncode.decTest",
-}
-
-// Floors at the D48 switch (D48GoWorkOrder.md Phase 4): all 40 native files,
-// nothing excluded.
+// Floors: native at the D48 switch (D48GoWorkOrder.md Phase 4); the wrapper
+// totals as of the full corpus file lists (RosettaCoveragePartitionWorkOrder.md
+// Phase 4).
 const (
 	nativeWrapperFloor = 30981
-	wrapperTotalFloor  = 82054
-	wrapperPassedFloor = 70820
+	wrapperTotalFloor  = 152649
+	wrapperPassedFloor = 136320
 )
 
 // TestWrapperRosetta drives the conformance corpora through the public
@@ -38,8 +31,9 @@ func TestWrapperRosetta(t *testing.T) {
 	}
 	mergeResult(&total, nat)
 
-	// dectest corpora.
-	for _, name := range wrapperDectestFiles {
+	// dectest corpora: the full file list (R-6). Ops with no public-API arm are
+	// reported unsupported.
+	for _, name := range dectestFiles {
 		cases, err := loadDectestFile(filepath.Join(resourcesDir(), "dectest", name))
 		if err != nil {
 			t.Fatalf("load %s: %v", name, err)
@@ -65,11 +59,8 @@ func TestWrapperRosetta(t *testing.T) {
 
 	// IEEE fptest corpora (raw cohort results, u-stripped flags, trap-enabled
 	// lines and "#" don't-care results handled in wrapCheck).
-	fptestFiles, err := filepath.Glob(filepath.Join(resourcesDir(), "fptest", "*.fptest"))
-	if err != nil || len(fptestFiles) == 0 {
-		t.Fatalf("glob fptest: %v (%d files)", err, len(fptestFiles))
-	}
-	for _, f := range fptestFiles {
+	for _, name := range fptestFiles {
+		f := filepath.Join(resourcesDir(), "fptest", name)
 		cases, err := loadFptestFile(f)
 		if err != nil {
 			t.Fatalf("load %s: %v", f, err)

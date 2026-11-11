@@ -2,6 +2,7 @@ package decimal128
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -688,6 +689,9 @@ func wrapToUInt64(c *rosettaCase, dir Rounding, exact bool) (outcome, string) {
 
 // dispatchWrapper runs a case through the public API.
 func dispatchWrapper(c *rosettaCase) (outcome, string) {
+	// Intel lines may carry operands the op ignores (R-7); trim them as the core
+	// harness does. The operand-count failure itself is the core runner's job.
+	fitOperands(c)
 	switch c.operation {
 	case "d128_add_ctx", "add":
 		return wrapBinaryCtx(c, (*Context).Add)
@@ -868,6 +872,46 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapComparePartial(c, (*Context).ComparePartial)
 	case "d128_compareSignaling_ctx":
 		return wrapComparePartial(c, (*Context).ComparePartialSignaling)
+	// Intel-only conversions (RosettaCoveragePartitionWorkOrder.md Phase 1).
+	// from_uint64 has no public constructor, so it stays unsupported here.
+	case "from_int64":
+		n, err := strconv.ParseInt(c.operands[0], 10, 64)
+		if err != nil {
+			return outUnsupported, "non-integer from_int64 operand"
+		}
+		return wrapCheck(c, NewContext(), FromInt64(n))
+	case "parse_ctx":
+		// Rounding parse: the context's direction, flags into the context.
+		rnd, ok := tokenToRounding(c.rounding)
+		if !ok {
+			return outUnsupported, "rounding mode not representable"
+		}
+		ctx := NewContextWithRounding(rnd)
+		return wrapCheck(c, ctx, ctx.ParseOrNaN(c.operands[0]))
+	case "round_integral_mode":
+		// Quiet round-to-integral in the case's direction (flag-free public form).
+		rnd, ok := tokenToRounding(c.rounding)
+		if !ok {
+			return outUnsupported, "rounding mode not representable"
+		}
+		return wrapDirectedRound(c, rnd)
+	case "to_int64_xmode":
+		// Convert to Int64, signaling inexact, in the case's direction.
+		rnd, ok := tokenToRounding(c.rounding)
+		if !ok {
+			return outUnsupported, "rounding mode not representable"
+		}
+		ctx := NewContextWithRounding(rnd)
+		got := ctx.ToInt64Exact(decodeOperandWrapper(c.operands[0]))
+		flags := wrapperFlagLetters(ctx.RaisedFlags())
+		expected, err := strconv.ParseInt(c.result, 10, 64)
+		if err != nil {
+			expected = math.MinInt64
+		}
+		if got == expected && flags == c.expectedFlags {
+			return outPass, ""
+		}
+		return outFail, fmt.Sprintf("got %d flags=%q want %d flags=%q", got, flags, expected, c.expectedFlags)
 	default:
 		return outUnsupported, "no public-API arm for " + c.operation
 	}

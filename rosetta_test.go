@@ -76,40 +76,56 @@ func TestRosettaNative(t *testing.T) {
 	}
 }
 
-// TestRosettaDectestEncode runs the IBM dectest DPD encode/decode vectors
-// (dqEncode.decTest) through the codec dispatch — the first validation against
-// real IBM conformance data.
-func TestRosettaDectestEncode(t *testing.T) {
-	cases, err := loadDectestFile(filepath.Join(resourcesDir(), "dectest", "dqEncode.decTest"))
-	if err != nil {
-		t.Fatalf("load dqEncode: %v", err)
-	}
-	r := runRosetta(cases)
-	if r.failed != 0 {
-		t.Fatalf("dqEncode: %d/%d failed: %v", r.failed, r.total, sampleFailures(r))
-	}
-	if r.passed == 0 {
-		t.Fatal("expected dqEncode apply cases to pass")
-	}
-	t.Logf("dqEncode: %d cases — %d passed, %d unsupported", r.total, r.passed, r.unsupported)
-}
-
-// TestRosettaDectestAddSub runs the IBM dectest add/subtract corpora through the
-// arithmetic dispatch (value + exception flags).
-func TestRosettaDectestAddSub(t *testing.T) {
-	for _, name := range []string{"dqAdd.decTest", "dqSubtract.decTest", "dqMultiply.decTest", "dqDivide.decTest", "dqCompare.decTest", "dqCompareSig.decTest", "dqToIntegral.decTest", "dqDivideInt.decTest", "dqFMA.decTest", "dqRemainder.decTest", "dqRemainderNear.decTest", "dqReduce.decTest", "dqQuantize.decTest", "dqLogB.decTest", "dqScaleB.decTest", "dqSameQuantum.decTest", "dqMin.decTest", "dqMax.decTest", "dqMinMag.decTest", "dqMaxMag.decTest", "dqCompareTotal.decTest", "dqCompareTotalMag.decTest", "dqNextPlus.decTest", "dqNextMinus.decTest", "dqCopy.decTest", "dqCopyAbs.decTest", "dqCopyNegate.decTest", "dqCopySign.decTest", "dqClass.decTest", "dqCanonical.decTest"} {
+// TestRosettaDectest runs every dectest file (the full list, R-6) through the
+// core dispatch (value + exception flags). Precision-34 cases only; dqPlus and
+// dqShift yield no cases (their ops are excluded, with reasons, in
+// dectestExclude). Gates on 0 failures.
+func TestRosettaDectest(t *testing.T) {
+	var total rosettaResult
+	for _, name := range dectestFiles {
 		cases, err := loadDectestFile(filepath.Join(resourcesDir(), "dectest", name))
 		if err != nil {
 			t.Fatalf("load %s: %v", name, err)
 		}
 		r := runRosetta(cases)
-		if r.failed != 0 {
-			t.Fatalf("%s: %d/%d failed: %v", name, r.failed, r.total, sampleFailures(r))
+		mergeResult(&total, r)
+		t.Logf("%s: %d cases — %d passed, %d unsupported, %d failed", name, r.total, r.passed, r.unsupported, r.failed)
+	}
+	t.Logf("dectest TOTAL: %d cases — %d passed, %d unsupported, %d failed", total.total, total.passed, total.unsupported, total.failed)
+	if total.failed != 0 {
+		t.Fatalf("dectest: %d/%d failed: %v", total.failed, total.total, sampleFailures(total))
+	}
+	if total.passed < dectestPassedFloor {
+		t.Fatalf("dectest: %d passed, below the floor %d", total.passed, dectestPassedFloor)
+	}
+}
+
+// Core pass-count floors (RosettaCoveragePartitionWorkOrder.md Phase 4).
+const (
+	dectestPassedFloor = 12529
+	fptestPassedFloor  = 24602
+	intelPassedFloor   = 24589
+)
+
+// TestRosettaFptest runs the IEEE fptest corpus (decimal128 lines) through the
+// core arithmetic. Gates on 0 failures.
+func TestRosettaFptest(t *testing.T) {
+	var total rosettaResult
+	for _, name := range fptestFiles {
+		cases, err := loadFptestFile(filepath.Join(resourcesDir(), "fptest", name))
+		if err != nil {
+			t.Fatalf("load %s: %v", name, err)
 		}
-		if r.passed == 0 {
-			t.Fatalf("%s: no cases passed", name)
-		}
-		t.Logf("%s: %d cases — %d passed, %d unsupported", name, r.total, r.passed, r.unsupported)
+		r := runRosetta(cases)
+		mergeResult(&total, r)
+		t.Logf("%s: %d cases — %d passed, %d unsupported, %d failed", name, r.total, r.passed, r.unsupported, r.failed)
+	}
+	t.Logf("fptest TOTAL: %d cases — %d passed, %d unsupported, %d failed", total.total, total.passed, total.unsupported, total.failed)
+	if total.failed != 0 {
+		t.Fatalf("fptest: %d/%d failed: %v", total.failed, total.total, sampleFailures(total))
+	}
+	if total.passed < fptestPassedFloor {
+		t.Fatalf("fptest: %d passed, below the floor %d", total.passed, fptestPassedFloor)
 	}
 }
 
@@ -128,7 +144,7 @@ func TestRosettaIntel(t *testing.T) {
 	if r.failed != 0 {
 		t.Fatalf("intel: %d/%d failed: %v", r.failed, r.total, sampleFailures(r))
 	}
-	if r.passed == 0 {
-		t.Fatal("expected some intel cases to pass")
+	if r.passed < intelPassedFloor {
+		t.Fatalf("intel: %d passed, below the floor %d", r.passed, intelPassedFloor)
 	}
 }

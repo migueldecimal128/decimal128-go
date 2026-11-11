@@ -138,6 +138,18 @@ func parseWord64(s string) uint64 {
 // added as operators land; unsupported operations report outUnsupported (not a
 // failure). Currently wired: the codec/parse/print/predicate ops.
 func dispatch(c *rosettaCase) (outcome, string) {
+	// R-7: an operand count that doesn't fit the op is a failure naming the line,
+	// never a silent drop. Skip-list the line (with a reason) to accept it.
+	if !fitOperands(c) {
+		n, ok := rosettaArity[c.operation]
+		if !ok {
+			return outFail, "no dispatch arm for " + c.operation
+		}
+		return outFail, fmt.Sprintf("operand count %d does not fit op %q (arity %d)", len(c.operands), c.operation, n)
+	}
+	if c.src == srcFptest {
+		return checkFptest(c)
+	}
 	switch c.operation {
 	case "d128_toString":
 		return checkFormat(c, FORMAT_AUTO)
@@ -381,9 +393,210 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkUnaryQuiet(c, d128_copy)
 	case "apply":
 		return dispatchApply(c)
+
+	// dectest computational abs / minus (value-only, as in Swift: dectest's
+	// abs/minus quiet a NaN and signal on sNaN; the sNaN lines are skip-listed).
+	case "abs":
+		return checkUnaryValueOnly(c, d128_abs)
+	case "minus":
+		return checkUnaryValueOnly(c, d128_negate)
+	// dectest to-string conversions: the operand is parsed in the case's context
+	// (rounding to 34 digits and raising flags), then rendered.
+	case "tosci":
+		return checkDectestFormat(c, FORMAT_AUTO)
+	case "toeng":
+		return checkDectestFormat(c, FORMAT_ENGINEERING)
+
+	// Intel-only conversions (RosettaCoveragePartitionWorkOrder.md Phase 1).
+	case "from_int64":
+		n, err := strconv.ParseInt(c.operands[0], 10, 64)
+		if err != nil {
+			return outFail, "non-integer from_int64 operand"
+		}
+		return checkValueFlags(c, d128_fromInt64(int(n)), "")
+	case "from_uint64":
+		n, err := strconv.ParseUint(c.operands[0], 10, 64)
+		if err != nil {
+			return outFail, "non-integer from_uint64 operand"
+		}
+		return checkValueFlags(c, d128_fromUInt64(uint(n)), "")
+	case "parse_ctx":
+		// Rounding parse: rounds to 34 digits in the case's mode, raises flags. A
+		// rejected string yields NaN (+ invalid).
+		ctx := newContextRound(roundingFromToken(c.rounding))
+		z, ok := d128_parse_ctx(c.operands[0], ctx)
+		if !ok {
+			z = d128_QNAN0()
+		}
+		return checkValueFlags(c, z, ctx.exceptionLetters())
+	case "round_integral_mode":
+		// Quiet round-to-integral in the case's rounding direction.
+		switch c.rounding {
+		case "TOWARD_NEGATIVE":
+			return checkUnaryCtx(c, d128_roundToIntegralTowardNegative_ctx)
+		case "TOWARD_POSITIVE":
+			return checkUnaryCtx(c, d128_roundToIntegralTowardPositive_ctx)
+		case "TOWARD_ZERO":
+			return checkUnaryCtx(c, d128_roundToIntegralTowardZero_ctx)
+		case "TIES_TO_AWAY":
+			return checkUnaryCtx(c, d128_roundToIntegralTiesToAway_ctx)
+		default:
+			return checkUnaryCtx(c, d128_roundToIntegralTiesToEven_ctx)
+		}
+	case "to_int64_xmode":
+		// Convert to Int64, signaling inexact, in the case's rounding direction.
+		switch c.rounding {
+		case "TOWARD_NEGATIVE":
+			return checkToInt64(c, d128_toInt64TowardNegativeSignalInexact_ctxnull)
+		case "TOWARD_POSITIVE":
+			return checkToInt64(c, d128_toInt64TowardPositiveSignalInexact_ctxnull)
+		case "TOWARD_ZERO":
+			return checkToInt64(c, d128_toInt64TowardZeroSignalInexact_ctxnull)
+		case "TIES_TO_AWAY":
+			return checkToInt64(c, d128_toInt64TiesToAwaySignalInexact_ctxnull)
+		default:
+			return checkToInt64(c, d128_toInt64TiesToEvenSignalInexact_ctxnull)
+		}
 	default:
-		return outUnsupported, "no dispatch arm for " + c.operation
+		// An included op with no dispatch arm is a failure, not a gap (R-7).
+		return outFail, "no dispatch arm for " + c.operation
 	}
+}
+
+// checkValueFlags compares an already-computed result (bitwise) and the raised
+// flags against the corpus expectation.
+func checkValueFlags(c *rosettaCase, z d128, flags string) (outcome, string) {
+	expected := decodeOperand(c.result)
+	if d128_bitwiseEQ(z, expected) && flags == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
+		d128_format(z, FORMAT_COEFFICIENT_QEXP), flags,
+		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+}
+
+// checkUnaryValueOnly runs a unary op and compares the value only (bitwise).
+func checkUnaryValueOnly(c *rosettaCase, op func(x d128) d128) (outcome, string) {
+	z := op(decodeOperand(c.operands[0]))
+	expected := decodeOperand(c.result)
+	if d128_bitwiseEQ(z, expected) {
+		return outPass, ""
+	}
+	return outFail, "got " + d128_format(z, FORMAT_COEFFICIENT_QEXP) + " want " + d128_format(expected, FORMAT_COEFFICIENT_QEXP)
+}
+
+// checkDectestFormat parses the operand in the case's context (round + flags)
+// and renders it, comparing the string and the parse flags.
+func checkDectestFormat(c *rosettaCase, style int) (outcome, string) {
+	if c.rounding == roundingUnsupported {
+		return outUnsupported, "rounding mode not representable"
+	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	x, ok := d128_parse_ctx(c.operands[0], ctx)
+	if !ok {
+		x = d128_QNAN0()
+	}
+	got := d128_format(x, style)
+	if got == c.result && ctx.exceptionLetters() == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q", got, ctx.exceptionLetters(), c.result, c.expectedFlags)
+}
+
+// MARK: - fptest (core)
+
+const fptestTrapWrapBias = 9216
+
+// checkFptest runs one fptest arithmetic case through the core and reconciles
+// it the IEEE-test-suite way: a "#" result is a don't-care value; a trap-enabled
+// overflow/underflow result is compared after unwrapping the 754 trap bias; the
+// underflow flag is stripped from both sides (fptest detects tininess before
+// rounding), but we must not report underflow fptest did not.
+func checkFptest(c *rosettaCase) (outcome, string) {
+	var op func(x, y d128, ctx *context) d128
+	switch c.operation {
+	case "add":
+		op = d128_add_ctx
+	case "subtract":
+		op = d128_subtract_ctx
+	case "multiply":
+		op = d128_multiply_ctx
+	case "divide":
+		op = d128_divide_ctx
+	default:
+		return outFail, "no fptest dispatch arm for " + c.operation
+	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	z := op(decodeNativeResult(c.operands[0]), decodeNativeResult(c.operands[1]), ctx)
+	flags := ctx.exceptionLetters()
+	if c.result != "#" {
+		expected := decodeNativeResult(c.result)
+		if !d128_bitwiseEQ(z, expected) {
+			delta := 0
+			if strings.Contains(c.traps, "o") && strings.Contains(c.expectedFlags, "o") && strings.Contains(flags, "o") {
+				delta = fptestTrapWrapBias
+			} else if strings.Contains(c.traps, "u") && strings.Contains(c.expectedFlags, "u") && d128_isFinite(z) && !d128_isNormal(z) {
+				delta = -fptestTrapWrapBias
+			}
+			if delta == 0 {
+				return outFail, "got " + d128_format(z, FORMAT_COEFFICIENT_QEXP) + " want " + d128_format(expected, FORMAT_COEFFICIENT_QEXP)
+			}
+			unwrapped := d128_scaleB_ctxnull(expected, delta, newContextRound(roundingFromToken(c.rounding)))
+			if !d128_bitwiseEQ(unwrapped, z) {
+				return outFail, "trap-unwrap mismatch: got " + d128_format(z, FORMAT_COEFFICIENT_QEXP)
+			}
+			return outPass, ""
+		}
+	}
+	if !fptestFlagsMatch(flags, c.expectedFlags) {
+		return outFail, fmt.Sprintf("flags got %q want %q (u-stripped)", flags, c.expectedFlags)
+	}
+	return outPass, ""
+}
+
+// dectestSkips are per-line dectest cases skipped (counted, not failed), with
+// reasons. The lines come from Swift's RosettaDectestSkips (the ones this
+// harness reaches; Go's scaleb decimal-argument adapter and remainder arms pass
+// the scaleb / Division_impossible lines Swift skips, and the min/max sNaN lines
+// are handled by checkMinMaxNumber). Matched by trimmed line text.
+var dectestSkips = map[string]bool{
+	// dqabs abs: dectest abs quiets a NaN and signals on sNaN (and reads "#" as a
+	// syntax error); IEEE abs is a quiet bit operation. Value-only arm, so these
+	// sNaN / NaN-sign lines are out of its domain.
+	"dqabs523 abs  sNaN    ->  NaN   Invalid_operation": true,
+	"dqabs525 abs  sNaN33  ->  NaN33 Invalid_operation": true,
+	"dqabs526 abs  -NaN22  -> -NaN22":                   true,
+	"dqabs527 abs -sNaN33  -> -NaN33 Invalid_operation": true,
+	"dqabs900 abs  # -> NaN Invalid_operation":          true,
+
+	// dqbas toSci: strings this parser accepts as NaN that decNumber rejects as
+	// Conversion_syntax ("qNaN", over-long payloads).
+	"dqbas561 toSci \"qNaN\"            -> NaN Conversion_syntax":                      true,
+	"dqbas725 toSci 'NaN1234567890123456781234567890123456' -> NaN Conversion_syntax":  true,
+	"dqbas745 toSci 'sNaN1234567890123456787234561234567890' -> NaN Conversion_syntax": true,
+
+	// dqmns minus: dectest minus is 0 - x (quiets NaN, signals sNaN, keeps +0);
+	// IEEE negate flips the sign bit.
+	"dqmns021 minus         NaN  -> NaN":                       true,
+	"dqmns022 minus        -NaN  -> -NaN":                      true,
+	"dqmns023 minus        sNaN  -> NaN  Invalid_operation":    true,
+	"dqmns024 minus       -sNaN  -> -NaN Invalid_operation":    true,
+	"dqmns031 minus       NaN13  -> NaN13":                     true,
+	"dqmns032 minus      -NaN13  -> -NaN13":                    true,
+	"dqmns033 minus      sNaN13  -> NaN13   Invalid_operation": true,
+	"dqmns034 minus     -sNaN13  -> -NaN13  Invalid_operation": true,
+	"dqmns035 minus       NaN70  -> NaN70":                     true,
+	"dqmns036 minus      -NaN70  -> -NaN70":                    true,
+	"dqmns037 minus      sNaN101 -> NaN101  Invalid_operation": true,
+	"dqmns038 minus     -sNaN101 -> -NaN101 Invalid_operation": true,
+	"dqmns111 minus          0   -> 0":                         true,
+	"dqmns113 minus       0E+4   -> 0E+4":                      true,
+	"dqmns115 minus     0.0000   -> 0.0000":                    true,
+	"dqmns117 minus      0E-141  -> 0E-141":                    true,
+
+	// logx log10: the 35-digit operand is used unrounded by decNumber; as a
+	// decimal128 operand it rounds to exactly 1, so log10 is 0.
+	"logx1308 log10 1.0000000000000000000000000000000001 -> 4.342944819032518276511289189166051E-35 Inexact Rounded": true,
 }
 
 func roundingFromToken(tok string) round {
@@ -998,25 +1211,31 @@ func parseDectestLine(line string) (rosettaCase, bool) {
 	if line == "" || strings.HasPrefix(line, "--") {
 		return rosettaCase{}, false
 	}
+	if i := strings.Index(line, "--"); i >= 0 {
+		line = strings.TrimSpace(line[:i])
+	}
 	arrow := strings.Index(line, "->")
 	if arrow < 0 {
 		return rosettaCase{}, false // directive
 	}
-	left := strings.Fields(line[:arrow])
-	right := strings.Fields(line[arrow+len("->"):])
+	left := dectestTokens(line[:arrow])
+	right := dectestTokens(line[arrow+len("->"):])
 	if len(left) < 3 || len(right) < 1 {
 		return rosettaCase{}, false
 	}
-	operands := make([]string, 0, len(left)-2)
-	for _, o := range left[2:] {
-		operands = append(operands, unquoteDectest(o))
+	operands := append([]string(nil), left[2:]...)
+	// Every operation maps through the dectest include map (Rosetta.md §9); an
+	// excluded or undecided token is dropped here and caught by the coverage test.
+	op, ok := dectestInclude[strings.ToLower(left[1])]
+	if !ok {
+		return rosettaCase{}, false
 	}
 	c := rosettaCase{
 		src:       srcDectest,
 		text:      line,
-		operation: left[1],
+		operation: op,
 		operands:  operands,
-		result:    unquoteDectest(right[0]),
+		result:    right[0],
 	}
 	if len(right) > 1 {
 		c.expectedFlags = dectestConditionsToFlags(right[1:])
@@ -1073,13 +1292,64 @@ func parseDectestRounding(line string) (string, bool) {
 
 const roundingUnsupported = "UNSUPPORTED_ROUNDING"
 
-// unquoteDectest strips the surrounding single quotes dectest uses for string
-// results/operands.
-func unquoteDectest(s string) string {
-	if len(s) >= 2 && s[0] == '\'' && s[len(s)-1] == '\'' {
-		return s[1 : len(s)-1]
+// parseDectestPrecision maps a "precision:" directive to its value. ok=false for
+// non-directive lines.
+func parseDectestPrecision(line string) (int, bool) {
+	l := strings.TrimSpace(strings.ToLower(line))
+	if !strings.HasPrefix(l, "precision:") {
+		return 0, false
 	}
-	return s
+	if i := strings.Index(l, "--"); i >= 0 {
+		l = l[:i]
+	}
+	p, err := strconv.Atoi(strings.TrimSpace(l[len("precision:"):]))
+	if err != nil {
+		return 0, false
+	}
+	return p, true
+}
+
+// dectestTokens splits a dectest line fragment on whitespace, honouring quoted
+// tokens: a token starting with ' or " runs to the matching quote (a doubled
+// quote inside is a literal quote) and is returned without its quotes, so a
+// quoted operand may contain spaces.
+func dectestTokens(s string) []string {
+	var out []string
+	i, n := 0, len(s)
+	for i < n {
+		for i < n && (s[i] == ' ' || s[i] == '\t' || s[i] == '\r' || s[i] == '\n') {
+			i++
+		}
+		if i >= n {
+			break
+		}
+		q := s[i]
+		if q != '\'' && q != '"' {
+			start := i
+			for i < n && s[i] != ' ' && s[i] != '\t' && s[i] != '\r' && s[i] != '\n' {
+				i++
+			}
+			out = append(out, s[start:i])
+			continue
+		}
+		var b strings.Builder
+		i++
+		for i < n {
+			if s[i] == q {
+				if i+1 < n && s[i+1] == q {
+					b.WriteByte(q)
+					i += 2
+					continue
+				}
+				i++
+				break
+			}
+			b.WriteByte(s[i])
+			i++
+		}
+		out = append(out, b.String())
+	}
+	return out
 }
 
 func loadDectestFile(path string) ([]rosettaCase, error) {
@@ -1090,12 +1360,21 @@ func loadDectestFile(path string) ([]rosettaCase, error) {
 	defer f.Close()
 	var cases []rosettaCase
 	rounding := "TIES_TO_EVEN"
+	precision := 34
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 0, 1<<20), 1<<20)
 	for sc.Scan() {
 		line := sc.Text()
 		if r, ok := parseDectestRounding(line); ok {
 			rounding = r
+			continue
+		}
+		if p, ok := parseDectestPrecision(line); ok {
+			precision = p
+			continue
+		}
+		if precision != 34 {
+			// Only decimal128 (precision 34) cases are in scope.
 			continue
 		}
 		if c, ok := parseDectestLine(line); ok {

@@ -18,126 +18,6 @@ import (
 	"strings"
 )
 
-// intelInclude is the set of bid128_* operations the Go core supports and that
-// the Intel operations runner exercises. Ops outside this set are skipped at
-// parse time.
-var intelInclude = map[string]bool{
-	"bid128_abs": true, "bid128_add": true, "bid128_class": true, "bid128_copySign": true,
-	"bid128_div": true, "bid128_exp": true, "bid128_exp10": true, "bid128_expm1": true,
-	"bid128_fma": true, "bid128_isFinite": true, "bid128_isInf": true,
-	"bid128_isNaN": true, "bid128_isNormal": true, "bid128_isSignaling": true, "bid128_isSigned": true,
-	"bid128_isSubnormal": true, "bid128_isZero": true, "bid128_log": true, "bid128_log10": true,
-	"bid128_log1p": true, "bid128_maxnum": true, "bid128_maxnum_mag": true,
-	"bid128_minnum": true, "bid128_minnum_mag": true, "bid128_mul": true, "bid128_nextdown": true,
-	"bid128_nextup": true, "bid128_quantexp": true, "bid128_quantize": true, "bid128_quiet_equal": true,
-	"bid128_quiet_greater": true, "bid128_quiet_greater_equal": true, "bid128_quiet_greater_unordered": true,
-	"bid128_quiet_less": true, "bid128_quiet_less_equal": true, "bid128_quiet_less_unordered": true,
-	"bid128_quiet_not_equal": true, "bid128_quiet_not_greater": true, "bid128_quiet_not_less": true,
-	"bid128_quiet_ordered": true, "bid128_quiet_unordered": true, "bid128_rem": true,
-	"bid128_round_integral_exact": true, "bid128_round_integral_nearest_away": true,
-	"bid128_round_integral_nearest_even": true, "bid128_round_integral_negative": true,
-	"bid128_round_integral_positive": true, "bid128_round_integral_zero": true, "bid128_sameQuantum": true,
-	"bid128_scalbn": true, "bid128_signaling_greater": true, "bid128_signaling_greater_equal": true,
-	"bid128_signaling_greater_unordered": true, "bid128_signaling_less": true,
-	"bid128_signaling_less_equal": true, "bid128_signaling_less_unordered": true,
-	"bid128_signaling_not_greater": true, "bid128_signaling_not_less": true, "bid128_sqrt": true,
-	"bid128_sub": true, "bid128_to_int64_rnint": true, "bid128_to_int64_rninta": true,
-	"bid128_to_int64_ceil": true, "bid128_to_int64_floor": true, "bid128_to_int64_int": true,
-	"bid128_to_int64_xrnint": true, "bid128_to_int64_xrninta": true, "bid128_to_int64_xceil": true,
-	"bid128_to_int64_xfloor": true, "bid128_to_int64_xint": true,
-	"bid128_to_uint64_rnint": true, "bid128_to_uint64_rninta": true, "bid128_to_uint64_ceil": true,
-	"bid128_to_uint64_floor": true, "bid128_to_uint64_int": true, "bid128_to_uint64_xrnint": true,
-	"bid128_to_uint64_xrninta": true, "bid128_to_uint64_xceil": true, "bid128_to_uint64_xfloor": true,
-	"bid128_to_uint64_xint": true,
-	"bid128_totalOrder":     true, "bid128_totalOrderMag": true,
-}
-
-// intelOpMap maps an included bid128_* operation to the harness dispatch token.
-var intelOpMap = map[string]string{
-	"bid128_abs":                         "d128_abs",
-	"bid128_add":                         "add",
-	"bid128_class":                       "class",
-	"bid128_copySign":                    "copysign",
-	"bid128_div":                         "divide",
-	"bid128_exp":                         "d128_exp_ctx",
-	"bid128_exp10":                       "d128_exp10_ctx",
-	"bid128_expm1":                       "d128_expm1_ctx",
-	"bid128_fma":                         "fma",
-	"bid128_isFinite":                    "d128_isFinite",
-	"bid128_isInf":                       "d128_isInf",
-	"bid128_isNaN":                       "d128_isNaN",
-	"bid128_isNormal":                    "d128_isNormal",
-	"bid128_isSignaling":                 "d128_isSignaling",
-	"bid128_isSigned":                    "d128_isSigned",
-	"bid128_isSubnormal":                 "d128_isSubnormal",
-	"bid128_isZero":                      "d128_isZero",
-	"bid128_log":                         "d128_ln_ctx",
-	"bid128_log10":                       "d128_log10_ctx",
-	"bid128_log1p":                       "d128_lnp1_ctx",
-	"bid128_maxnum":                      "max",
-	"bid128_maxnum_mag":                  "maxmag",
-	"bid128_minnum":                      "min",
-	"bid128_minnum_mag":                  "minmag",
-	"bid128_mul":                         "multiply",
-	"bid128_nextdown":                    "nextminus",
-	"bid128_nextup":                      "nextplus",
-	"bid128_quantexp":                    "d128_quantexp",
-	"bid128_quantize":                    "quantize",
-	"bid128_quiet_equal":                 "d128_isEqual_ctx",
-	"bid128_quiet_greater":               "d128_isGreater_ctx",
-	"bid128_quiet_greater_equal":         "d128_isGreaterEqual_ctx",
-	"bid128_quiet_greater_unordered":     "d128_isGreaterUnordered_ctx",
-	"bid128_quiet_less":                  "d128_isLess_ctx",
-	"bid128_quiet_less_equal":            "d128_isLessEqual_ctx",
-	"bid128_quiet_less_unordered":        "d128_isLessUnordered_ctx",
-	"bid128_quiet_not_equal":             "d128_isNotEqual_ctx",
-	"bid128_quiet_not_greater":           "d128_isNotGreater_ctx",
-	"bid128_quiet_not_less":              "d128_isNotLess_ctx",
-	"bid128_quiet_ordered":               "d128_isOrdered_ctx",
-	"bid128_quiet_unordered":             "d128_isUnordered_ctx",
-	"bid128_rem":                         "remaindernear",
-	"bid128_round_integral_exact":        "tointegralx",
-	"bid128_round_integral_nearest_away": "d128_round_integral_nearest_away",
-	"bid128_round_integral_nearest_even": "d128_round_integral_nearest_even",
-	"bid128_round_integral_negative":     "d128_round_integral_negative",
-	"bid128_round_integral_positive":     "d128_round_integral_positive",
-	"bid128_round_integral_zero":         "d128_round_integral_zero",
-	"bid128_sameQuantum":                 "samequantum",
-	"bid128_scalbn":                      "scaleb",
-	"bid128_signaling_greater":           "d128_isGreaterSignaling_ctx",
-	"bid128_signaling_greater_equal":     "d128_isGreaterEqualSignaling_ctx",
-	"bid128_signaling_greater_unordered": "d128_isGreaterUnorderedSignaling_ctx",
-	"bid128_signaling_less":              "d128_isLessSignaling_ctx",
-	"bid128_signaling_less_equal":        "d128_isLessEqualSignaling_ctx",
-	"bid128_signaling_less_unordered":    "d128_isLessUnorderedSignaling_ctx",
-	"bid128_signaling_not_greater":       "d128_isNotGreaterSignaling_ctx",
-	"bid128_signaling_not_less":          "d128_isNotLessSignaling_ctx",
-	"bid128_sqrt":                        "squareroot",
-	"bid128_sub":                         "subtract",
-	"bid128_to_int64_rnint":              "d128_to_int64_rnint",
-	"bid128_to_int64_rninta":             "d128_to_int64_rninta",
-	"bid128_to_int64_ceil":               "d128_to_int64_ceil",
-	"bid128_to_int64_floor":              "d128_to_int64_floor",
-	"bid128_to_int64_int":                "d128_to_int64_int",
-	"bid128_to_int64_xrnint":             "d128_to_int64_xrnint",
-	"bid128_to_int64_xrninta":            "d128_to_int64_xrninta",
-	"bid128_to_int64_xceil":              "d128_to_int64_xceil",
-	"bid128_to_int64_xfloor":             "d128_to_int64_xfloor",
-	"bid128_to_int64_xint":               "d128_to_int64_xint",
-	"bid128_to_uint64_rnint":             "d128_to_uint64_rnint",
-	"bid128_to_uint64_rninta":            "d128_to_uint64_rninta",
-	"bid128_to_uint64_ceil":              "d128_to_uint64_ceil",
-	"bid128_to_uint64_floor":             "d128_to_uint64_floor",
-	"bid128_to_uint64_int":               "d128_to_uint64_int",
-	"bid128_to_uint64_xrnint":            "d128_to_uint64_xrnint",
-	"bid128_to_uint64_xrninta":           "d128_to_uint64_xrninta",
-	"bid128_to_uint64_xceil":             "d128_to_uint64_xceil",
-	"bid128_to_uint64_xfloor":            "d128_to_uint64_xfloor",
-	"bid128_to_uint64_xint":              "d128_to_uint64_xint",
-	"bid128_totalOrder":                  "d128_totalOrder",
-	"bid128_totalOrderMag":               "d128_totalOrderMag",
-}
-
 // intelRoundingToToken maps Intel's numeric rounding selector to the canonical
 // rounding token.
 func intelRoundingToToken(r int) (string, bool) {
@@ -180,43 +60,53 @@ func intelFlagsToExceptionLetters(flags int) string {
 	return b.String()
 }
 
-// getIntelOpCount returns the operand count for an Intel operation.
-func getIntelOpCount(op string) int {
-	if op == "bid128_fma" {
-		return 3
+// isIntelFlagRegister reports whether tok is a bare 1–2 hex-digit token (the
+// exception-flag column), optionally 0x-prefixed.
+func isIntelFlagRegister(tok string) bool {
+	t := strings.TrimPrefix(strings.TrimPrefix(tok, "0x"), "0X")
+	if len(t) < 1 || len(t) > 2 {
+		return false
 	}
-	if op == "bid128_abs" || op == "bid128_class" || strings.HasPrefix(op, "bid128_is") ||
-		strings.HasPrefix(op, "bid128_round_integral_") || op == "bid128_sqrt" ||
-		strings.HasPrefix(op, "bid128_to_int64_") || strings.HasPrefix(op, "bid128_to_uint64_") ||
-		op == "bid128_quantexp" || op == "bid128_exp" || op == "bid128_exp10" || op == "bid128_expm1" ||
-		op == "bid128_log" || op == "bid128_log10" || op == "bid128_log1p" {
-		return 1
+	for i := 0; i < len(t); i++ {
+		if !strings.ContainsRune("0123456789abcdefABCDEF", rune(t[i])) {
+			return false
+		}
 	}
-	return 2
+	return true
 }
 
 // parseIntelLine parses one readtest.in line into a rosettaCase. ok=false for
-// comments, blanks, and operations outside intelInclude.
+// comments, blanks, and operations not in intelInclude (excluded or undecided —
+// the coverage test catches undecided ones). The operand count comes from the
+// line shape, never a per-op table (R-7):
+//
+//	<func> <rnd-int> <op1> [<op2>] [<op3>] <result> <flags-hex> [tail-attrs]
+//
+// The flag register is the rightmost bare 1–2 hex-digit token, so the trailing
+// attributes (ulp=, longintsize=, str_prefix=|…|) need no parsing.
 func parseIntelLine(line string) (rosettaCase, bool) {
-	trimmed := strings.TrimSpace(line)
-	if trimmed == "" || strings.HasPrefix(trimmed, "--") {
+	body := line
+	if i := strings.Index(body, "--"); i >= 0 {
+		body = body[:i]
+	}
+	tokens := strings.Fields(body)
+	if len(tokens) == 0 || !intelInScope(tokens[0]) {
 		return rosettaCase{}, false
 	}
-	tokens := strings.Fields(trimmed)
-	if len(tokens) == 0 {
+	mapped, ok := intelInclude[tokens[0]]
+	if !ok {
 		return rosettaCase{}, false
 	}
-	op := tokens[0]
-	if !strings.HasPrefix(op, "bid128_") || !intelInclude[op] {
+	fi := -1
+	for j := len(tokens) - 1; j >= 0; j-- {
+		if isIntelFlagRegister(tokens[j]) {
+			fi = j
+			break
+		}
+	}
+	if fi < 4 {
 		return rosettaCase{}, false
 	}
-
-	opCount := getIntelOpCount(op)
-	// tokens: op, rounding, operands..., result, flagHex
-	if len(tokens) < 2+opCount+2 {
-		return rosettaCase{}, false
-	}
-
 	r, err := strconv.Atoi(tokens[1])
 	if err != nil {
 		return rosettaCase{}, false
@@ -225,30 +115,16 @@ func parseIntelLine(line string) (rosettaCase, bool) {
 	if !ok {
 		return rosettaCase{}, false
 	}
-
-	operands := make([]string, 0, opCount)
-	for i := 0; i < opCount; i++ {
-		operands = append(operands, tokens[2+i])
-	}
-
-	result := tokens[2+opCount]
-	flagHexStr := strings.TrimPrefix(tokens[2+opCount+1], "0x")
-	flags, err := strconv.ParseInt(flagHexStr, 16, 64)
+	flags, err := strconv.ParseInt(strings.TrimPrefix(tokens[fi], "0x"), 16, 64)
 	if err != nil {
 		return rosettaCase{}, false
 	}
-
-	mapped, ok := intelOpMap[op]
-	if !ok {
-		mapped = op
-	}
-
 	return rosettaCase{
 		src:           srcIntel,
 		text:          line,
 		operation:     mapped,
-		operands:      operands,
-		result:        result,
+		operands:      append([]string(nil), tokens[2:fi-1]...),
+		result:        tokens[fi-1],
 		rounding:      rounding,
 		expectedFlags: intelFlagsToExceptionLetters(int(flags)),
 	}, true
@@ -407,13 +283,38 @@ var intelSkips = map[string]bool{
 	"bid128_rem 2 [397cdc9a254ff562,99bc2af7b316f57c] [268d807293a0dcac,afddbd631e831cbb] [a68c1d3c3991cbb19eee601c8bdcb12c] 00":                                     true,
 	"bid128_rem 3 [397cdc9a254ff562,99bc2af7b316f57c] [268d807293a0dcac,afddbd631e831cbb] [a68c1d3c3991cbb19eee601c8bdcb12c] 00":                                     true,
 	"bid128_rem 4 [397cdc9a254ff562,99bc2af7b316f57c] [268d807293a0dcac,afddbd631e831cbb] [a68c1d3c3991cbb19eee601c8bdcb12c] 00":                                     true,
+	// from_string: malformed strings. We return NaN and raise invalid; Intel
+	// returns NaN with no flag (and reads the valid prefix of "1.1E-2E").
+	"bid128_from_string 0 1.. [7c000000000000000000000000000000] 00":        true,
+	"bid128_from_string 0 1.1P2 [7c000000000000000000000000000000] 00":      true,
+	"bid128_from_string 0 1.1EE [7c000000000000000000000000000000] 00":      true,
+	"bid128_from_string 0 1.1P-2 [7c000000000000000000000000000000] 00":     true,
+	"bid128_from_string 0 1.1E-2E [303a000000000000000000000000000b] 00":    true,
+	"bid128_from_string 0 +INFi [7c000000000000000000000000000000] 00":      true,
+	"bid128_from_string 0 +SNANi [7e000000000000000000000000000000] 00":     true,
+	"bid128_from_string 0 +INFINITYi [7c000000000000000000000000000000] 00": true,
+	"bid128_from_string 0 INFi [7c000000000000000000000000000000] 00":       true,
+	"bid128_from_string 0 SNANi [7e000000000000000000000000000000] 00":      true,
+	"bid128_from_string 0 INFINITYi [7c000000000000000000000000000000] 00":  true,
 }
 
-// shouldSkip reports whether a case is on a per-line skip list. Skipped cases
-// are counted (total decremented) rather than failed.
+// isOutOfScopeIntelLine: lrint/lround tagged `longintsize=32` test a 32-bit
+// `long` result (like to_int32_*, out of scope). On scalbln the same tag
+// describes the exponent argument, so those lines run.
+func isOutOfScopeIntelLine(t string) bool {
+	return (strings.HasPrefix(t, "bid128_lrint ") || strings.HasPrefix(t, "bid128_lround ")) &&
+		strings.Contains(t, " longintsize=32")
+}
+
+// shouldSkip reports whether a case is on a per-line skip list (or out of
+// scope). Skipped cases are counted (total decremented) rather than failed.
 func shouldSkip(c *rosettaCase) bool {
-	if c.src == srcIntel {
-		return intelSkips[strings.TrimSpace(c.text)]
+	t := strings.TrimSpace(c.text)
+	switch c.src {
+	case srcIntel:
+		return isOutOfScopeIntelLine(t) || intelSkips[t]
+	case srcDectest:
+		return dectestSkips[t]
 	}
 	return false
 }
