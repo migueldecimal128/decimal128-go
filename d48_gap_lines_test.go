@@ -70,17 +70,17 @@ func gapLineEvaluate(t *testing.T, op string, mode round, args []string) d128 {
 func TestD48GapLinesEveryRecordedD48AnswerMatches(t *testing.T) {
 	tags := []string{"gap", "pow-cohort", "compound-1+x"}
 	// Swift / C / Rust / Zig: gap 49 / 350 / 5, pow-cohort 238 / 36 / 16 -- 694
-	// lines in all. The 1,330 compound-1+x lines moved to transccompound.txt
-	// (CompoundD48OnePlusXWorkOrder.md CX-6), where they are active. translargen.txt:
+	// lines in all. The 1,330 compound-1+x lines moved to transcendental_compound.txt
+	// (CompoundD48OnePlusXWorkOrder.md CX-6), where they are active. transcendental_large_n.txt:
 	// 21 gap lines, the large-n route's near-1 family (PownLargeNWorkOrder.md LN-6).
 	expected := []struct {
 		file   string
 		counts [3]int
 	}{
-		{"transcsweep.txt", [3]int{49, 238, 0}},
-		{"transcstress.txt", [3]int{350, 36, 0}},
-		{"transcoracle.txt", [3]int{5, 16, 0}},
-		{"translargen.txt", [3]int{21, 0, 0}},
+		{"transcendental_sweep.txt", [3]int{49, 238, 0}},
+		{"transcendental_stress.txt", [3]int{350, 36, 0}},
+		{"transcendental_pown_rootn.txt", [3]int{5, 16, 0}},
+		{"transcendental_large_n.txt", [3]int{21, 0, 0}},
 	}
 	total, diffs := 0, 0
 	for _, e := range expected {
