@@ -54,6 +54,16 @@ func gapLineEvaluate(t *testing.T, op string, mode round, args []string) d128 {
 		return d128_ln_rnd(x, mode)
 	case "d128_log10_ctx":
 		return d128_log10_rnd(x, mode)
+	case "d128_lnp1_ctx":
+		return d128_lnp1_rnd(x, mode)
+	case "d128_log2p1_ctx":
+		return d128_log2p1_rnd(x, mode)
+	case "d128_log10p1_ctx":
+		return d128_log10p1_rnd(x, mode)
+	case "d128_expm1_ctx":
+		return d128_expm1_rnd(x, mode)
+	case "d128_exp10m1_ctx":
+		return d128_exp10m1_rnd(x, mode)
 	case "d128_pow_ctx":
 		return d128_pow_rnd(x, parse(args[1]), mode)
 	case "d128_pown_ctx":
@@ -75,7 +85,8 @@ func TestD48GapLinesEveryRecordedD48AnswerMatches(t *testing.T) {
 	// (CompoundD48OnePlusXWorkOrder.md CX-6), where they are active.
 	// transcendental_large_n.txt: 21 gap lines, the large-n route's near-1 family
 	// (PownLargeNWorkOrder.md LN-6). transcendental_rootn_sweep.txt: 54 gap lines, the
-	// general-n rootn route's near-1 family. 753 in all.
+	// general-n rootn route's near-1 family. transcendental_expm1.txt: 3 gap lines,
+	// expm1's third-order residual (LogP1ExpM1WorkOrder.md §3). 756 in all.
 	expected := []struct {
 		file   string
 		counts [3]int
@@ -85,6 +96,7 @@ func TestD48GapLinesEveryRecordedD48AnswerMatches(t *testing.T) {
 		{"transcendental_pown_rootn.txt", [3]int{5, 0, 0}},
 		{"transcendental_large_n.txt", [3]int{21, 0, 0}},
 		{"transcendental_rootn_sweep.txt", [3]int{54, 0, 0}},
+		{"transcendental_expm1.txt", [3]int{3, 0, 0}},
 	}
 	total, diffs := 0, 0
 	for _, e := range expected {
@@ -148,8 +160,8 @@ func TestD48GapLinesEveryRecordedD48AnswerMatches(t *testing.T) {
 		total += counts[0] + counts[1] + counts[2]
 		diffs += fileDiffs
 	}
-	if total != 753 {
-		t.Errorf("%d recorded lines, want 753", total)
+	if total != 756 {
+		t.Errorf("%d recorded lines, want 756", total)
 	}
 	if diffs != 0 {
 		t.Errorf("%d lines where Go differs from the recorded D48 answer", diffs)

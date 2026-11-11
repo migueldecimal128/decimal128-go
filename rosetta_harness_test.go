@@ -345,6 +345,16 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkUnaryCtx(c, d128_ln_ctx)
 	case "d128_log10_ctx":
 		return checkUnaryCtx(c, d128_log10_ctx)
+	case "d128_lnp1_ctx":
+		return checkUnaryCtx(c, d128_lnp1_ctx)
+	case "d128_log2p1_ctx":
+		return checkUnaryCtx(c, d128_log2p1_ctx)
+	case "d128_log10p1_ctx":
+		return checkUnaryCtx(c, d128_log10p1_ctx)
+	case "d128_expm1_ctx":
+		return checkUnaryCtx(c, d128_expm1_ctx)
+	case "d128_exp10m1_ctx":
+		return checkUnaryCtx(c, d128_exp10m1_ctx)
 	case "d128_pow_ctx":
 		return checkBinaryCtx(c, d128_pow_ctx)
 	case "d128_pown_ctx":

@@ -95,12 +95,51 @@ const TINY_SCI_EXP = -35
 // d48_onePlusTiny is e^u for a tiny u (see TINY_SCI_EXP): 1 + u, decided by u's
 // sign alone. Rounds 1⁺ (just above one) or 1⁻ (just below) into decimal128.
 func d48_onePlusTiny(positive bool, rounding round, ctxnull *context) d128 {
-	if positive {
-		return finalize_128_ctxnull(false, -33, fromLoHi_128_64x64(pow10_128_dw0(33), pow10_128_dw1(33)),
-			RESIDUE_LT_HALF, rounding, ctxnull)
+	return d48_nudge_320(false, 0, u320FromDw0(1), positive, rounding, ctxnull)
+}
+
+// d48_nudge_320 is round(v ± tiny) for an exact value v = ±coeff·10^qExp (coeff
+// != 0, below 10^77): v moved toward +∞ (up) or −∞ by less than any ulp, rounded
+// once into decimal128, Inexact (LogP1ExpM1WorkOrder.md §3, the nudge helper;
+// d48_onePlusTiny is v = 1). v may be a decimal128 point, a midpoint, or any
+// other value. coeff is first scaled to at least 35 digits, so the final round
+// always drops a digit; the tiny is then a residue below coeff's last digit:
+// magnitude up is coeff + (0, ½), magnitude down (coeff − 1) + (½, 1).
+func d48_nudge_320(sign bool, qExp int, coeffIn u320, up bool, rounding round, ctxnull *context) d128 {
+	c := coeffIn
+	q := qExp
+	n := digitLen_320(c)
+	if n < 35 {
+		c = mulPow10_320(c, 35-n)
+		q -= 35 - n
 	}
-	return finalize_128_ctxnull(false, -34, sub_128_128x128(pow10_128_dw0(34), pow10_128_dw1(34), 1, 0),
-		RESIDUE_GT_HALF, rounding, ctxnull)
+	magnitudeUp := up != sign
+	if !magnitudeUp {
+		c = sub_320_320x320(c, u320FromDw0(1))
+	}
+	verify("", func() bool { return c.dw4 == 0 })
+	res := RESIDUE_GT_HALF
+	if magnitudeUp {
+		res = RESIDUE_LT_HALF
+	}
+	return finalize_256_ctxnull(sign, q, u256{c.dw0, c.dw1, c.dw2, c.dw3}, res, rounding, ctxnull)
+}
+
+// d48_ambiguous48 is d48_ambiguous on a D48 result with e in units of its 48th
+// significant digit: the coefficient is padded to 48 digits first, so the test
+// does not depend on how many trailing zeros the D48 operation left.
+func d48_ambiguous48(r d48, e u320) bool {
+	if d48_isZero(r) {
+		return false
+	}
+	c := d48_u320(r)
+	q := d48_qExp(r)
+	n := digitLen_320(c)
+	if n < D48_DIGITS {
+		c = mulPow10_320(c, D48_DIGITS-n)
+		q -= D48_DIGITS - n
+	}
+	return d48_ambiguous(c, q, e)
 }
 
 // finalizeD48_ctxnull rounds a D48 result once into decimal128.

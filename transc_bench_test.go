@@ -11,7 +11,8 @@ import (
 
 // Transcendental benchmark (D48GoWorkOrder.md G-12; Swift Decimal128Transc,
 // C benchmark/transc, Rust benches/transc.rs): exp, exp10, ln, log10, pow,
-// pown n > 0, pown n < 0 and compound (CompoundD48OnePlusXWorkOrder.md), each over its 64-input pool from the shared
+// pown n > 0, pown n < 0, compound (CompoundD48OnePlusXWorkOrder.md) and lnp1 / log2p1 /
+// log10p1 / expm1 / exp10m1 (LogP1ExpM1WorkOrder.md), each over its 64-input pool from the shared
 // resources/d48/bench_pool.txt, ties-to-even through the wrapper's flag-free
 // methods. Each iteration is one call; the pool is cycled in file order
 // (realistic branch history), so ns/op is the mean over the pool.
@@ -86,6 +87,11 @@ func BenchmarkTransc(b *testing.B) {
 		{"pown_pos", func(a transcArg) Decimal128 { return a.x.PowInt(a.n) }},
 		{"pown_neg", func(a transcArg) Decimal128 { return a.x.PowInt(a.n) }},
 		{"compound", func(a transcArg) Decimal128 { return a.x.Compound(a.n) }},
+		{"lnp1", func(a transcArg) Decimal128 { return a.x.LnP1() }},
+		{"log2p1", func(a transcArg) Decimal128 { return a.x.Log2P1() }},
+		{"log10p1", func(a transcArg) Decimal128 { return a.x.Log10P1() }},
+		{"expm1", func(a transcArg) Decimal128 { return a.x.ExpM1() }},
+		{"exp10m1", func(a transcArg) Decimal128 { return a.x.Exp10M1() }},
 	}
 	for _, op := range ops {
 		b.Run(op.name, func(b *testing.B) {

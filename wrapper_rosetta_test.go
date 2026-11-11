@@ -709,6 +709,16 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapUnaryCtxRnd(c, (*Context).Ln, Rounding.Ln)
 	case "d128_log10_ctx":
 		return wrapUnaryCtxRnd(c, (*Context).Log10, Rounding.Log10)
+	case "d128_lnp1_ctx":
+		return wrapUnaryCtxRnd(c, (*Context).LnP1, Rounding.LnP1)
+	case "d128_log2p1_ctx":
+		return wrapUnaryCtxRnd(c, (*Context).Log2P1, Rounding.Log2P1)
+	case "d128_log10p1_ctx":
+		return wrapUnaryCtxRnd(c, (*Context).Log10P1, Rounding.Log10P1)
+	case "d128_expm1_ctx":
+		return wrapUnaryCtxRnd(c, (*Context).ExpM1, Rounding.ExpM1)
+	case "d128_exp10m1_ctx":
+		return wrapUnaryCtxRnd(c, (*Context).Exp10M1, Rounding.Exp10M1)
 	case "d128_pow_ctx":
 		return wrapBinaryCtxRnd(c, (*Context).Pow, Rounding.Pow)
 	case "d128_pown_ctx":
