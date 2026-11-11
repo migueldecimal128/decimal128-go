@@ -7,7 +7,10 @@
 
 package decimal128
 
-import "math/bits"
+import (
+	"math"
+	"math/bits"
+)
 
 var d128RootnOne = d128_fromInt64(1)
 
@@ -95,14 +98,116 @@ func rootnFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 		return z
 	}
 
-	// General case: |x|^(1/n), with the sign restored for odd n.
-	absX := d128_abs(x)
-	nReciprocal := d128_divide_tte(d128RootnOne, d128_fromInt64(n))
-	z := d128_pow_rnd_ctxnull(absX, nReciprocal, forMagnitude(rounding, d128_signFlag(x)), ctxnull)
-	if d128_signFlag(x) {
-		return d128_negate(z)
+	return rootnGeneral_d48(x, n, rounding, ctxnull)
+}
+
+// --- D48 route for general n (RootnGeneralNWorkOrder.md) ---
+
+// rootnGeneral_d48 is x^(1/n) for |n| >= 3 not a power of two (x < 0 only for
+// odd n): 10^u with u = log10|x| / n in D48 -- n is exact and 1/n is never
+// formed, so no rounded exponent gets magnified by |ln(result)| -- rounded once
+// with the result's sign. |u| <= 2,059, so 10^u never over- or underflows and
+// keeps about 8 guard digits (pow's bound). An integer u, or a result too close
+// to a rounding boundary, goes to the exact rule; then the tiny rule; anything
+// left is rounded as is: the documented 1-ulp gap near 1.
+func rootnGeneral_d48(x d128, n int, rounding round, ctxnull *context) d128 {
+	sign := d128_signFlag(x)
+	u := d48_divide(d48_logMagnitude(d48_fromD128(x, false), true), d48_fromInt32(n))
+	if l := d48_toLongOrMin(u); l != math.MinInt64 {
+		// 10^u is a power of ten (rootn(1000, 3) = 10): exact iff (10^u)^n == |x|.
+		if r, ok := rootnExactGeneral(x, n, u128{1, 0}, int(l), rounding, ctxnull); ok {
+			return r
+		}
+		r := finalize_128_ctxnull(sign, int(l), u128{1, 0}, RESIDUE_EXACT, rounding, ctxnull)
+		return d48_forceInexact(r, ctxnull)
 	}
-	return z
+	s := exp10Scaled_d48(u)
+	uMag := mulPow10_320(u320FromDw0(1000), max(0, d48_sciExp(u)+1))
+	if ambiguousScaled(s, add_320_320x320(e_EXP_D48, uMag)) {
+		// An exact root lands on a 34-digit point: test the ties-to-even candidate.
+		candidate := finalize_256_ctxnull(false, d48_qExp(s.z)+s.n, u256{s.z.coeffDw0, s.z.coeffDw1, s.z.coeffDw2, 0},
+			RESIDUE_EXACT, ROUND_TIES_TO_EVEN, nil)
+		if d128_isFNZ(candidate) {
+			if r, ok := rootnExactGeneral(x, n, d128_u128(candidate), d128_qExp(candidate), rounding, ctxnull); ok {
+				return r
+			}
+		}
+		if d48_sciExp(u) < TINY_SCI_EXP-1 {
+			// 10^u = 1 ± tiny, decided by u's sign; the magnitude rounds in the
+			// mode that gives the signed result the caller's rounding.
+			r := d48_onePlusTiny(!d48_signFlag(u), forMagnitude(rounding, sign), ctxnull)
+			if sign {
+				r = d128_negate(r)
+			}
+			return d48_forceInexact(r, ctxnull)
+		}
+	}
+	return finalizeScaled(sign, s.z, s.n, rounding, ctxnull)
+}
+
+// rootnExactGeneral: if y = cy·10^qy is exactly |x|^(1/n), return ±y at the
+// exponent nearest the preferred ⌊Q(x)/n⌋ (RootnGeneralNWorkOrder.md RN-3).
+// Integers only, with x and y stripped of trailing zeros: n > 0 needs
+// qx = n·qy and cy^n = cx (cx < 10^34, so the power is abandoned once it passes
+// cx); n < 0 needs cx·cy^|n| = 10^k with k = n·qy − qx, so both coefficients
+// are 2^a·5^b and it reduces to exponent arithmetic.
+func rootnExactGeneral(x d128, n int, cy u128, qy int, rounding round, ctxnull *context) (d128, bool) {
+	ysC, ysQ := stripTens(cy, qy)
+	xsC, xsQ := stripTens(d128_u128(x), d128_qExp(x))
+	if (ysQ != 0) && (absU64(n) > 1<<48) {
+		return d128{}, false // |n·qy| > 2^48: no decimal128 exponent matches
+	}
+	nqy := n * ysQ
+	yIsOne := ysC == (u128{1, 0})
+	if n > 0 {
+		if nqy != xsQ {
+			return d128{}, false
+		}
+		p := u128{1, 0}
+		if !yIsOne {
+			j := 0
+			for cmp_int_128x128(p.dw0, p.dw1, xsC.dw0, xsC.dw1) < 0 { // ysC >= 2: at most 113 rounds
+				t, ok := u128MulChecked(p, ysC)
+				if !ok {
+					return d128{}, false
+				}
+				p = t
+				j++
+			}
+			if j != n {
+				return d128{}, false
+			}
+		}
+		if p != xsC {
+			return d128{}, false
+		}
+	} else {
+		k := nqy - xsQ
+		fyA, fyB, okY := twoFive(ysC)
+		fxA, fxB, okX := twoFive(xsC)
+		if !okY || !okX {
+			return d128{}, false
+		}
+		// cx·cy^m = 2^(fxA + m·fyA) · 5^(fxB + m·fyB); both exponents must be k.
+		a, b := fxA, fxB
+		if !yIsOne {
+			m := absU64(n)
+			if m > 400 {
+				return d128{}, false // cy >= 2: cy^m would dwarf any 10^k in range
+			}
+			a += int(m) * fyA
+			b += int(m) * fyB
+		}
+		if (a != k) || (b != k) {
+			return d128{}, false
+		}
+	}
+	q := d128_qExp(x)
+	preferred := q / n
+	if ((q % n) != 0) && ((q < 0) != (n < 0)) {
+		preferred-- // ⌊Q(x)/n⌋
+	}
+	return d48_exactWithPreferred(d128_signFlag(x), ysC, ysQ, preferred, rounding, ctxnull), true
 }
 
 // rootnChain_d48 is x^(±1/2^shifts) for x > 0 over D48, rounded once. The
