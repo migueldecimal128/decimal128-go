@@ -12,9 +12,11 @@ import (
 	"math/bits"
 )
 
-var d128RootnOne = d128_fromInt64(1)
+var const_D128_ROOTN_ONE = d128_fromInt64(1)
 
-func d128_rootn_tte(x d128, n int) d128            { return d128_rootn_rnd_ctxnull(x, n, ROUND_TIES_TO_EVEN, nil) }
+func d128_rootn_tte(x d128, n int) d128 {
+	return d128_rootn_rnd_ctxnull(x, n, const_ROUND_TIES_TO_EVEN, nil)
+}
 func d128_rootn_rnd(x d128, n int, rnd round) d128 { return d128_rootn_rnd_ctxnull(x, n, rnd, nil) }
 func d128_rootn_ctx(x d128, n int, ctx *context) d128 {
 	return d128_rootn_rnd_ctxnull(x, n, ctx.round, ctx)
@@ -52,7 +54,7 @@ func d128_rootn_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d12
 		if n < 0 {
 			return d128_zero(true, 0)
 		}
-		return d128_NEG_INFINITY() // -∞, odd n
+		return const_D128_NEG_INFINITY // -∞, odd n
 	}
 	if xSign {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeRootnBadArgs) // -∞, even n
@@ -60,7 +62,7 @@ func d128_rootn_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d12
 	if n < 0 {
 		return d128_zero(false, 0)
 	}
-	return d128_POS_INFINITY() // +∞
+	return const_D128_POS_INFINITY // +∞
 }
 
 func rootnFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
@@ -93,7 +95,7 @@ func rootnFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 			}
 		}
 		if n < 0 {
-			z = d128_divide_rnd_ctxnull(d128RootnOne, z, rounding, ctxnull)
+			z = d128_divide_rnd_ctxnull(const_D128_ROOTN_ONE, z, rounding, ctxnull)
 		}
 		return z
 	}
@@ -118,21 +120,21 @@ func rootnGeneral_d48(x d128, n int, rounding round, ctxnull *context) d128 {
 		if r, ok := rootnExactGeneral(x, n, u128{1, 0}, int(l), rounding, ctxnull); ok {
 			return r
 		}
-		r := finalize_128_ctxnull(sign, int(l), u128{1, 0}, RESIDUE_EXACT, rounding, ctxnull)
+		r := finalize_128_ctxnull(sign, int(l), u128{1, 0}, const_RESIDUE_EXACT, rounding, ctxnull)
 		return d48_forceInexact(r, ctxnull)
 	}
 	s := exp10Scaled_d48(u)
 	uMag := mulPow10_320(u320FromDw0(1000), max(0, d48_sciExp(u)+1))
-	if ambiguousScaled(s, add_320_320x320(e_EXP_D48, uMag)) {
+	if ambiguousScaled(s, add_320_320x320(const_E_EXP_D48, uMag)) {
 		// An exact root lands on a 34-digit point: test the ties-to-even candidate.
 		candidate := finalize_256_ctxnull(false, d48_qExp(s.z)+s.n, u256{s.z.coeffDw0, s.z.coeffDw1, s.z.coeffDw2, 0},
-			RESIDUE_EXACT, ROUND_TIES_TO_EVEN, nil)
+			const_RESIDUE_EXACT, const_ROUND_TIES_TO_EVEN, nil)
 		if d128_isFNZ(candidate) {
 			if r, ok := rootnExactGeneral(x, n, d128_u128(candidate), d128_qExp(candidate), rounding, ctxnull); ok {
 				return r
 			}
 		}
-		if d48_sciExp(u) < TINY_SCI_EXP-1 {
+		if d48_sciExp(u) < const_TINY_SCI_EXP-1 {
 			// 10^u = 1 ± tiny, decided by u's sign; the magnitude rounds in the
 			// mode that gives the signed result the caller's rounding.
 			r := d48_onePlusTiny(!d48_signFlag(u), forMagnitude(rounding, sign), ctxnull)
@@ -225,7 +227,7 @@ func rootnChain_d48(x d128, shifts int, invert bool, rounding round, ctxnull *co
 	}
 	if d48_ambiguous(d48_u320(z), d48_qExp(z), u320FromDw0(40)) {
 		// Near a boundary. An exact root lands on a 34-digit point: check it exactly.
-		candidate := finalizeD48_ctxnull(z, ROUND_TIES_TO_EVEN, nil)
+		candidate := finalizeD48_ctxnull(z, const_ROUND_TIES_TO_EVEN, nil)
 		if exact, ok := rootnExact(x, shifts, invert, candidate, rounding, ctxnull); ok {
 			return exact
 		}

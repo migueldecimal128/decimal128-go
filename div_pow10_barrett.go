@@ -1,17 +1,17 @@
 // The 128- and 256-bit exact-remainder Barrett pow10 unit (D20). Divides a u128
-// or u256 by 10^k (k in 1..barrettPow10Max) returning the full quotient and the
+// or u256 by 10^k (k in 1..const_BARRETT_POW10_MAX) returning the full quotient and the
 // exact 64-bit remainder. 10^k = 2^k · 5^k: the 2^k part is a shift, the 5^k part
 // is Barrett reduction over the tabulated reciprocals. The residue-classifying
 // entries (the Quot*Residue shape, D17/D42) wrap the exact-remainder forms.
 
 package decimal128
 
-// barrettPow10Max is the largest pow10/pow5 covered by the mu table. (Swift
+// const_BARRETT_POW10_MAX is the largest pow10/pow5 covered by the mu table. (Swift
 // BARRETT_POW10_MAX; lowercased to stay unexported.)
-const barrettPow10Max = 13
+const const_BARRETT_POW10_MAX = 13
 
-// barrettPow5Mu[i] = floor(2^64 / 5^i) for i in 1..13. Index 0 is unused.
-var barrettPow5Mu = [14]uint64{
+// const_BARRETT_POW5_MU[i] = floor(2^64 / 5^i) for i in 1..13. Index 0 is unused.
+var const_BARRETT_POW5_MU = [14]uint64{
 	0,
 	3_689_348_814_741_910_323,
 	737_869_762_948_382_064,
@@ -33,7 +33,7 @@ var barrettPow5Mu = [14]uint64{
 // divPow10_q128r64_128_barrett computes x / 10^pow10 with exact remainder.
 func divPow10_q128r64_128_barrett(xDw0, xDw1 int64, pow10 int) quot128Rem64 {
 	verify("", func() bool { return pow10 >= 1 })
-	verify("", func() bool { return pow10 <= barrettPow10Max })
+	verify("", func() bool { return pow10 <= const_BARRETT_POW10_MAX })
 	loBits := uint64(xDw0) & ((uint64(1) << uint(pow10)) - 1)
 	xShifted := shr_128_128(xDw0, xDw1, pow10)
 	qr := barrett_128_pow5_q128r64(xShifted.dw0, xShifted.dw1, pow10)
@@ -43,9 +43,9 @@ func divPow10_q128r64_128_barrett(xDw0, xDw1 int64, pow10 int) quot128Rem64 {
 }
 
 func barrett_128_pow5_q128r64(xDw0, xDw1 int64, pow5 int) quot128Rem64 {
-	verify("", func() bool { return pow5 >= 1 && pow5 <= barrettPow10Max })
+	verify("", func() bool { return pow5 >= 1 && pow5 <= const_BARRETT_POW10_MAX })
 	denom := pow5_64(pow5)
-	mu := int64(barrettPow5Mu[pow5])
+	mu := int64(const_BARRETT_POW5_MU[pow5])
 	return barrett_128_32_mu_q128r64(xDw0, xDw1, denom, mu)
 }
 
@@ -85,7 +85,7 @@ func divPow10_q256res_256_barrett(xDw0, xDw1, xDw2, xDw3 int64, pow10 int) quot2
 // --- 256-bit entry, width dispatch, and chunk ladder ---
 
 func divPow10_q256r64_256_barrett(xDw0, xDw1, xDw2, xDw3 int64, pow10 int) quot256Rem64 {
-	verify("", func() bool { return pow10 >= 1 && pow10 <= barrettPow10Max })
+	verify("", func() bool { return pow10 >= 1 && pow10 <= const_BARRETT_POW10_MAX })
 	loBits := xDw0 & ((int64(1) << uint(pow10)) - 1)
 	xShifted := shr_256_256(xDw0, xDw1, xDw2, xDw3, pow10)
 	qr := barrett_256_pow5_q256r64(xShifted, pow10)
@@ -94,9 +94,9 @@ func divPow10_q256r64_256_barrett(xDw0, xDw1, xDw2, xDw3 int64, pow10 int) quot2
 }
 
 func barrett_256_pow5_q256r64(x u256, pow5 int) quot256Rem64 {
-	verify("", func() bool { return pow5 >= 1 && pow5 <= barrettPow10Max })
+	verify("", func() bool { return pow5 >= 1 && pow5 <= const_BARRETT_POW10_MAX })
 	denom := pow5_64(pow5)
-	mu := int64(barrettPow5Mu[pow5])
+	mu := int64(const_BARRETT_POW5_MU[pow5])
 	xBitLen := bitLen_int_256(x.dw0, x.dw1, x.dw2, x.dw3)
 
 	if xBitLen <= 64 {
@@ -181,7 +181,7 @@ func barrett_256_32_mu_q256r64(x u256, denom, mu int64) quot256Rem64 {
 // --- 54-bit chunk kernels (small pow5) ---
 
 func barrett_118_54_mu_q256r64(x u256, denom, mu int64) quot256Rem64 {
-	dwA := x.dw0 & mask54L
+	dwA := x.dw0 & const_MASK54L
 	dwG := (x.dw1 << 10) | ushr_64_64(x.dw0, 54)
 
 	qrG := divRem_q64r64_64x64x64_mu_barrettStep(dwG, denom, mu)
@@ -193,8 +193,8 @@ func barrett_118_54_mu_q256r64(x u256, denom, mu int64) quot256Rem64 {
 }
 
 func barrett_172_54_mu_q256r64(x u256, denom, mu int64) quot256Rem64 {
-	dwA := x.dw0 & mask54L
-	dwB := ((x.dw1 << 10) | ushr_64_64(x.dw0, 54)) & mask54L
+	dwA := x.dw0 & const_MASK54L
+	dwB := ((x.dw1 << 10) | ushr_64_64(x.dw0, 54)) & const_MASK54L
 	dwG := (x.dw2 << 20) | ushr_64_64(x.dw1, 44)
 
 	qrG := divRem_q64r64_64x64x64_mu_barrettStep(dwG, denom, mu)
@@ -208,9 +208,9 @@ func barrett_172_54_mu_q256r64(x u256, denom, mu int64) quot256Rem64 {
 }
 
 func barrett_226_54_mu_q256r64(x u256, denom, mu int64) quot256Rem64 {
-	dwA := x.dw0 & mask54L
-	dwB := ((x.dw1 << 10) | ushr_64_64(x.dw0, 54)) & mask54L
-	dwC := ((x.dw2 << 20) | ushr_64_64(x.dw1, 44)) & mask54L
+	dwA := x.dw0 & const_MASK54L
+	dwB := ((x.dw1 << 10) | ushr_64_64(x.dw0, 54)) & const_MASK54L
+	dwC := ((x.dw2 << 20) | ushr_64_64(x.dw1, 44)) & const_MASK54L
 	dwG := (x.dw3 << 30) | ushr_64_64(x.dw2, 34)
 
 	qrG := divRem_q64r64_64x64x64_mu_barrettStep(dwG, denom, mu)
@@ -226,10 +226,10 @@ func barrett_226_54_mu_q256r64(x u256, denom, mu int64) quot256Rem64 {
 }
 
 func barrett_256_54_mu_q256r64(x u256, denom, mu int64) quot256Rem64 {
-	dwA := x.dw0 & mask54L
-	dwB := ((x.dw1 << 10) | ushr_64_64(x.dw0, 54)) & mask54L
-	dwC := ((x.dw2 << 20) | ushr_64_64(x.dw1, 44)) & mask54L
-	dwD := ((x.dw3 << 30) | ushr_64_64(x.dw2, 34)) & mask54L
+	dwA := x.dw0 & const_MASK54L
+	dwB := ((x.dw1 << 10) | ushr_64_64(x.dw0, 54)) & const_MASK54L
+	dwC := ((x.dw2 << 20) | ushr_64_64(x.dw1, 44)) & const_MASK54L
+	dwD := ((x.dw3 << 30) | ushr_64_64(x.dw2, 34)) & const_MASK54L
 	dwG := ushr_64_64(x.dw3, 24)
 
 	qrG := divRem_q64r64_64x64x64_mu_barrettStep(dwG, denom, mu)

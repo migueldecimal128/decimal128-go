@@ -21,9 +21,9 @@ import (
 )
 
 var gapLineModes = map[string]round{
-	"TIES_TO_EVEN": ROUND_TIES_TO_EVEN, "TIES_TO_AWAY": ROUND_TIES_TO_AWAY,
-	"TOWARD_ZERO": ROUND_TOWARD_ZERO, "TOWARD_POSITIVE": ROUND_TOWARD_POSITIVE,
-	"TOWARD_NEGATIVE": ROUND_TOWARD_NEGATIVE,
+	"TIES_TO_EVEN": const_ROUND_TIES_TO_EVEN, "TIES_TO_AWAY": const_ROUND_TIES_TO_AWAY,
+	"TOWARD_ZERO": const_ROUND_TOWARD_ZERO, "TOWARD_POSITIVE": const_ROUND_TOWARD_POSITIVE,
+	"TOWARD_NEGATIVE": const_ROUND_TOWARD_NEGATIVE,
 }
 
 // gapLineEvaluate runs one native-dialect line's operation through the core
@@ -148,7 +148,7 @@ func TestD48GapLinesEveryRecordedD48AnswerMatches(t *testing.T) {
 				fileDiffs++
 				if fileDiffs <= 20 {
 					t.Errorf("%s: %s | d48: %s | go: %s", e.file, strings.Join(body, " "), d48Text,
-						d128_format(got, FORMAT_AUTO))
+						d128_format(got, const_FORMAT_AUTO))
 				}
 			}
 		}

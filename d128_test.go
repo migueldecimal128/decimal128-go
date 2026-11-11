@@ -47,9 +47,9 @@ func TestD128Zero(t *testing.T) {
 		if d128_qExp(z) != 5 || d128_signFlag(z) != sign {
 			t.Fatalf("zero qExp/sign wrong")
 		}
-		want := CLASS_POSITIVE_ZERO
+		want := const_CLASS_POSITIVE_ZERO
 		if sign {
-			want = CLASS_NEGATIVE_ZERO
+			want = const_CLASS_NEGATIVE_ZERO
 		}
 		if d128_ieeeClass(z) != want {
 			t.Fatalf("zero class wrong")
@@ -63,20 +63,20 @@ func TestD128NonFinite(t *testing.T) {
 	if !d128_isINF(posInf) || !d128_isNonFinite(posInf) || d128_isFinite(posInf) || d128_isNAN(posInf) {
 		t.Fatalf("posInf predicates wrong")
 	}
-	if d128_ieeeClass(posInf) != CLASS_POSITIVE_INFINITY || d128_ieeeClass(negInf) != CLASS_NEGATIVE_INFINITY {
+	if d128_ieeeClass(posInf) != const_CLASS_POSITIVE_INFINITY || d128_ieeeClass(negInf) != const_CLASS_NEGATIVE_INFINITY {
 		t.Fatalf("inf class wrong")
 	}
-	if !d128_bitwiseEQ(posInf, d128_POS_INFINITY()) || !d128_bitwiseEQ(negInf, d128_NEG_INFINITY()) {
+	if !d128_bitwiseEQ(posInf, const_D128_POS_INFINITY) || !d128_bitwiseEQ(negInf, const_D128_NEG_INFINITY) {
 		t.Fatalf("inf constants mismatch")
 	}
 
-	if !d128_isQNAN(d128_QNAN0()) || !d128_isNAN(d128_QNAN0()) || d128_isSNAN(d128_QNAN0()) {
+	if !d128_isQNAN(const_D128_QNAN0) || !d128_isNAN(const_D128_QNAN0) || d128_isSNAN(const_D128_QNAN0) {
 		t.Fatalf("QNAN0 predicates wrong")
 	}
-	if !d128_isSNAN(d128_SNAN0()) || !d128_isNAN(d128_SNAN0()) || d128_isQNAN(d128_SNAN0()) {
+	if !d128_isSNAN(const_D128_SNAN0) || !d128_isNAN(const_D128_SNAN0) || d128_isQNAN(const_D128_SNAN0) {
 		t.Fatalf("SNAN0 predicates wrong")
 	}
-	if d128_ieeeClass(d128_QNAN0()) != CLASS_QUIET_NAN || d128_ieeeClass(d128_SNAN0()) != CLASS_SIGNALING_NAN {
+	if d128_ieeeClass(const_D128_QNAN0) != const_CLASS_QUIET_NAN || d128_ieeeClass(const_D128_SNAN0) != const_CLASS_SIGNALING_NAN {
 		t.Fatalf("nan class wrong")
 	}
 }
@@ -119,7 +119,7 @@ func TestD128SubnormalNormal(t *testing.T) {
 	if !d128_isSubnormal(sub) || d128_isNormal(sub) {
 		t.Fatalf("expected subnormal")
 	}
-	if d128_ieeeClass(sub) != CLASS_POSITIVE_SUBNORMAL {
+	if d128_ieeeClass(sub) != const_CLASS_POSITIVE_SUBNORMAL {
 		t.Fatalf("subnormal class wrong")
 	}
 	// A mid-range value is normal.
@@ -127,7 +127,7 @@ func TestD128SubnormalNormal(t *testing.T) {
 	if d128_isSubnormal(norm) || !d128_isNormal(norm) {
 		t.Fatalf("expected normal")
 	}
-	if d128_ieeeClass(norm) != CLASS_NEGATIVE_NORMAL {
+	if d128_ieeeClass(norm) != const_CLASS_NEGATIVE_NORMAL {
 		t.Fatalf("normal class wrong")
 	}
 }

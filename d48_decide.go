@@ -69,7 +69,7 @@ func d48_exactWithPreferred(sign bool, cIn u128, qIn int, preferred int, roundin
 			q -= pad
 		}
 	}
-	return finalize_128_ctxnull(sign, q, c, RESIDUE_EXACT, rounding, ctxnull)
+	return finalize_128_ctxnull(sign, q, c, const_RESIDUE_EXACT, rounding, ctxnull)
 }
 
 // d48_forceInexact signals Inexact on a result whose D48 value happened to land
@@ -82,17 +82,17 @@ func d48_forceInexact(d d128, ctxnull *context) d128 {
 	return d
 }
 
-// TINY_SCI_EXP is the tiny-argument rule's bound: e^u for sciExp(u) <
-// TINY_SCI_EXP is decided by u's sign (d48_onePlusTiny). exp10 and pow test
-// their base-10 argument against TINY_SCI_EXP − 1 (u·ln10, ln10 < 10).
+// const_TINY_SCI_EXP is the tiny-argument rule's bound: e^u for sciExp(u) <
+// const_TINY_SCI_EXP is decided by u's sign (d48_onePlusTiny). exp10 and pow test
+// their base-10 argument against const_TINY_SCI_EXP − 1 (u·ln10, ln10 < 10).
 //
 // onePlusTiny is the correct rounding of e^u = 1 + u + u²/2 + … exactly when
 // −5·10^−35 < u < 5·10^−34 (below one the grid step is 10^−34, above it
 // 10^−33), so |u| < 10^−35 is the widest decade that holds for both signs
 // (measured in D48SwiftWorkOrder.md Phase 0).
-const TINY_SCI_EXP = -35
+const const_TINY_SCI_EXP = -35
 
-// d48_onePlusTiny is e^u for a tiny u (see TINY_SCI_EXP): 1 + u, decided by u's
+// d48_onePlusTiny is e^u for a tiny u (see const_TINY_SCI_EXP): 1 + u, decided by u's
 // sign alone. Rounds 1⁺ (just above one) or 1⁻ (just below) into decimal128.
 func d48_onePlusTiny(positive bool, rounding round, ctxnull *context) d128 {
 	return d48_nudge_320(false, 0, u320FromDw0(1), positive, rounding, ctxnull)
@@ -118,9 +118,9 @@ func d48_nudge_320(sign bool, qExp int, coeffIn u320, up bool, rounding round, c
 		c = sub_320_320x320(c, u320FromDw0(1))
 	}
 	verify("", func() bool { return c.dw4 == 0 })
-	res := RESIDUE_GT_HALF
+	res := const_RESIDUE_GT_HALF
 	if magnitudeUp {
-		res = RESIDUE_LT_HALF
+		res = const_RESIDUE_LT_HALF
 	}
 	return finalize_256_ctxnull(sign, q, u256{c.dw0, c.dw1, c.dw2, c.dw3}, res, rounding, ctxnull)
 }
@@ -135,9 +135,9 @@ func d48_ambiguous48(r d48, e u320) bool {
 	c := d48_u320(r)
 	q := d48_qExp(r)
 	n := digitLen_320(c)
-	if n < D48_DIGITS {
-		c = mulPow10_320(c, D48_DIGITS-n)
-		q -= D48_DIGITS - n
+	if n < const_D48_DIGITS {
+		c = mulPow10_320(c, const_D48_DIGITS-n)
+		q -= const_D48_DIGITS - n
 	}
 	return d48_ambiguous(c, q, e)
 }
@@ -145,5 +145,5 @@ func d48_ambiguous48(r d48, e u320) bool {
 // finalizeD48_ctxnull rounds a D48 result once into decimal128.
 func finalizeD48_ctxnull(r d48, rounding round, ctxnull *context) d128 {
 	return finalize_256_ctxnull(d48_signFlag(r), d48_qExp(r), u256{r.coeffDw0, r.coeffDw1, r.coeffDw2, 0},
-		RESIDUE_EXACT, rounding, ctxnull)
+		const_RESIDUE_EXACT, rounding, ctxnull)
 }

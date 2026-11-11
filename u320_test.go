@@ -134,15 +134,15 @@ func randomBelow(rng *splitMix, max *big.Int) *big.Int {
 
 func expectedResidue(r, d *big.Int) residue {
 	if r.Sign() == 0 {
-		return RESIDUE_EXACT
+		return const_RESIDUE_EXACT
 	}
 	switch bigShl(r, 1).Cmp(d) {
 	case -1:
-		return RESIDUE_LT_HALF
+		return const_RESIDUE_LT_HALF
 	case 0:
-		return RESIDUE_HALF
+		return const_RESIDUE_HALF
 	default:
-		return RESIDUE_GT_HALF
+		return const_RESIDUE_GT_HALF
 	}
 }
 
@@ -409,12 +409,12 @@ func TestU320DivPow10Wrappers(t *testing.T) {
 	c := &expectCounter{t: t}
 	x := u320Of(bigSub(bigTen(96), bigOne()))
 	c.expect(divPow10_q320res(x, 0).quot() == x, func() string { return "k=0 quot" })
-	c.expect(divPow10_q320res(x, 0).residue == RESIDUE_EXACT, func() string { return "k=0 residue" })
+	c.expect(divPow10_q320res(x, 0).residue == const_RESIDUE_EXACT, func() string { return "k=0 residue" })
 	far := divPow10_checked_q320res(x, 200)
-	c.expect(far.quot().isZero() && (far.residue == RESIDUE_LT_HALF), func() string { return "k=200" })
-	c.expect(divPow10_checked_q320res(u320{}, 200).residue == RESIDUE_EXACT, func() string { return "0, k=200" })
-	c.expect(divPow10_checked_q320res(x, 96).residue == RESIDUE_GT_HALF, func() string { return "k=96" })
-	c.expect(divPow10_q320res(u320FromDw0(1250), 2).residue == RESIDUE_HALF, func() string { return "1250, k=2" })
+	c.expect(far.quot().isZero() && (far.residue == const_RESIDUE_LT_HALF), func() string { return "k=200" })
+	c.expect(divPow10_checked_q320res(u320{}, 200).residue == const_RESIDUE_EXACT, func() string { return "0, k=200" })
+	c.expect(divPow10_checked_q320res(x, 96).residue == const_RESIDUE_GT_HALF, func() string { return "k=96" })
+	c.expect(divPow10_q320res(u320FromDw0(1250), 2).residue == const_RESIDUE_HALF, func() string { return "1250, k=2" })
 	c.done("divPow10Wrappers")
 }
 

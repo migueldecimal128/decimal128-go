@@ -13,14 +13,14 @@ func residueMerge(left, right residue) residue {
 func residueSubtractionInverse(res residue) residue {
 	verify("", func() bool { return res&^3 == 0 })
 	// EXACT->EXACT, LT_HALF->GT_HALF, HALF->HALF, GT_HALF->LT_HALF, packed nybbles.
-	const inverseMap = 0x1230
-	return (inverseMap >> uint(res<<2)) & 0x3
+	const const_INVERSE_MAP = 0x1230
+	return (const_INVERSE_MAP >> uint(res<<2)) & 0x3
 }
 
 func residueFromRemainderDivisor_256(remainder, divisor u256) residue {
 	if (remainder.dw3 >> 63) == 0 {
 		if isZero_bool_128(remainder.dw2|remainder.dw0, remainder.dw3|remainder.dw1) {
-			return RESIDUE_EXACT
+			return const_RESIDUE_EXACT
 		}
 		doubled := shl1_256_256(remainder.dw0, remainder.dw1, remainder.dw2, remainder.dw3)
 		ge := 0
@@ -33,7 +33,7 @@ func residueFromRemainderDivisor_256(remainder, divisor u256) residue {
 		}
 		return (ge << 1) | (1 ^ eq)
 	}
-	return RESIDUE_GT_HALF
+	return const_RESIDUE_GT_HALF
 }
 
 func residueFromDecadeWithDigitLen_128(dw0, dw1 int64, digitLen int) residue {
@@ -53,7 +53,7 @@ func residueFromDecadeWithDigitLen_128(dw0, dw1 int64, digitLen int) residue {
 		return (ge << 1) | (1 ^ eq)
 	}
 	verify("", func() bool { return digitLen == 39 })
-	return RESIDUE_LT_HALF
+	return const_RESIDUE_LT_HALF
 }
 
 func residueFromDecadeWithDigitLen_256(v u256, digitLen int) residue {

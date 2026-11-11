@@ -27,11 +27,11 @@ func sqrtFloorScaled(coeff u128, qExp, digitLen int) sqrtFloor {
 	// rem==0 exact; rem<=s below half; else above half. A HALF tie is impossible.
 	var res residue
 	if rem == (u256{}) {
-		res = RESIDUE_EXACT
+		res = const_RESIDUE_EXACT
 	} else if !s.less(rem) { // rem <= s
-		res = RESIDUE_LT_HALF
+		res = const_RESIDUE_LT_HALF
 	} else {
-		res = RESIDUE_GT_HALF
+		res = const_RESIDUE_GT_HALF
 	}
 
 	resultQExp := (qExp - scaleUp) >> 1 // (qExp − scaleUp) even ⇒ exact

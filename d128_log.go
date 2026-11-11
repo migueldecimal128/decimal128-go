@@ -9,7 +9,7 @@ package decimal128
 
 // --- ln ladder ---
 
-func d128_ln_tte(x d128) d128            { return d128_ln_rnd_ctxnull(x, ROUND_TIES_TO_EVEN, nil) }
+func d128_ln_tte(x d128) d128            { return d128_ln_rnd_ctxnull(x, const_ROUND_TIES_TO_EVEN, nil) }
 func d128_ln_rnd(x d128, rnd round) d128 { return d128_ln_rnd_ctxnull(x, rnd, nil) }
 func d128_ln_ctx(x d128, ctx *context) d128 {
 	return d128_ln_rnd_ctxnull(x, ctx.round, ctx)
@@ -21,7 +21,7 @@ func d128_ln_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 
 // --- log10 ladder ---
 
-func d128_log10_tte(x d128) d128            { return d128_log10_rnd_ctxnull(x, ROUND_TIES_TO_EVEN, nil) }
+func d128_log10_tte(x d128) d128            { return d128_log10_rnd_ctxnull(x, const_ROUND_TIES_TO_EVEN, nil) }
 func d128_log10_rnd(x d128, rnd round) d128 { return d128_log10_rnd_ctxnull(x, rnd, nil) }
 func d128_log10_ctx(x d128, ctx *context) d128 {
 	return d128_log10_rnd_ctxnull(x, ctx.round, ctx)
@@ -55,7 +55,7 @@ func logDispatch(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 	if d128_signFlag(x) {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeLogOfNegNumber)
 	}
-	return d128_POS_INFINITY() // log(+∞) = +∞
+	return const_D128_POS_INFINITY // log(+∞) = +∞
 }
 
 // --- magnitude ---

@@ -4,7 +4,7 @@
 
 package decimal128
 
-func d128_sqrt_tte(x d128) d128            { return d128_sqrt_rnd_ctxnull(x, ROUND_TIES_TO_EVEN, nil) }
+func d128_sqrt_tte(x d128) d128            { return d128_sqrt_rnd_ctxnull(x, const_ROUND_TIES_TO_EVEN, nil) }
 func d128_sqrt_rnd(x d128, rnd round) d128 { return d128_sqrt_rnd_ctxnull(x, rnd, nil) }
 func d128_sqrt_ctx(x d128, ctx *context) d128 {
 	return d128_sqrt_rnd_ctxnull(x, ctx.round, ctx)
@@ -28,7 +28,7 @@ func d128_sqrt_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 	if d128_signFlag(x) {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeSquareRootOfNegInfinity)
 	}
-	return d128_POS_INFINITY()
+	return const_D128_POS_INFINITY
 }
 
 func sqrtMagnitudeFnz_ctxnull(x d128, rounding round, ctxnull *context) d128 {
@@ -38,7 +38,7 @@ func sqrtMagnitudeFnz_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 	// GDAS ideal exponent floor(Q/2): reduce toward it ONLY for exact results
 	// (a perfect square whose root fits in <=34 digits). Inexact results keep
 	// full precision — their trailing zeros are significant.
-	isExact := f.residue == RESIDUE_EXACT && isMultipleOfPow10_4(f.s)
+	isExact := f.residue == const_RESIDUE_EXACT && isMultipleOfPow10_4(f.s)
 	if isExact {
 		maxToStrip := (d128_qExp(x) >> 1) - d128_qExp(result)
 		if maxToStrip > 0 {

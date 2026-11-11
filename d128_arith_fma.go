@@ -18,7 +18,9 @@ func d128_fma_rnd_ctxnull(x, y, a d128, rounding round, ctxnull *context) d128 {
 	return fmaSlow_rnd_ctxnull(x, y, a, prod.hi(), prod.lo(), rounding, ctxnull)
 }
 
-func d128_fma_tte(x, y, a d128) d128            { return d128_fma_rnd_ctxnull(x, y, a, ROUND_TIES_TO_EVEN, nil) }
+func d128_fma_tte(x, y, a d128) d128 {
+	return d128_fma_rnd_ctxnull(x, y, a, const_ROUND_TIES_TO_EVEN, nil)
+}
 func d128_fma_rnd(x, y, a d128, rnd round) d128 { return d128_fma_rnd_ctxnull(x, y, a, rnd, nil) }
 func d128_fma_ctx(x, y, a d128, ctx *context) d128 {
 	return d128_fma_rnd_ctxnull(x, y, a, ctx.round, ctx)
@@ -59,7 +61,7 @@ func fmaSlow_rnd_ctxnull(x, y, a d128, prodHi, prodLo u128, rounding round, ctxn
 
 	prodU256 := u256FromHiLo(prodHi, prodLo)
 	aCoeff := d128_u128(a)
-	zeroSign := rounding == ROUND_TOWARD_NEGATIVE
+	zeroSign := rounding == const_ROUND_TOWARD_NEGATIVE
 	return addWideAndFinalize_rnd_ctxnull(
 		prodSign, prodQ, prodU256,
 		d128_signFlag(a), d128_qExp(a), u256{aCoeff.dw0, aCoeff.dw1, 0, 0},
@@ -107,7 +109,7 @@ func fmaZeroProd_ctxnull(x, y, a d128, rounding round, ctxnull *context) d128 {
 		if prodSign == d128_signFlag(a) {
 			fmaSign = prodSign
 		} else {
-			fmaSign = rounding == ROUND_TOWARD_NEGATIVE
+			fmaSign = rounding == const_ROUND_TOWARD_NEGATIVE
 		}
 		return d128_zero(fmaSign, min(prodQ, d128_qExp(a)))
 	}
@@ -124,14 +126,14 @@ func fmaInfProdCtx(infSign bool, a d128) d128 {
 
 func fmaFnzFnzZer_ctxnull(prodSign bool, prodQ int, prodHi, prodLo u128, a d128, rounding round, ctxnull *context) d128 {
 	prodU256 := u256FromHiLo(prodHi, prodLo)
-	productD128 := finalize_256_ctxnull(prodSign, prodQ, prodU256, RESIDUE_EXACT, rounding, ctxnull)
+	productD128 := finalize_256_ctxnull(prodSign, prodQ, prodU256, const_RESIDUE_EXACT, rounding, ctxnull)
 	if d128_isFIN(productD128) && !d128_isZER(productD128) {
 		return preferMinimumQExp_exact(productD128, d128_qExp(a))
 	}
 	return productD128
 }
 
-// fmaExactAlignDigits is how far the larger-exponent operand may be scaled up so
+// const_FMA_EXACT_ALIGN_DIGITS is how far the larger-exponent operand may be scaled up so
 // that alignment is exact. If scaling m by the whole exponent gap keeps it within
 // this many digits, m is scaled all the way, nothing is shifted off n, and
 // finalize_256 does the one and only divide. Any bound up to 76 is correct (both
@@ -139,7 +141,7 @@ func fmaFnzFnzZer_ctxnull(prodSign bool, prodQ int, prodHi, prodLo u128, a d128,
 // 69 covers the product's 68 digits plus one, and measured the same as 71.
 // Past it, m is scaled only toward the 34-digit result precision and n is shifted
 // right with a residue, which keeps the far-addend case on finalize's 128-bit path.
-const fmaExactAlignDigits = 69
+const const_FMA_EXACT_ALIGN_DIGITS = 69
 
 func addWideAndFinalize_rnd_ctxnull(prodSign bool, prodQ int, prodCoeff u256, aSign bool, aQ int, aCoeff u256, zeroSign bool, rounding round, ctxnull *context) d128 {
 	var mSign, nSign bool
@@ -163,7 +165,7 @@ func addWideAndFinalizeLikeSign_rnd_ctxnull(sign bool, mQ int, mCoeff u256, nQ i
 	verify("", func() bool { return qDelta >= 0 })
 	mDigitLen := digitLen_int_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3)
 	shiftLeft := qDelta
-	if qDelta > fmaExactAlignDigits-mDigitLen {
+	if qDelta > const_FMA_EXACT_ALIGN_DIGITS-mDigitLen {
 		shiftLeft = min(qDelta, max(0, 34-mDigitLen))
 	}
 	mAligned := mCoeff
@@ -184,7 +186,7 @@ func addWideAndFinalizeUnlikeSign_rnd_ctxnull(mSign bool, mQ int, mCoeff u256, n
 	verify("", func() bool { return qDelta >= 0 })
 	mDigitLen := digitLen_int_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3)
 	shiftLeft := qDelta
-	if qDelta > fmaExactAlignDigits-mDigitLen {
+	if qDelta > const_FMA_EXACT_ALIGN_DIGITS-mDigitLen {
 		nDigitLen := digitLen_int_256(nCoeff.dw0, nCoeff.dw1, nCoeff.dw2, nCoeff.dw3)
 		maxCancellation := min(mDigitLen, nDigitLen)
 		shiftLeft = min(qDelta, max(0, 34+maxCancellation+1-mDigitLen))
@@ -202,14 +204,14 @@ func addWideAndFinalizeUnlikeSign_rnd_ctxnull(mSign bool, mQ int, mCoeff u256, n
 
 	ds := subAbs_d256swap_256x256(mAligned.dw0, mAligned.dw1, mAligned.dw2, mAligned.dw3, nAligned.dw0, nAligned.dw1, nAligned.dw2, nAligned.dw3)
 	diff := u256{ds.diffDw0, ds.diffDw1, ds.diffDw2, ds.diffDw3}
-	if diff == (u256{}) && residue == RESIDUE_EXACT {
+	if diff == (u256{}) && residue == const_RESIDUE_EXACT {
 		return d128_zero(zeroSign, qAlign)
 	}
 	if ds.swap {
 		return finalize_256_ctxnull(nSign, qAlign, diff, residue, rounding, ctxnull)
 	}
-	if residue == RESIDUE_EXACT {
-		return finalize_256_ctxnull(mSign, qAlign, diff, RESIDUE_EXACT, rounding, ctxnull)
+	if residue == const_RESIDUE_EXACT {
+		return finalize_256_ctxnull(mSign, qAlign, diff, const_RESIDUE_EXACT, rounding, ctxnull)
 	}
 	diffMinus1 := sub_256_256x256(diff.dw0, diff.dw1, diff.dw2, diff.dw3, 1, 0, 0, 0)
 	return finalize_256_ctxnull(mSign, qAlign, diffMinus1, residueSubtractionInverse(residue), rounding, ctxnull)

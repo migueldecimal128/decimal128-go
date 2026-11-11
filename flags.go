@@ -25,19 +25,19 @@ func (f *flags) raw() int64 { return f.bits }
 // three test corpora.
 func (f *flags) exceptionLetters() string {
 	var b strings.Builder
-	if f.isSet(INEXACT) {
+	if f.isSet(const_INEXACT) {
 		b.WriteByte('x')
 	}
-	if f.isSet(UNDERFLOW) {
+	if f.isSet(const_UNDERFLOW) {
 		b.WriteByte('u')
 	}
-	if f.isSet(OVERFLOW) {
+	if f.isSet(const_OVERFLOW) {
 		b.WriteByte('o')
 	}
-	if f.isSet(DIVISION_BY_ZERO) {
+	if f.isSet(const_DIVISION_BY_ZERO) {
 		b.WriteByte('z')
 	}
-	if f.isSet(INVALID_OPERATION) {
+	if f.isSet(const_INVALID_OPERATION) {
 		b.WriteByte('i')
 	}
 	return b.String()

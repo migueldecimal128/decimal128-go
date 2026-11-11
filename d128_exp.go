@@ -10,7 +10,7 @@ package decimal128
 
 // --- exp ladder ---
 
-func d128_exp_tte(x d128) d128            { return d128_exp_rnd_ctxnull(x, ROUND_TIES_TO_EVEN, nil) }
+func d128_exp_tte(x d128) d128            { return d128_exp_rnd_ctxnull(x, const_ROUND_TIES_TO_EVEN, nil) }
 func d128_exp_rnd(x d128, rnd round) d128 { return d128_exp_rnd_ctxnull(x, rnd, nil) }
 func d128_exp_ctx(x d128, ctx *context) d128 {
 	return d128_exp_rnd_ctxnull(x, ctx.round, ctx)
@@ -22,7 +22,7 @@ func d128_exp_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 
 // --- exp10 ladder ---
 
-func d128_exp10_tte(x d128) d128            { return d128_exp10_rnd_ctxnull(x, ROUND_TIES_TO_EVEN, nil) }
+func d128_exp10_tte(x d128) d128            { return d128_exp10_rnd_ctxnull(x, const_ROUND_TIES_TO_EVEN, nil) }
 func d128_exp10_rnd(x d128, rnd round) d128 { return d128_exp10_rnd_ctxnull(x, rnd, nil) }
 func d128_exp10_ctx(x d128, ctx *context) d128 {
 	return d128_exp10_rnd_ctxnull(x, ctx.round, ctx)
@@ -51,5 +51,5 @@ func expDispatch(x d128, isExp10 bool, rounding round, ctxnull *context) d128 {
 	if d128_signFlag(x) {
 		return d128_zero(false, 0) // exp(−∞) = +0
 	}
-	return d128_POS_INFINITY() // exp(+∞) = +∞
+	return const_D128_POS_INFINITY // exp(+∞) = +∞
 }

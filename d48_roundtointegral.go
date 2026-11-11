@@ -19,7 +19,7 @@ func d48_roundToIntegralTiesToAway(x d48) d48 {
 	}
 	qr := divPow10_checked_q320res(d48_u320(x), -q)
 	quot := qr.quot()
-	if (qr.residue == RESIDUE_HALF) || (qr.residue == RESIDUE_GT_HALF) {
+	if (qr.residue == const_RESIDUE_HALF) || (qr.residue == const_RESIDUE_GT_HALF) {
 		quot = add_320_320x64(quot, 1) // ties away from zero
 	}
 	return d48_fromSignQExp_160(sign, 0, quot.u192())
@@ -38,7 +38,7 @@ func d48_roundToIntegralTowardNegative(x d48) d48 {
 	}
 	qr := divPow10_checked_q320res(d48_u320(x), -q)
 	quot := qr.quot()
-	if sign && (qr.residue != RESIDUE_EXACT) {
+	if sign && (qr.residue != const_RESIDUE_EXACT) {
 		quot = add_320_320x64(quot, 1)
 	}
 	return d48_fromSignQExp_160(sign, 0, quot.u192())
@@ -69,7 +69,7 @@ func d48_toLongOrMin(x d48) int64 {
 			return math.MinInt64 // |x| < 1
 		}
 		qr := divPow10_q320res(c, dropDigits)
-		if qr.residue != RESIDUE_EXACT {
+		if qr.residue != const_RESIDUE_EXACT {
 			return math.MinInt64
 		}
 		mag = qr.quot()

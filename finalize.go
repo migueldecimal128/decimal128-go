@@ -8,7 +8,7 @@ package decimal128
 
 func finalize_128_ctxnull(sign bool, qExpIn int, coeffIn u128, residueIn residue, rounding round, ctxnull *context) d128 {
 	// Fast path: EXACT residue and already in valid decimal128 range.
-	if residueIn == RESIDUE_EXACT {
+	if residueIn == const_RESIDUE_EXACT {
 		if isCanonical34_128(qExpIn, coeffIn) {
 			return d128Pack(sign, qExpIn, coeffIn.dw0, coeffIn.dw1)
 		}
@@ -50,7 +50,7 @@ func finalizeSwampedFnz_128_ctxnull(sign bool, qExpIn int, coeffIn u128, residue
 	verify("", func() bool { return qExpIn >= -6176 && qExpIn <= 6111 })
 	verify("", func() bool { return !isZero_bool_128(coeffIn.dw0, coeffIn.dw1) })
 	verify("", func() bool { return cmp_int_128x128_pow10(coeffIn.dw0, coeffIn.dw1, 34) < 0 })
-	verify("", func() bool { return residueIn != RESIDUE_EXACT })
+	verify("", func() bool { return residueIn != const_RESIDUE_EXACT })
 	coeff0 := coeffIn.dw0
 	coeff1 := coeffIn.dw1
 	qExp := qExpIn
@@ -76,7 +76,7 @@ func finalizeSwampedFnz_128_ctxnull(sign bool, qExpIn int, coeffIn u128, residue
 }
 
 func finalize_128_quiet(sign bool, qExpIn int, coeffIn u128, residueIn residue) d128 {
-	if residueIn == RESIDUE_EXACT {
+	if residueIn == const_RESIDUE_EXACT {
 		if isCanonical34_128(qExpIn, coeffIn) {
 			return d128Pack(sign, qExpIn, coeffIn.dw0, coeffIn.dw1)
 		}
@@ -87,7 +87,7 @@ func finalize_128_quiet(sign bool, qExpIn int, coeffIn u128, residueIn residue) 
 	if isZero_bool_128(coeffIn.dw0, coeffIn.dw1) {
 		return finalizeZero_quiet(sign, qExpIn, residueIn)
 	}
-	return finalize_128_nonTrivial_ctxnull(sign, qExpIn, coeffIn, residueIn, ROUND_TIES_TO_EVEN, nil)
+	return finalize_128_nonTrivial_ctxnull(sign, qExpIn, coeffIn, residueIn, const_ROUND_TIES_TO_EVEN, nil)
 }
 
 func finalize_128_nonTrivial_ctxnull(sign bool, qExpIn int, coeffIn u128, residueIn residue, rounding round, ctxnull *context) d128 {
@@ -117,7 +117,7 @@ func finalizeZero_ctxnull(sign bool, qExp int, res residue, rounding round, ctxn
 	verify("", func() bool { return qExp <= 6111 })
 	var z d128
 	isOdd := false
-	if res != RESIDUE_EXACT && needsRoundUp(rounding, sign, isOdd, res) {
+	if res != const_RESIDUE_EXACT && needsRoundUp(rounding, sign, isOdd, res) {
 		if qExp < -6176 {
 			return finalizeUnderflowRegion_128_ctxnull(sign, qExp, u128{1, 0}, res, rounding, ctxnull)
 		}
@@ -125,7 +125,7 @@ func finalizeZero_ctxnull(sign bool, qExp int, res residue, rounding round, ctxn
 	} else {
 		z = d128_zero(sign, qExp)
 	}
-	if res != RESIDUE_EXACT && ctxnull != nil {
+	if res != const_RESIDUE_EXACT && ctxnull != nil {
 		return ctxSignalInexact_ctxnull(ctxnull, z)
 	}
 	return z
@@ -213,7 +213,7 @@ func finalizeSubnormal_ctxnull(sign bool, coeffDw0, coeffDw1 int64, res residue,
 	coeffT1 := coeffDw1
 	qExpT := -6176
 	isOdd := (coeffT0 & 1) != 0
-	if res != RESIDUE_EXACT && needsRoundUp(rounding, sign, isOdd, res) {
+	if res != const_RESIDUE_EXACT && needsRoundUp(rounding, sign, isOdd, res) {
 		rounded := add_128_128x128(coeffT0, coeffT1, 1, 0)
 		coeffT0 = rounded.dw0
 		coeffT1 = rounded.dw1
@@ -225,7 +225,7 @@ func finalizeSubnormal_ctxnull(sign bool, coeffDw0, coeffDw1 int64, res residue,
 		}
 	}
 	z := decimalFNZ_64x64(sign, qExpT, coeffT0, coeffT1)
-	if res != RESIDUE_EXACT && ctxnull != nil {
+	if res != const_RESIDUE_EXACT && ctxnull != nil {
 		return ctxSignalInexactUnderflow_ctxnull(ctxnull, z)
 	}
 	return z
@@ -236,7 +236,7 @@ func roundAndPack_128_ctxnull(sign bool, qExpIn int, coeffDw0, coeffDw1 int64, t
 	coeff0 := coeffDw0
 	coeff1 := coeffDw1
 	verify("", func() bool { return digitLen_int_128(coeff0, coeff1) <= 34 })
-	applyRounding := totalResidue != RESIDUE_EXACT
+	applyRounding := totalResidue != const_RESIDUE_EXACT
 	isOdd := (coeff0 & 1) != 0
 	if applyRounding && needsRoundUp(rounding, sign, isOdd, totalResidue) {
 		incremented := add_128_128x128(coeff0, coeff1, 1, 0)
@@ -300,13 +300,13 @@ func finalizeFullWidth_256_ctxnull(sign bool, qExpIn int, u256In u256, residueIn
 
 func finalizeZero_quiet(sign bool, qExp int, res residue) d128 {
 	verify("", func() bool { return qExp <= 6111 })
-	if res != RESIDUE_GT_HALF {
+	if res != const_RESIDUE_GT_HALF {
 		return d128_zero(sign, qExp)
 	}
 	if qExp >= -6176 {
 		return d128Pack(sign, qExp, 1, 0)
 	}
-	return finalizeUnderflowRegion_128_ctxnull(sign, qExp, u128{1, 0}, res, ROUND_TIES_TO_EVEN, nil)
+	return finalizeUnderflowRegion_128_ctxnull(sign, qExp, u128{1, 0}, res, const_ROUND_TIES_TO_EVEN, nil)
 }
 
 // --- magnitude limits ---

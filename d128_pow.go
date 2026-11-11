@@ -13,16 +13,16 @@ import (
 	"math/bits"
 )
 
-var d128PowOne = d128_fromInt64(1)
+var const_D128_POW_ONE = d128_fromInt64(1)
 
 const (
-	qMaxPow  = 6111
-	qTinyPow = -6176
+	const_Q_MAX  = 6111
+	const_Q_TINY = -6176
 )
 
 // --- ladder ---
 
-func d128_pow_tte(x, y d128) d128            { return d128_pow_rnd_ctxnull(x, y, ROUND_TIES_TO_EVEN, nil) }
+func d128_pow_tte(x, y d128) d128            { return d128_pow_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil) }
 func d128_pow_rnd(x, y d128, rnd round) d128 { return d128_pow_rnd_ctxnull(x, y, rnd, nil) }
 func d128_pow_ctx(x, y d128, ctx *context) d128 {
 	return d128_pow_rnd_ctxnull(x, y, ctx.round, ctx)
@@ -37,7 +37,7 @@ func d128_pow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 			return d128_pown_rnd_ctxnull(x, int(n), rounding, ctxnull)
 		}
 		// |y| too large for pown: only a magnitude-1 base stays finite.
-		if d128_isFNZ(x) && cmpMagFnzFnz(x, d128PowOne) == 0 {
+		if d128_isFNZ(x) && cmpMagFnzFnz(x, const_D128_POW_ONE) == 0 {
 			if d128_signFlag(x) && d128_isOddIntegral(y) {
 				return d128_fromInt64(-1)
 			}
@@ -49,7 +49,7 @@ func d128_pow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	// NaN operands (y is not an exact integer here).
 	if d128_isNAN(x) || d128_isNAN(y) {
 		// pow(1, qNaN) = 1 with no exception (§9.2).
-		if d128_isFNZ(x) && !d128_signFlag(x) && d128_isQNAN(y) && cmpMagFnzFnz(x, d128PowOne) == 0 {
+		if d128_isFNZ(x) && !d128_signFlag(x) && d128_isQNAN(y) && cmpMagFnzFnz(x, const_D128_POW_ONE) == 0 {
 			return d128_fromInt64(1)
 		}
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
@@ -60,7 +60,7 @@ func d128_pow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 		if d128_isINF(y) {
 			// pow(±0, ±∞): y > 0 → +0, y < 0 → +∞ (no divideByZero, per §9.2).
 			if d128_signFlag(y) {
-				return d128_POS_INFINITY()
+				return const_D128_POS_INFINITY
 			}
 			return d128_zero(false, 0)
 		}
@@ -94,12 +94,12 @@ func powInfFnz(y d128) d128 {
 	if d128_signFlag(y) {
 		return d128_zero(false, 0) // y < 0 → +0
 	}
-	return d128_POS_INFINITY() // y > 0 → +∞
+	return const_D128_POS_INFINITY // y > 0 → +∞
 }
 
 // powFnzInf: pow(x, ±∞), x finite non-zero or ±∞.
 func powFnzInf(x, y d128) d128 {
-	if d128_isFNZ(x) && cmpMagFnzFnz(x, d128PowOne) == 0 {
+	if d128_isFNZ(x) && cmpMagFnzFnz(x, const_D128_POW_ONE) == 0 {
 		return d128_fromInt64(1) // pow(±1, ±∞) = 1
 	}
 	xLessThanOne := d128_isFNZ(x) && d128_sciExp(x) < 0
@@ -107,7 +107,7 @@ func powFnzInf(x, y d128) d128 {
 	if xLessThanOne != yNeg {
 		return d128_zero(false, 0)
 	}
-	return d128_POS_INFINITY()
+	return const_D128_POS_INFINITY
 }
 
 // --- finite non-zero core ---
@@ -133,15 +133,15 @@ func powPreferredQExp(x, y d128) int {
 	}
 	if d128_sciExp(y) >= 5 {
 		if d128_signFlag(y) {
-			return qTinyPow
+			return const_Q_TINY
 		}
-		return qMaxPow
+		return const_Q_MAX
 	}
 	// y·Q(x) is exact in D48 (34 + 5 digits).
 	prod := d48_multiply(d48_fromD128(y, d128_signFlag(y)), d48_fromInt32(qX))
 	floored := d48_roundToIntegralTowardNegative(prod)
 	l := d48_toLongOrMin(floored)
-	return int(maxI64(minI64(l, qMaxPow), qTinyPow))
+	return int(maxI64(minI64(l, const_Q_MAX), const_Q_TINY))
 }
 
 // powFromD48 is pow(x, y) = 10^u, u = y·log10(x), over D48, rounded once. The
@@ -158,11 +158,11 @@ func powFromD48(x, y d128, preferred int, rounding round, ctxnull *context) d128
 	}
 	s := exp10Scaled_d48(u)
 	uMag := mulPow10_320(u320FromDw0(1000), max(0, d48_sciExp(u)+1))
-	if ambiguousScaled(s, add_320_320x320(e_EXP_D48, uMag)) {
+	if ambiguousScaled(s, add_320_320x320(const_E_EXP_D48, uMag)) {
 		if r, ok := powExact(x, y, preferred, rounding, ctxnull); ok {
 			return r
 		}
-		if !d48_isZero(u) && (d48_sciExp(u) < TINY_SCI_EXP-1) {
+		if !d48_isZero(u) && (d48_sciExp(u) < const_TINY_SCI_EXP-1) {
 			return d48_forceInexact(d48_onePlusTiny(!d48_signFlag(u), rounding, ctxnull), ctxnull)
 		}
 	}
@@ -381,7 +381,7 @@ func applyPreferredScale(x d128, preferredQExp int) d128 {
 	if qDelta > 0 {
 		// Lower the exponent toward preferred by padding trailing zeros.
 		digitLen := d128_digitLen(x)
-		headroom := min(34-digitLen, xQ-qTinyPow)
+		headroom := min(34-digitLen, xQ-const_Q_TINY)
 		if qDelta <= headroom {
 			c := d128_u128(x)
 			scaled := mulPow10_128_128(c.dw0, c.dw1, qDelta)
@@ -414,7 +414,7 @@ func d128_isExactIntegral(x d128) bool {
 		return false // |x| < 1, nonzero
 	}
 	qr := div_128_pow10_q128res(d128_u128(x), drop)
-	return qr.residue == RESIDUE_EXACT
+	return qr.residue == const_RESIDUE_EXACT
 }
 
 // d128_isOddIntegral reports whether x is an odd integer. The caller guarantees

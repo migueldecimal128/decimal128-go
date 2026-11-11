@@ -8,7 +8,7 @@ package decimal128
 func div_128_pow10_checked_q128res(x u128, pow10 int) quot128Residue {
 	verify("", func() bool { return pow10 >= 0 && pow10 <= 13000 })
 	if pow10 == 0 {
-		return quot128Residue{x.dw0, x.dw1, RESIDUE_EXACT}
+		return quot128Residue{x.dw0, x.dw1, const_RESIDUE_EXACT}
 	}
 	digitLen := digitLen_int_128(x.dw0, x.dw1)
 	if pow10 < digitLen {
@@ -17,9 +17,9 @@ func div_128_pow10_checked_q128res(x u128, pow10 int) quot128Residue {
 	var res residue
 	if pow10 > digitLen {
 		if digitLen > 0 {
-			res = RESIDUE_LT_HALF
+			res = const_RESIDUE_LT_HALF
 		} else {
-			res = RESIDUE_EXACT
+			res = const_RESIDUE_EXACT
 		}
 	} else {
 		res = residueFromDecadeWithDigitLen_128(x.dw0, x.dw1, digitLen)
@@ -40,7 +40,7 @@ func div_128_pow10_q128res(x u128, pow10 int) quot128Residue {
 func div_256_pow10_checked_q256res(x u256, pow10 int) quot256Residue {
 	verify("", func() bool { return pow10 >= 0 && pow10 <= 19000 })
 	if pow10 == 0 {
-		return quot256Residue{x.dw0, x.dw1, x.dw2, x.dw3, RESIDUE_EXACT}
+		return quot256Residue{x.dw0, x.dw1, x.dw2, x.dw3, const_RESIDUE_EXACT}
 	}
 	digitLen := digitLen_int_256(x.dw0, x.dw1, x.dw2, x.dw3)
 	if pow10 < digitLen {
@@ -56,9 +56,9 @@ func div_256_pow10_checked_q256res(x u256, pow10 int) quot256Residue {
 	var res residue
 	if pow10 > digitLen {
 		if digitLen > 0 {
-			res = RESIDUE_LT_HALF
+			res = const_RESIDUE_LT_HALF
 		} else {
-			res = RESIDUE_EXACT
+			res = const_RESIDUE_EXACT
 		}
 	} else {
 		res = residueFromDecadeWithDigitLen_256(x, digitLen)
@@ -68,10 +68,10 @@ func div_256_pow10_checked_q256res(x u256, pow10 int) quot256Residue {
 
 func div_256_pow10_q256res(x u256, pow10 int) quot256Residue {
 	pow10Remaining := pow10
-	totalResidue := RESIDUE_EXACT
+	totalResidue := const_RESIDUE_EXACT
 	quotient := x
 	for pow10Remaining > 0 && !isZero_bool_128(quotient.dw2, quotient.dw3) {
-		chunk := min(pow10Remaining, barrettPow10Max)
+		chunk := min(pow10Remaining, const_BARRETT_POW10_MAX)
 		qr := divPow10_q256res_256_barrett(quotient.dw0, quotient.dw1, quotient.dw2, quotient.dw3, chunk)
 		totalResidue = residueMerge(qr.residue, totalResidue)
 		quotient = u256{qr.quotDw0, qr.quotDw1, qr.quotDw2, qr.quotDw3}
@@ -79,7 +79,7 @@ func div_256_pow10_q256res(x u256, pow10 int) quot256Residue {
 	}
 	for pow10Remaining > 0 {
 		verify("", func() bool { return isZero_bool_128(quotient.dw2, quotient.dw3) })
-		chunk := min(pow10Remaining, barrettPow10Max)
+		chunk := min(pow10Remaining, const_BARRETT_POW10_MAX)
 		qr := divPow10_q128res_128_barrett(quotient.dw0, quotient.dw1, chunk)
 		totalResidue = residueMerge(qr.residue, totalResidue)
 		quotient = u256{qr.quotDw0, qr.quotDw1, 0, 0}
@@ -93,7 +93,7 @@ func div_256_pow10_q128res(x u256, pow10 int) quot128Residue {
 		if !isZero_bool_128(x.dw2, x.dw3) {
 			impossible("div_256_pow10_q128res: pow10 == 0 quotient overflows U128")
 		}
-		return quot128Residue{x.dw0, x.dw1, RESIDUE_EXACT}
+		return quot128Residue{x.dw0, x.dw1, const_RESIDUE_EXACT}
 	}
 	if isZero_bool_128(x.dw2, x.dw3) {
 		return div_128_pow10_q128res(x.lo(), pow10)

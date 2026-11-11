@@ -6,9 +6,9 @@
 
 package decimal128
 
-// rmp10_128_m[pow10] (lo/hi dwords) is the 128-bit reciprocal multiplier; index 0
+// const_RMP10_128_M[pow10] (lo/hi dwords) is the 128-bit reciprocal multiplier; index 0
 // is unused (pow10 is 1-based).
-var rmp10_128_m = [78]int64{
+var const_RMP10_128_M = [78]int64{
 	0, 0, -3689348814741910323, -3689348814741910324, -8116567392432202711, 2951479051793528258,
 	-5607810198407703691, 4722366482869645213, -796899343984252629, 3777893186295716170, 7059937891890119595, 1511157274518286468,
 	-5966710051105796727, 302231454903657293, 8681362423783412279, 120892581961462917, -433607690457090823, 96714065569170333,
@@ -24,23 +24,23 @@ var rmp10_128_m = [78]int64{
 	6511330626094318325, 713623846, -8463514193788003639, 285449538, -5382051653499511051, 57089907,
 }
 
-// rmp10_128_s128[pow10] = S - 128 (the post-multiply shift in the high half).
-var rmp10_128_s128 = [39]int{
+// const_RMP10_128_S128[pow10] = S - 128 (the post-multiply shift in the high half).
+var const_RMP10_128_S128 = [39]int{
 	0, 2, 2, 5, 7, 8, 8, 9, 11, 13, 14, 14, 16, 18, 19, 21, 20, 23, 23, 27, 24, 28, 30, 31, 32,
 	32, 34, 34, 36, 38, 41, 42, 41, 44, 44, 46, 49, 50, 50,
 }
 
 // Accessors for the interleaved reciprocal table: for index k the two dwords of
-// M ascend at rmp10_128_m[(k<<1)+0..1] (PrimitiveLayer.md D50).
-func rmp10_128_dw0(k int) int64 { return rmp10_128_m[k<<1] }
-func rmp10_128_dw1(k int) int64 { return rmp10_128_m[(k<<1)|1] }
+// M ascend at const_RMP10_128_M[(k<<1)+0..1] (PrimitiveLayer.md D50).
+func rmp10_128_dw0(k int) int64 { return const_RMP10_128_M[k<<1] }
+func rmp10_128_dw1(k int) int64 { return const_RMP10_128_M[(k<<1)|1] }
 
 func divPow10_q128res_128_recipmul(xDw0, xDw1 int64, pow10 int) quot128Residue {
 	demand("recipmul: pow10 outside [1, 38]", pow10 > 0 && pow10 <= 38)
 	k := pow10
 	mDw0 := rmp10_128_dw0(pow10)
 	mDw1 := rmp10_128_dw1(pow10)
-	s128 := rmp10_128_s128[pow10]
+	s128 := const_RMP10_128_S128[pow10]
 
 	// Strip k-1 low bits (the 2^(k-1) factor of 10^k); track them as sticky.
 	dividendAlfa := shr_128_128(xDw0, xDw1, k-1)
@@ -76,13 +76,13 @@ func divPow10_q128res_128_recipmul(xDw0, xDw1 int64, pow10 int) quot128Residue {
 
 	sticky := stickyAlfa || stickyBeta
 
-	res := RESIDUE_EXACT
+	res := const_RESIDUE_EXACT
 	if roundBit && sticky {
-		res = RESIDUE_GT_HALF
+		res = const_RESIDUE_GT_HALF
 	} else if roundBit {
-		res = RESIDUE_HALF
+		res = const_RESIDUE_HALF
 	} else if sticky {
-		res = RESIDUE_LT_HALF
+		res = const_RESIDUE_LT_HALF
 	}
 	return quot128Residue{q.dw0, q.dw1, res}
 }

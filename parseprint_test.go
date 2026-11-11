@@ -48,14 +48,14 @@ func TestPrintCoefficientQExp(t *testing.T) {
 		if !d128_isFIN(x) {
 			continue
 		}
-		if got, want := d128_format(x, FORMAT_COEFFICIENT_QEXP), refCoeffQExp(x); got != want {
+		if got, want := d128_format(x, const_FORMAT_COEFFICIENT_QEXP), refCoeffQExp(x); got != want {
 			t.Fatalf("coeffQExp: got %q want %q", got, want)
 		}
 	}
 }
 
 func TestParsePrintRoundTrip(t *testing.T) {
-	styles := []int{FORMAT_AUTO, FORMAT_EXPONENTIAL, FORMAT_ENGINEERING, FORMAT_COEFFICIENT_QEXP}
+	styles := []int{const_FORMAT_AUTO, const_FORMAT_EXPONENTIAL, const_FORMAT_ENGINEERING, const_FORMAT_COEFFICIENT_QEXP}
 	r := rand.New(rand.NewSource(111))
 	for i := 0; i < oracleIters; i++ {
 		x := randD128(r)
@@ -69,7 +69,7 @@ func TestParsePrintRoundTrip(t *testing.T) {
 			// bitwise; AUTO/EXP/ENG preserve the numeric value (ENG may pad with
 			// trailing zeros into a different cohort representative).
 			var equal bool
-			if !d128_isFIN(x) || style == FORMAT_COEFFICIENT_QEXP {
+			if !d128_isFIN(x) || style == const_FORMAT_COEFFICIENT_QEXP {
 				equal = d128_bitwiseEQ(got, x)
 			} else {
 				equal = d128_isFIN(got) && sameValue(got, x)
@@ -88,21 +88,21 @@ func TestPrintKnown(t *testing.T) {
 		style int
 		want  string
 	}{
-		{decimalFNZ_64x64(false, 0, 1, 0), FORMAT_AUTO, "1"},
-		{decimalFNZ_64x64(true, 0, 1, 0), FORMAT_AUTO, "-1"},
-		{decimalFNZ_64x64(false, 0, 123, 0), FORMAT_AUTO, "123"},
-		{decimalFNZ_64x64(false, -2, 1, 0), FORMAT_AUTO, "0.01"},
-		{decimalFNZ_64x64(false, -1, 15, 0), FORMAT_AUTO, "1.5"},
-		{decimalFNZ_64x64(false, 5, 1, 0), FORMAT_AUTO, "1E+5"},
-		{decimalFNZ_64x64(false, -8, 1, 0), FORMAT_AUTO, "1E-8"},
-		{d128_zero(false, 0), FORMAT_AUTO, "0"},
-		{d128_zero(true, 0), FORMAT_AUTO, "-0"},
-		{d128_infinity(false), FORMAT_AUTO, "Infinity"},
-		{d128_infinity(true), FORMAT_AUTO, "-Infinity"},
-		{d128_QNAN0(), FORMAT_AUTO, "NaN"},
-		{d128_SNAN0(), FORMAT_AUTO, "sNaN"},
-		{decimalFNZ_64x64(false, 0, 1, 0), FORMAT_EXPONENTIAL, "1E+0"},
-		{decimalFNZ_64x64(false, 0, 1, 0), FORMAT_COEFFICIENT_QEXP, "1E+0"},
+		{decimalFNZ_64x64(false, 0, 1, 0), const_FORMAT_AUTO, "1"},
+		{decimalFNZ_64x64(true, 0, 1, 0), const_FORMAT_AUTO, "-1"},
+		{decimalFNZ_64x64(false, 0, 123, 0), const_FORMAT_AUTO, "123"},
+		{decimalFNZ_64x64(false, -2, 1, 0), const_FORMAT_AUTO, "0.01"},
+		{decimalFNZ_64x64(false, -1, 15, 0), const_FORMAT_AUTO, "1.5"},
+		{decimalFNZ_64x64(false, 5, 1, 0), const_FORMAT_AUTO, "1E+5"},
+		{decimalFNZ_64x64(false, -8, 1, 0), const_FORMAT_AUTO, "1E-8"},
+		{d128_zero(false, 0), const_FORMAT_AUTO, "0"},
+		{d128_zero(true, 0), const_FORMAT_AUTO, "-0"},
+		{d128_infinity(false), const_FORMAT_AUTO, "Infinity"},
+		{d128_infinity(true), const_FORMAT_AUTO, "-Infinity"},
+		{const_D128_QNAN0, const_FORMAT_AUTO, "NaN"},
+		{const_D128_SNAN0, const_FORMAT_AUTO, "sNaN"},
+		{decimalFNZ_64x64(false, 0, 1, 0), const_FORMAT_EXPONENTIAL, "1E+0"},
+		{decimalFNZ_64x64(false, 0, 1, 0), const_FORMAT_COEFFICIENT_QEXP, "1E+0"},
 	}
 	for _, c := range cases {
 		if got := d128_format(c.x, c.style); got != c.want {

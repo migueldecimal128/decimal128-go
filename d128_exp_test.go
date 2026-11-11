@@ -18,9 +18,9 @@ func d128FromFloat(f float64) d128 {
 }
 
 func d128ToFloat(t *testing.T, x d128) float64 {
-	f, err := strconv.ParseFloat(d128_format(x, FORMAT_AUTO), 64)
+	f, err := strconv.ParseFloat(d128_format(x, const_FORMAT_AUTO), 64)
 	if err != nil {
-		t.Fatalf("parse result %q: %v", d128_format(x, FORMAT_AUTO), err)
+		t.Fatalf("parse result %q: %v", d128_format(x, const_FORMAT_AUTO), err)
 	}
 	return f
 }
@@ -42,7 +42,7 @@ func checkRelErrTol(t *testing.T, name string, arg, got, want, tol float64) {
 }
 
 func TestExpVsFloat(t *testing.T) {
-	ctx := newContextRound(ROUND_TIES_TO_EVEN)
+	ctx := newContextRound(const_ROUND_TIES_TO_EVEN)
 	rng := rand.New(rand.NewSource(0xE7))
 	for i := 0; i < 50000; i++ {
 		f := (rng.Float64()*2 - 1) * 200 // [-200, 200]
@@ -52,7 +52,7 @@ func TestExpVsFloat(t *testing.T) {
 }
 
 func TestExp10VsFloat(t *testing.T) {
-	ctx := newContextRound(ROUND_TIES_TO_EVEN)
+	ctx := newContextRound(const_ROUND_TIES_TO_EVEN)
 	rng := rand.New(rand.NewSource(0xE710))
 	for i := 0; i < 50000; i++ {
 		f := (rng.Float64()*2 - 1) * 290 // [-290, 290], inside float64 range
@@ -68,7 +68,7 @@ func randPositiveFloat(rng *rand.Rand) float64 {
 }
 
 func TestLnVsFloat(t *testing.T) {
-	ctx := newContextRound(ROUND_TIES_TO_EVEN)
+	ctx := newContextRound(const_ROUND_TIES_TO_EVEN)
 	rng := rand.New(rand.NewSource(0x1A))
 	for i := 0; i < 50000; i++ {
 		f := randPositiveFloat(rng)
@@ -78,7 +78,7 @@ func TestLnVsFloat(t *testing.T) {
 }
 
 func TestLog10VsFloat(t *testing.T) {
-	ctx := newContextRound(ROUND_TIES_TO_EVEN)
+	ctx := newContextRound(const_ROUND_TIES_TO_EVEN)
 	rng := rand.New(rand.NewSource(0x1A10))
 	for i := 0; i < 50000; i++ {
 		f := randPositiveFloat(rng)

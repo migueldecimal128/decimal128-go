@@ -10,12 +10,14 @@ package decimal128
 
 import "math/bits"
 
-var d128PownOne = d128_fromInt64(1)
-var d128PownTen = d128_fromInt64(10)
+var const_D128_ONE = d128_fromInt64(1)
+var const_D128_TEN = d128_fromInt64(10)
 
 // --- ladder ---
 
-func d128_pown_tte(x d128, n int) d128            { return d128_pown_rnd_ctxnull(x, n, ROUND_TIES_TO_EVEN, nil) }
+func d128_pown_tte(x d128, n int) d128 {
+	return d128_pown_rnd_ctxnull(x, n, const_ROUND_TIES_TO_EVEN, nil)
+}
 func d128_pown_rnd(x d128, n int, rnd round) d128 { return d128_pown_rnd_ctxnull(x, n, rnd, nil) }
 func d128_pown_ctx(x d128, n int, ctx *context) d128 {
 	return d128_pown_rnd_ctxnull(x, n, ctx.round, ctx)
@@ -87,13 +89,13 @@ func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 
 	// |x| == 1: result is ±1 carrying the preferred exponent n·Q(x), clamped to
 	// [-33, 0] (the product saturated: n may be math.MinInt).
-	if cmpMagFnzFnz(x, d128PownOne) == 0 {
+	if cmpMagFnzFnz(x, const_D128_ONE) == 0 {
 		resultQExp := max(min(satMulSigned(n, d128_qExp(x)), 0), -33)
 		return d128_oneWithQExp(negative, resultQExp)
 	}
 
 	// |x| == 10: an exact power of ten, carrying the preferred cohort exponent.
-	if cmpMagFnzFnz(x, d128PownTen) == 0 {
+	if cmpMagFnzFnz(x, const_D128_TEN) == 0 {
 		if n > 6144 {
 			return finalizeOverflow_ctxnull(negative, rounding, ctxnull)
 		}
@@ -108,8 +110,8 @@ func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 
 	// |n| > 2^31: 10^(n·log1p(ε)/ln10) with ε = |x| − 1, whose error does not
 	// grow with n (pown_largeN). |n| is taken unsigned, so math.MinInt lands here.
-	if absU64(n) > POWN_LARGE_N {
-		eps := d48_subtract(d48_fromD128(x, false), d48_ONE)
+	if absU64(n) > const_POWN_LARGE_N {
+		eps := d48_subtract(d48_fromD128(x, false), const_D48_ONE)
 		return pown_largeN(eps, n, negative, false, rounding, ctxnull)
 	}
 
@@ -127,9 +129,9 @@ func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 		estimatedResultExp := int64(d128_sciExp(x)) * int64(absPow)
 		if estimatedResultExp < 6100 {
 			raised := pownFNZ(x, absPow, rounding, ctxnull)
-			return d128_divide_rnd_ctxnull(d128PownOne, raised, rounding, ctxnull)
+			return d128_divide_rnd_ctxnull(const_D128_ONE, raised, rounding, ctxnull)
 		}
-		reciprocal := d128_divide_rnd_ctxnull(d128PownOne, x, rounding, ctxnull)
+		reciprocal := d128_divide_rnd_ctxnull(const_D128_ONE, x, rounding, ctxnull)
 		return pownFNZ(reciprocal, absPow, rounding, ctxnull)
 	}
 
@@ -138,16 +140,16 @@ func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 
 // --- large n (PownLargeNWorkOrder.md) ---
 
-// POWN_LARGE_N is the |n| above which pown and compound take the log route
+// const_POWN_LARGE_N is the |n| above which pown and compound take the log route
 // (LN-1). Up to it the D48 ladder's error, about |n|·5·10^-48, stays below
 // 10^-38; past about 10^12 it exceeds an ulp.
-const POWN_LARGE_N uint64 = 1 << 31
+const const_POWN_LARGE_N uint64 = 1 << 31
 
 // d48_log1pSeries is log1p(ε) for |ε| < 10^-5: ε·Σ (−1)^(k+1)·ε^(k−1)/k, Horner
 // in D48. Ten terms reach 48 digits relative to ε however small ε is; the
 // general d48_logMagnitude is only absolutely accurate near 1.
 func d48_log1pSeries(eps d48) d48 {
-	w := d48_LOG1P_WEIGHTS
+	w := const_D48_LOG1P_WEIGHTS
 	acc := w[len(w)-1]
 	for k := len(w) - 2; k >= 0; k-- {
 		acc = d48_fma(acc, eps, w[k])
@@ -165,7 +167,7 @@ func d48_log1pSeries(eps d48) d48 {
 // (PownLargeNWorkOrder.md LN-6). tinyRule (compound only, whose ε can be far
 // below 10^-34): |z| < 10^-35 makes 10^z 1 ± tiny, decided by z's sign.
 func pown_largeN(eps d48, n int, resultSign, tinyRule bool, rounding round, ctxnull *context) d128 {
-	verify("", func() bool { return (absU64(n) > POWN_LARGE_N) && !d48_isZero(eps) })
+	verify("", func() bool { return (absU64(n) > const_POWN_LARGE_N) && !d48_isZero(eps) })
 	// |n·ln(1 + ε)| > 2·10^4: the magnitude exceeds 1 iff ε and n share a sign (LN-3).
 	if d48_sciExp(eps) >= -5 {
 		if d48_signFlag(eps) == (n < 0) {
@@ -173,8 +175,8 @@ func pown_largeN(eps d48, n int, resultSign, tinyRule bool, rounding round, ctxn
 		}
 		return finalizeUnderflowFullySwamped(resultSign, rounding, ctxnull)
 	}
-	z := d48_divide(d48_multiply(d48_log1pSeries(eps), d48_fromInt32(n)), d48_LN10)
-	if tinyRule && (d48_sciExp(z) < TINY_SCI_EXP) {
+	z := d48_divide(d48_multiply(d48_log1pSeries(eps), d48_fromInt32(n)), const_D48_LN10)
+	if tinyRule && (d48_sciExp(z) < const_TINY_SCI_EXP) {
 		return d48_forceInexact(d48_onePlusTiny(!d48_signFlag(z), rounding, ctxnull), ctxnull)
 	}
 	// z on an integer is a D48 accident (the true z is irrational): still Inexact.
@@ -194,8 +196,8 @@ func pown_largeN(eps d48, n int, resultSign, tinyRule bool, rounding round, ctxn
 // is monotonic, so the first band crossing is terminal → the correctly-signed
 // overflow / underflow.
 const (
-	POWN_QEXP_OVER  = 6200
-	POWN_QEXP_UNDER = -6250
+	const_POWN_QEXP_OVER  = 6200
+	const_POWN_QEXP_UNDER = -6250
 )
 
 // ladderStartBit is the bit below |n|'s top bit (n >= 2): the left-to-right
@@ -214,7 +216,7 @@ func pownFNZ_powGE3(x d128, n uint64, rounding round, ctxnull *context) d128 {
 // pown_d48Ladder is left-to-right binary exponentiation m^n (n >= 1; n = 1
 // returns m) in the 48-digit D48 domain. It stops at the first guard-band
 // crossing and returns that value: the caller tests d48_qExp against
-// POWN_QEXP_OVER / POWN_QEXP_UNDER.
+// const_POWN_QEXP_OVER / const_POWN_QEXP_UNDER.
 func pown_d48Ladder(m d48, n uint64) d48 {
 	if n == 1 {
 		return m // the top-bit shift needs n >= 2
@@ -225,7 +227,7 @@ func pown_d48Ladder(m d48, n uint64) d48 {
 		if (n & bit) != 0 {
 			z = d48_multiply(z, m)
 		}
-		if (d48_qExp(z) > POWN_QEXP_OVER) || (d48_qExp(z) < POWN_QEXP_UNDER) {
+		if (d48_qExp(z) > const_POWN_QEXP_OVER) || (d48_qExp(z) < const_POWN_QEXP_UNDER) {
 			return z
 		}
 	}
@@ -242,10 +244,10 @@ func pown_d48Positive(m d48, n uint64, exact bool, rounding round, ctxnull *cont
 	verify("", func() bool { return n >= 2 })
 	resultSign := d48_signFlag(m) && (n&1) != 0
 	z := pown_d48Ladder(m, n)
-	if d48_qExp(z) > POWN_QEXP_OVER {
+	if d48_qExp(z) > const_POWN_QEXP_OVER {
 		return finalizeOverflow_ctxnull(resultSign, rounding, ctxnull)
 	}
-	if d48_qExp(z) < POWN_QEXP_UNDER {
+	if d48_qExp(z) < const_POWN_QEXP_UNDER {
 		return finalizeUnderflowFullySwamped(resultSign, rounding, ctxnull)
 	}
 	r := finalizeD48_ctxnull(z, rounding, ctxnull)
@@ -263,10 +265,10 @@ func pown_d48Negative(m d48, absPow uint64, rounding round, ctxnull *context) d1
 	verify("", func() bool { return absPow >= 1 })
 	resultSign := d48_signFlag(m) && (absPow&1) != 0
 	z := pown_d48Ladder(m, absPow)
-	if d48_qExp(z) > POWN_QEXP_OVER {
+	if d48_qExp(z) > const_POWN_QEXP_OVER {
 		return finalizeUnderflowFullySwamped(resultSign, rounding, ctxnull)
 	}
-	if d48_qExp(z) < POWN_QEXP_UNDER {
+	if d48_qExp(z) < const_POWN_QEXP_UNDER {
 		return finalizeOverflow_ctxnull(resultSign, rounding, ctxnull)
 	}
 	r := finalizeD48_ctxnull(d48_divide(d48_fromInt32(1), z), rounding, ctxnull)
@@ -410,10 +412,10 @@ func tenPowN(sign bool, n, preferredQExp int, rounding round, ctxnull *context) 
 	coeffExp := n - preferredQExp
 	if coeffExp <= 0 || coeffExp > 33 {
 		// coefficient 1, qExp = n
-		return finalize_128_ctxnull(sign, n, u128{1, 0}, RESIDUE_EXACT, rounding, ctxnull)
+		return finalize_128_ctxnull(sign, n, u128{1, 0}, const_RESIDUE_EXACT, rounding, ctxnull)
 	}
 	coeff := fromLoHi_128_64x64(pow10_128_dw0(coeffExp), pow10_128_dw1(coeffExp))
-	return finalize_128_ctxnull(sign, preferredQExp, coeff, RESIDUE_EXACT, rounding, ctxnull)
+	return finalize_128_ctxnull(sign, preferredQExp, coeff, const_RESIDUE_EXACT, rounding, ctxnull)
 }
 
 func minI64(a, b int64) int64 {

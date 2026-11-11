@@ -178,7 +178,7 @@ func TestWrapperRounding(t *testing.T) {
 	if got := TowardPositive.Quo(a, b).String(); got != "0.3333333333333333333333333333333334" {
 		t.Fatalf("TowardPositive 1/3 = %q", got)
 	}
-	if TiesToEven.core() != ROUND_TIES_TO_EVEN || TowardNegative.core() != ROUND_TOWARD_NEGATIVE {
+	if TiesToEven.core() != const_ROUND_TIES_TO_EVEN || TowardNegative.core() != const_ROUND_TOWARD_NEGATIVE {
 		t.Fatal("Rounding.core() mapping")
 	}
 }

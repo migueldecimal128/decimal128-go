@@ -93,7 +93,7 @@ func TestNanParenRendersBare(t *testing.T) {
 		{"NaN(0)", "NaN"},
 	}
 	for _, c := range cases {
-		got := d128_format(d128_parseOrNaN(c[0]), FORMAT_AUTO)
+		got := d128_format(d128_parseOrNaN(c[0]), const_FORMAT_AUTO)
 		if got != c[1] {
 			t.Errorf("format(%q) = %q, want %q", c[0], got, c[1])
 		}

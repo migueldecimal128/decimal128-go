@@ -12,7 +12,7 @@ type context struct {
 	flags *flags
 }
 
-func newContext() *context             { return &context{round: ROUND_TIES_TO_EVEN, flags: newFlags()} }
+func newContext() *context             { return &context{round: const_ROUND_TIES_TO_EVEN, flags: newFlags()} }
 func newContextRound(r round) *context { return &context{round: r, flags: newFlags()} }
 func ieee754Context() *context         { return newContext() }
 
@@ -24,46 +24,46 @@ func (ctx *context) withRoundingAndNewFlags(r round) *context {
 }
 
 func (ctx *context) isSet(e exception754) bool { return ctx.flags.isSet(e) }
-func (ctx *context) isOverflow() bool          { return ctx.isSet(OVERFLOW) }
-func (ctx *context) isUnderflow() bool         { return ctx.isSet(UNDERFLOW) }
+func (ctx *context) isOverflow() bool          { return ctx.isSet(const_OVERFLOW) }
+func (ctx *context) isUnderflow() bool         { return ctx.isSet(const_UNDERFLOW) }
 func (ctx *context) exceptionLetters() string  { return ctx.flags.exceptionLetters() }
 func (ctx *context) exceptionFlagsInt() int    { return int(ctx.flags.raw()) }
 
-func isRoundTowardNegative(ctx *context) bool { return ctx.round == ROUND_TOWARD_NEGATIVE }
+func isRoundTowardNegative(ctx *context) bool { return ctx.round == const_ROUND_TOWARD_NEGATIVE }
 func isRoundTowardNegative_quiet() bool       { return false }
 
 func ctxSignalInexact_ctxnull(ctx *context, d d128) d128 {
-	ctx.flags.set(INEXACT)
+	ctx.flags.set(const_INEXACT)
 	return d
 }
 
 func ctxSignalInexactOverflow_ctxnull(ctx *context, d d128) d128 {
-	ctx.flags.set(OVERFLOW)
-	ctx.flags.set(INEXACT)
+	ctx.flags.set(const_OVERFLOW)
+	ctx.flags.set(const_INEXACT)
 	return d
 }
 
 func ctxSignalInexactUnderflow_ctxnull(ctx *context, d d128) d128 {
-	ctx.flags.set(UNDERFLOW)
-	ctx.flags.set(INEXACT)
+	ctx.flags.set(const_UNDERFLOW)
+	ctx.flags.set(const_INEXACT)
 	return d
 }
 
 func ctxSignalDivByZero_ctxnull(ctxnull *context, sign bool) d128 {
 	if ctxnull != nil {
-		ctxnull.flags.set(DIVISION_BY_ZERO)
+		ctxnull.flags.set(const_DIVISION_BY_ZERO)
 	}
 	if sign {
-		return d128_NEG_INFINITY()
+		return const_D128_NEG_INFINITY
 	}
-	return d128_POS_INFINITY()
+	return const_D128_POS_INFINITY
 }
 
 func signalDivByZero_quiet(resultSign bool) d128 {
 	if resultSign {
-		return d128_NEG_INFINITY()
+		return const_D128_NEG_INFINITY
 	}
-	return d128_POS_INFINITY()
+	return const_D128_POS_INFINITY
 }
 
 func signalInexactOverflow_quiet(dec d128) d128  { return dec }
@@ -74,9 +74,9 @@ func signalInexactUnderflow_quiet(dec d128) d128 { return dec }
 func ctxSignalInvalidOperation_ctxnull(ctxnull *context, cause invalidCause) d128 {
 	_ = cause
 	if ctxnull != nil {
-		ctxnull.flags.set(INVALID_OPERATION)
+		ctxnull.flags.set(const_INVALID_OPERATION)
 	}
-	return d128_QNAN0()
+	return const_D128_QNAN0
 }
 
 // ctxSignalInvalidOperationResult is ctxSignalInvalidOperation_ctxnull with an explicit
@@ -84,7 +84,7 @@ func ctxSignalInvalidOperation_ctxnull(ctxnull *context, cause invalidCause) d12
 func ctxSignalInvalidOperationResult(ctxnull *context, cause invalidCause, result d128) d128 {
 	_ = cause
 	if ctxnull != nil {
-		ctxnull.flags.set(INVALID_OPERATION)
+		ctxnull.flags.set(const_INVALID_OPERATION)
 	}
 	return result
 }
@@ -97,7 +97,7 @@ func ctxSignalSNanOperandFound_ctxnull(ctxnull *context, nan d128) d128 {
 		quietedNaN = d128_quieted(nan)
 	}
 	if ctxnull != nil {
-		ctxnull.flags.set(INVALID_OPERATION)
+		ctxnull.flags.set(const_INVALID_OPERATION)
 	}
 	return quietedNaN
 }

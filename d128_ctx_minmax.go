@@ -10,7 +10,7 @@ package decimal128
 
 func minMaxSignalSNaN(x, y d128, ctx *context) {
 	if d128_isSNAN(x) || d128_isSNAN(y) {
-		ctx.flags.set(INVALID_OPERATION)
+		ctx.flags.set(const_INVALID_OPERATION)
 	}
 }
 

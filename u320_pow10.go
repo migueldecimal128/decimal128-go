@@ -2,7 +2,7 @@
 // U320Pow10.swift): the digit count, and the residue of a remainder against a
 // power of ten or a general divisor. Every power of ten is read at its own
 // width from regions A/B (10^0..10^77, pow10) or region C (10^78..10^96,
-// pow10_320); none is built as a five-limb value.
+// const_POW10_320_DW); none is built as a five-limb value.
 
 package decimal128
 
@@ -49,16 +49,16 @@ func residueFromRemainderPow10_320(rem u320, p int) residue {
 	verify("", func() bool { return (p >= 0) && (p <= 48) })
 	verify("rem >= 10^p", func() bool { return cmp_int_320_pow10(rem, p) < 0 })
 	if rem.isZero() {
-		return RESIDUE_EXACT
+		return const_RESIDUE_EXACT
 	}
 	c := cmp_int_320_pow10(add_320_320x320(rem, rem), p)
 	if c < 0 {
-		return RESIDUE_LT_HALF
+		return const_RESIDUE_LT_HALF
 	}
 	if c == 0 {
-		return RESIDUE_HALF
+		return const_RESIDUE_HALF
 	}
-	return RESIDUE_GT_HALF
+	return const_RESIDUE_GT_HALF
 }
 
 // residueFromRemainderDivisor_320 is the residue of rem against a general
@@ -67,14 +67,14 @@ func residueFromRemainderPow10_320(rem u320, p int) residue {
 func residueFromRemainderDivisor_320(rem, divisor u320) residue {
 	verify("rem >= divisor", func() bool { return lt_320(rem, divisor) })
 	if rem.isZero() {
-		return RESIDUE_EXACT
+		return const_RESIDUE_EXACT
 	}
 	c := cmp_int_320x320(add_320_320x320(rem, rem), divisor)
 	if c < 0 {
-		return RESIDUE_LT_HALF
+		return const_RESIDUE_LT_HALF
 	}
 	if c == 0 {
-		return RESIDUE_HALF
+		return const_RESIDUE_HALF
 	}
-	return RESIDUE_GT_HALF
+	return const_RESIDUE_GT_HALF
 }

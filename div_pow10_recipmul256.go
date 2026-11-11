@@ -105,11 +105,11 @@ func lowBitsNonZero_256(d0, d1, d2, d3 int64, n int) bool {
 }
 
 // Accessors for the interleaved reciprocal table: for index k the four dwords
-// of M ascend at rmp10_256_m[(k<<2)+0..3] (PrimitiveLayer.md D50).
-func rmp10_256_dw0(k int) int64 { return rmp10_256_m[k<<2] }
-func rmp10_256_dw1(k int) int64 { return rmp10_256_m[(k<<2)|1] }
-func rmp10_256_dw2(k int) int64 { return rmp10_256_m[(k<<2)|2] }
-func rmp10_256_dw3(k int) int64 { return rmp10_256_m[(k<<2)|3] }
+// of M ascend at const_RMP10_256_M[(k<<2)+0..3] (PrimitiveLayer.md D50).
+func rmp10_256_dw0(k int) int64 { return const_RMP10_256_M[k<<2] }
+func rmp10_256_dw1(k int) int64 { return const_RMP10_256_M[(k<<2)|1] }
+func rmp10_256_dw2(k int) int64 { return const_RMP10_256_M[(k<<2)|2] }
+func rmp10_256_dw3(k int) int64 { return const_RMP10_256_M[(k<<2)|3] }
 
 func divPow10_q128res_256_recipmul(x u256, pow10 int) quot128Residue {
 	demand("recipmul256: pow10 outside [1, 77]", pow10 > 0 && pow10 <= 77)
@@ -118,8 +118,8 @@ func divPow10_q128res_256_recipmul(x u256, pow10 int) quot128Residue {
 	m1 := rmp10_256_dw1(k)
 	m2 := rmp10_256_dw2(k)
 	m3 := rmp10_256_dw3(k)
-	s256 := rmp10_256_s256[k] // = S - 256
-	sh := k - 1               // 0..76
+	s256 := const_RMP10_256_S256[k] // = S - 256
+	sh := k - 1                     // 0..76
 
 	// Strip k-1 low bits (the 2^(k-1) factor of 10^k); track them as sticky.
 	a := shr_256_256(x.dw0, x.dw1, x.dw2, x.dw3, sh)
@@ -142,13 +142,13 @@ func divPow10_q128res_256_recipmul(x u256, pow10 int) quot128Residue {
 	pLoGeM := cmp_int_256x256(pLo.dw0, pLo.dw1, pLo.dw2, pLo.dw3, m0, m1, m2, m3) >= 0
 	sticky := stickyAlfa || highFrac || pLoGeM
 
-	res := RESIDUE_EXACT
+	res := const_RESIDUE_EXACT
 	if roundBit && sticky {
-		res = RESIDUE_GT_HALF
+		res = const_RESIDUE_GT_HALF
 	} else if roundBit {
-		res = RESIDUE_HALF
+		res = const_RESIDUE_HALF
 	} else if sticky {
-		res = RESIDUE_LT_HALF
+		res = const_RESIDUE_LT_HALF
 	}
 	return quot128Residue{q.dw0, q.dw1, res}
 }

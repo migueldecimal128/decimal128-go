@@ -52,7 +52,7 @@ func d128_multiply_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context)
 		// Reuse prod computed above: the finite×finite slow path is just
 		// "finalize the 256-bit product". Recomputing it in a mulFnzFnz helper
 		// would be a redundant 128×128→256 multiply on every full-width multiply.
-		return finalize_256_ctxnull(prodSignFlag, prodQExp, prod, RESIDUE_EXACT, rounding, ctxnull)
+		return finalize_256_ctxnull(prodSignFlag, prodQExp, prod, const_RESIDUE_EXACT, rounding, ctxnull)
 	}
 	if d128_isNAN(x) || d128_isNAN(y) {
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
@@ -65,7 +65,7 @@ func d128_multiply_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context)
 }
 
 func d128_multiply_tte(x, y d128) d128 {
-	return d128_multiply_rnd_ctxnull(x, y, ROUND_TIES_TO_EVEN, nil)
+	return d128_multiply_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
 }
 func d128_multiply_rnd(x, y d128, rnd round) d128 { return d128_multiply_rnd_ctxnull(x, y, rnd, nil) }
 func d128_multiply_ctx(x, y d128, ctx *context) d128 {
@@ -91,7 +91,7 @@ func d128_square_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 }
 
 func d128_square_tte(x d128) d128 {
-	return d128_square_rnd_ctxnull(x, ROUND_TIES_TO_EVEN, nil)
+	return d128_square_rnd_ctxnull(x, const_ROUND_TIES_TO_EVEN, nil)
 }
 func d128_square_rnd(x d128, rnd round) d128 { return d128_square_rnd_ctxnull(x, rnd, nil) }
 func d128_square_ctx(x d128, ctx *context) d128 {

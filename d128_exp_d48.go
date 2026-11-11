@@ -21,7 +21,7 @@ func expScaled_d48(x d128) scaled {
 	xd := d48_fromD128(x, d128_signFlag(x))
 
 	// Range reduction: n = round(x/ln10), r = x − n·ln10 (ln10 at 90 digits).
-	nDec := d48_roundToIntegralTiesToAway(d48_divide(xd, d48_LN10))
+	nDec := d48_roundToIntegralTiesToAway(d48_divide(xd, const_D48_LN10))
 	n := int(d48_toLongOrMin(nDec))
 	r := xd
 	if n != 0 {
@@ -30,12 +30,12 @@ func expScaled_d48(x d128) scaled {
 		if n < 0 {
 			nMag = -n
 		}
-		nLn10 := mul_320_320x64(u320_LN10_WIDE_COEFF, int64(nMag))
-		r = d48_addWide(d48_signFlag(xd), d48_qExp(xd), d48_u320(xd), n > 0, LN10_WIDE_QEXP, nLn10)
+		nLn10 := mul_320_320x64(const_U320_LN10_WIDE_COEFF, int64(nMag))
+		r = d48_addWide(d48_signFlag(xd), d48_qExp(xd), d48_u320(xd), n > 0, const_LN10_WIDE_QEXP, nLn10)
 	}
 
 	// exp(r) = exp(r/8)^8 -- three squarings.
-	rPrime := d48_divide(r, d48_EIGHT)
+	rPrime := d48_divide(r, const_D48_EIGHT)
 	e := d48_padeEval(rPrime, padeExpPWeights, padeExpQWeights)
 	e = d48_square(e)
 	e = d48_square(e)
@@ -48,7 +48,7 @@ func exp10Scaled_d48(xd d48) scaled {
 	nDec := d48_roundToIntegralTiesToAway(xd)
 	nLong := int(d48_toLongOrMin(nDec))
 	r := d48_subtract(xd, nDec)
-	rPrime := d48_divide(r, d48_EIGHT)
+	rPrime := d48_divide(r, const_D48_EIGHT)
 	z := d48_padeEval(rPrime, padeExp10PWeights, padeExp10QWeights)
 	z = d48_square(z)
 	z = d48_square(z)
@@ -58,10 +58,10 @@ func exp10Scaled_d48(xd d48) scaled {
 
 // --- Rounding into D128 ---
 
-// e_EXP_D48 is the error bound of the D48 exp / exp10 kernels in units of the
+// const_E_EXP_D48 is the error bound of the D48 exp / exp10 kernels in units of the
 // last digit: the measured maximum on transc_truth.txt is 42 (d48_bounds_test.go);
 // ×250 slack.
-var e_EXP_D48 = u320FromDw0(10_000)
+var const_E_EXP_D48 = u320FromDw0(10_000)
 
 // finalizeScaled rounds ±exp(z)^8 scaled by 10^n once into decimal128; a
 // non-special exp / exp10 / pow / large-n pown result is irrational, hence
@@ -69,7 +69,7 @@ var e_EXP_D48 = u320FromDw0(10_000)
 // to an odd large n (PownLargeNWorkOrder.md LN-5).
 func finalizeScaled(sign bool, e d48, n int, rounding round, ctxnull *context) d128 {
 	result := finalize_256_ctxnull(sign, d48_qExp(e)+n, u256{e.coeffDw0, e.coeffDw1, e.coeffDw2, 0},
-		RESIDUE_EXACT, rounding, ctxnull)
+		const_RESIDUE_EXACT, rounding, ctxnull)
 	return d48_forceInexact(result, ctxnull)
 }
 
@@ -88,7 +88,7 @@ func exp10Trivial(sign bool, xd d48, rounding round, ctxnull *context) (d128, bo
 		if l < -6176 {
 			return finalizeUnderflowFullySwamped(sign, rounding, ctxnull), true
 		}
-		return finalize_128_ctxnull(sign, int(l), u128{1, 0}, RESIDUE_EXACT, rounding, ctxnull), true
+		return finalize_128_ctxnull(sign, int(l), u128{1, 0}, const_RESIDUE_EXACT, rounding, ctxnull), true
 	}
 	nLong := d48_toLongOrMin(d48_roundToIntegralTiesToAway(xd))
 	if nLong == math.MinInt64 {
@@ -118,7 +118,7 @@ func expImplFNZ_d48(x d128, rounding round, ctxnull *context) d128 {
 		return finalizeOverflow_ctxnull(false, rounding, ctxnull)
 	}
 	s := expScaled_d48(x)
-	if ambiguousScaled(s, e_EXP_D48) && (d128_sciExp(x) < TINY_SCI_EXP) {
+	if ambiguousScaled(s, const_E_EXP_D48) && (d128_sciExp(x) < const_TINY_SCI_EXP) {
 		return d48_forceInexact(d48_onePlusTiny(!d128_signFlag(x), rounding, ctxnull), ctxnull)
 	}
 	return finalizeScaled(false, s.z, s.n, rounding, ctxnull)
@@ -142,7 +142,7 @@ func exp10ImplFNZ_d48(x d128, rounding round, ctxnull *context) d128 {
 		return t
 	}
 	s := exp10Scaled_d48(xd)
-	if ambiguousScaled(s, e_EXP_D48) && (d128_sciExp(x) < TINY_SCI_EXP-1) {
+	if ambiguousScaled(s, const_E_EXP_D48) && (d128_sciExp(x) < const_TINY_SCI_EXP-1) {
 		return d48_forceInexact(d48_onePlusTiny(!d128_signFlag(x), rounding, ctxnull), ctxnull)
 	}
 	return finalizeScaled(false, s.z, s.n, rounding, ctxnull)

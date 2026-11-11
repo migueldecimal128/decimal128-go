@@ -47,10 +47,10 @@ func mul384_192x192(a0, a1, a2, m0, m1, m2 uint64) (pLo, pHi u256) {
 }
 
 // Accessors for the flat reciprocal table: for index k the three dwords of M
-// ascend at rmp10_192_m[k*3 + 0..2] (m3 == 0 by the N=191 gate).
-func rmp10_192_dw0(k int) int64 { return rmp10_192_m[k*3] }
-func rmp10_192_dw1(k int) int64 { return rmp10_192_m[k*3+1] }
-func rmp10_192_dw2(k int) int64 { return rmp10_192_m[k*3+2] }
+// ascend at const_RMP10_192_M[k*3 + 0..2] (m3 == 0 by the N=191 gate).
+func rmp10_192_dw0(k int) int64 { return const_RMP10_192_M[k*3] }
+func rmp10_192_dw1(k int) int64 { return const_RMP10_192_M[k*3+1] }
+func rmp10_192_dw2(k int) int64 { return const_RMP10_192_M[k*3+2] }
 
 func divPow10_q128res_192_recipmul(x u256, pow10 int) quot128Residue {
 	demand("recipmul192: pow10 outside [1, 77]", pow10 > 0 && pow10 <= 77)
@@ -58,8 +58,8 @@ func divPow10_q128res_192_recipmul(x u256, pow10 int) quot128Residue {
 	m0 := rmp10_192_dw0(k)
 	m1 := rmp10_192_dw1(k)
 	m2 := rmp10_192_dw2(k)
-	s192 := rmp10_192_s192[k] // = S192 - 192, in 1..173
-	sh := k - 1               // 0..76
+	s192 := const_RMP10_192_S192[k] // = S192 - 192, in 1..173
+	sh := k - 1                     // 0..76
 
 	// Strip k-1 low bits (the 2^(k-1) factor of 10^k); track them as sticky.
 	a := shr_256_256(x.dw0, x.dw1, x.dw2, x.dw3, sh)
@@ -80,13 +80,13 @@ func divPow10_q128res_192_recipmul(x u256, pow10 int) quot128Residue {
 	pLoGeM := cmp_int_256x256(pLo.dw0, pLo.dw1, pLo.dw2, pLo.dw3, m0, m1, m2, 0) >= 0
 	sticky := stickyAlfa || highFrac || pLoGeM
 
-	res := RESIDUE_EXACT
+	res := const_RESIDUE_EXACT
 	if roundBit && sticky {
-		res = RESIDUE_GT_HALF
+		res = const_RESIDUE_GT_HALF
 	} else if roundBit {
-		res = RESIDUE_HALF
+		res = const_RESIDUE_HALF
 	} else if sticky {
-		res = RESIDUE_LT_HALF
+		res = const_RESIDUE_LT_HALF
 	}
 	return quot128Residue{q.dw0, q.dw1, res}
 }

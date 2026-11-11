@@ -1,24 +1,24 @@
 // Shared read-only power-of-ten table (PrimitiveLayer.md §4.5, D16/D50): 10^0..10^77
-// and 5^0..5^13, stored as ONE merged interleaved int64 array `pow10` (D50), the
+// and 5^0..5^13, stored as ONE merged interleaved int64 array `const_POW10` (D50), the
 // same canonical layout as the Java/Kotlin ports (byte-identical dword image).
 // Go has no 128-bit literal, so limbs are precomputed signed int64 dwords
 // (generated from math, not hand-transcribed). Core reads only the dword surface
 // (pow10_128_dw0/_dw1, pow10_256_dw0..3, pow5_64); Primitive composes whole values.
 //
-// Layout (index masked by pow10Bce = 0xFF, so every access is provably in range):
+// Layout (index masked by const_POW10_BCE = 0xFF, so every access is provably in range):
 //   region A 10^0..10^38 : (lo,hi)   at [p<<1], [p<<1|1]
-//   region B 10^39..10^77: (dw0..dw3) at [pow10QuadBase + ((p-39)<<2) + k]
-//   tail     5^0..5^13   : one int64 at [pow5Base + p]
+//   region B 10^39..10^77: (dw0..dw3) at [const_POW10_QUAD_BASE + ((p-39)<<2) + k]
+//   tail     5^0..5^13   : one int64 at [const_POW5_BASE + p]
 
 package decimal128
 
 const (
-	pow10Bce      = 0xFF // whole-index BCE mask (table padded to 256)
-	pow10QuadBase = 78   // region B (256-bit powers) base offset
-	pow5Base      = 234  // 5^0..5^13 tail base offset
+	const_POW10_BCE       = 0xFF // whole-index BCE mask (table padded to 256)
+	const_POW10_QUAD_BASE = 78   // region B (256-bit powers) base offset
+	const_POW5_BASE       = 234  // 5^0..5^13 tail base offset
 )
 
-var pow10 = [256]int64{
+var const_POW10 = [256]int64{
 	1, 0, 10, 0, 100, 0, 1000, 0,
 	10000, 0, 100000, 0, 1000000, 0, 10000000, 0,
 	100000000, 0, 1000000000, 0, 10000000000, 0, 100000000000, 0,
@@ -57,22 +57,22 @@ var pow10 = [256]int64{
 
 func pow10_128_dw0(p int) int64 {
 	verify("", func() bool { return p <= 38 })
-	return pow10[(p<<1)&pow10Bce]
+	return const_POW10[(p<<1)&const_POW10_BCE]
 }
 
 func pow10_128_dw1(p int) int64 {
 	verify("", func() bool { return p <= 38 })
-	return pow10[((p<<1)|1)&pow10Bce]
+	return const_POW10[((p<<1)|1)&const_POW10_BCE]
 }
 
-func pow10_256_dw0(i int) int64 { return pow10[(pow10QuadBase+(i<<2))&pow10Bce] }
-func pow10_256_dw1(i int) int64 { return pow10[(pow10QuadBase+(i<<2)+1)&pow10Bce] }
-func pow10_256_dw2(i int) int64 { return pow10[(pow10QuadBase+(i<<2)+2)&pow10Bce] }
-func pow10_256_dw3(i int) int64 { return pow10[(pow10QuadBase+(i<<2)+3)&pow10Bce] }
+func pow10_256_dw0(i int) int64 { return const_POW10[(const_POW10_QUAD_BASE+(i<<2))&const_POW10_BCE] }
+func pow10_256_dw1(i int) int64 { return const_POW10[(const_POW10_QUAD_BASE+(i<<2)+1)&const_POW10_BCE] }
+func pow10_256_dw2(i int) int64 { return const_POW10[(const_POW10_QUAD_BASE+(i<<2)+2)&const_POW10_BCE] }
+func pow10_256_dw3(i int) int64 { return const_POW10[(const_POW10_QUAD_BASE+(i<<2)+3)&const_POW10_BCE] }
 
 func pow5_64(p int) int64 {
 	verify("", func() bool { return p <= 13 })
-	return pow10[(pow5Base+p)&pow10Bce]
+	return const_POW10[(const_POW5_BASE+p)&const_POW10_BCE]
 }
 
 // pow10U128 is the whole 10^p value as a u128 (p <= 38).
@@ -100,15 +100,15 @@ func cmp_int_128x128_pow10(dw0, dw1 int64, p int) int {
 // Region C: 10^78..10^96 for the D48 width-aware power-of-ten reads
 // (D48GoWorkOrder.md G-4; Swift D128_POW10_320_DW, C POW10_320_DW, Rust
 // POW10_320_DW). 10^0..10^77 stay in pow10 above (regions A/B) and are not
-// duplicated. Entry e = k - 78 occupies pow10_320[5e .. 5e+4] as five ascending
-// dwords; entries 19..31 are zero padding so a single `& POW10_320_BCE` on the
+// duplicated. Entry e = k - 78 occupies const_POW10_320_DW[5e .. 5e+4] as five ascending
+// dwords; entries 19..31 are zero padding so a single `& const_POW10_320_BCE` on the
 // entry index proves every read in bounds. 10^96 < 2^320. Values computed
 // exactly (Python) and checked against the other ports' tables.
 
-// POW10_320_BCE is the entry-index mask for pow10_320 (32 entries).
-const POW10_320_BCE = 0x1F
+// const_POW10_320_BCE is the entry-index mask for const_POW10_320_DW (32 entries).
+const const_POW10_320_BCE = 0x1F
 
-var pow10_320 = [160]int64{
+var const_POW10_320_DW = [160]int64{
 	0, -6200099544362237952, -2065301584337423502, -6711505550140736842, 8, // [0] 10^78
 	0, -6660763222493724672, -2206271769664683398, 6671920793430838052, 86, // [1] 10^79
 	0, 7179344069900959744, -3615973622937282358, -7067768360529825936, 863, // [2] 10^80
@@ -144,8 +144,8 @@ var pow10_320 = [160]int64{
 }
 
 // pow10_320_dw0..dw4 are the dwords of 10^(78+i), 0 <= i <= 18.
-func pow10_320_dw0(i int) int64 { return pow10_320[(i&POW10_320_BCE)*5] }
-func pow10_320_dw1(i int) int64 { return pow10_320[(i&POW10_320_BCE)*5+1] }
-func pow10_320_dw2(i int) int64 { return pow10_320[(i&POW10_320_BCE)*5+2] }
-func pow10_320_dw3(i int) int64 { return pow10_320[(i&POW10_320_BCE)*5+3] }
-func pow10_320_dw4(i int) int64 { return pow10_320[(i&POW10_320_BCE)*5+4] }
+func pow10_320_dw0(i int) int64 { return const_POW10_320_DW[(i&const_POW10_320_BCE)*5] }
+func pow10_320_dw1(i int) int64 { return const_POW10_320_DW[(i&const_POW10_320_BCE)*5+1] }
+func pow10_320_dw2(i int) int64 { return const_POW10_320_DW[(i&const_POW10_320_BCE)*5+2] }
+func pow10_320_dw3(i int) int64 { return const_POW10_320_DW[(i&const_POW10_320_BCE)*5+3] }
+func pow10_320_dw4(i int) int64 { return const_POW10_320_DW[(i&const_POW10_320_BCE)*5+4] }

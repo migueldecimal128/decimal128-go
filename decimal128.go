@@ -67,17 +67,17 @@ func (e *ParseError) Error() string {
 func Zero() Decimal128 { return Decimal128{d128_zero(false, 0)} }
 
 // NaN returns a quiet NaN with no payload.
-func NaN() Decimal128 { return Decimal128{d128_QNAN0()} }
+func NaN() Decimal128 { return Decimal128{const_D128_QNAN0} }
 
 // SignalingNaN returns a signaling NaN with no payload.
-func SignalingNaN() Decimal128 { return Decimal128{d128_SNAN0()} }
+func SignalingNaN() Decimal128 { return Decimal128{const_D128_SNAN0} }
 
 // Inf returns positive infinity if sign >= 0, negative infinity otherwise.
 func Inf(sign int) Decimal128 {
 	if sign < 0 {
-		return Decimal128{d128_NEG_INFINITY()}
+		return Decimal128{const_D128_NEG_INFINITY}
 	}
-	return Decimal128{d128_POS_INFINITY()}
+	return Decimal128{const_D128_POS_INFINITY}
 }
 
 // --- classification ---
@@ -105,7 +105,7 @@ func (d Decimal128) Signbit() bool { return d128_isNegative(d.core) }
 // String returns the GDAS "to-scientific-string" rendering of d (plain when the
 // adjusted exponent allows, scientific otherwise) — the form BigDecimal.toString
 // and Python's decimal.Decimal produce. It implements fmt.Stringer.
-func (d Decimal128) String() string { return d128_format(d.core, FORMAT_AUTO) }
+func (d Decimal128) String() string { return d128_format(d.core, const_FORMAT_AUTO) }
 
 // --- arithmetic (ties-to-even, no flags) ---
 

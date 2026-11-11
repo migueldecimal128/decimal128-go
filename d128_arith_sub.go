@@ -49,7 +49,7 @@ func d128_subtract_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context)
 }
 
 func d128_subtract_tte(x, y d128) d128 {
-	return d128_subtract_rnd_ctxnull(x, y, ROUND_TIES_TO_EVEN, nil)
+	return d128_subtract_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
 }
 func d128_subtract_rnd(x, y d128, rnd round) d128 { return d128_subtract_rnd_ctxnull(x, y, rnd, nil) }
 func d128_subtract_ctx(x, y d128, ctx *context) d128 {
@@ -70,7 +70,7 @@ func subMagUnalignedFnzFnz_rnd_ctxnull(zSign bool, m, s d128, rounding round, ct
 	if gap < 0 {
 		prod := mulPow10_128_128(sCoeff.dw0, sCoeff.dw1, -gap)
 		diff := sub_128_128x128(mCoeff.dw0, mCoeff.dw1, prod.dw0, prod.dw1)
-		return finalize_128_ctxnull(zSign, mQ, diff, RESIDUE_EXACT, rounding, ctxnull)
+		return finalize_128_ctxnull(zSign, mQ, diff, const_RESIDUE_EXACT, rounding, ctxnull)
 	}
 	verify("", func() bool { return mDigitLen <= 34 })
 	headroom := 34 - mDigitLen
@@ -85,7 +85,7 @@ func subMagUnalignedFnzFnz_rnd_ctxnull(zSign bool, m, s d128, rounding round, ct
 		if isLt_pow10_34_bool_128(diff.dw0, diff.dw1) {
 			return d128Pack(zSign, sQ, diff.dw0, diff.dw1)
 		}
-		return finalize_128_ctxnull(zSign, sQ, diff, RESIDUE_EXACT, rounding, ctxnull)
+		return finalize_128_ctxnull(zSign, sQ, diff, const_RESIDUE_EXACT, rounding, ctxnull)
 	}
 
 	// Fully/Borderline swamped fast path at 34-digit scale.
@@ -105,7 +105,7 @@ func subMagUnalignedFnzFnz_rnd_ctxnull(zSign bool, m, s d128, rounding round, ct
 			mScaled = mulPow10_128_128(mCoeff.dw0, mCoeff.dw1, shiftM34)
 		}
 		if cmp_int_128x128_pow10(mScaled.dw0, mScaled.dw1, 33) != 0 { // not 10^33
-			raw := RESIDUE_LT_HALF
+			raw := const_RESIDUE_LT_HALF
 			if !(shiftS34 >= 35 || shiftS34 > sDigitLen) {
 				raw = residueFromDecadeWithDigitLen_128(sCoeff.dw0, sCoeff.dw1, sDigitLen)
 			}
@@ -128,13 +128,13 @@ func subMagUnalignedFnzFnz_rnd_ctxnull(zSign bool, m, s d128, rounding round, ct
 	}
 	if shiftSRight > sDigitLen {
 		borrowed := sub_128_128x128(zCoeff.dw0, zCoeff.dw1, 1, 0)
-		return finalizeAddSubFnz_128_ctxnull(zSign, qAlign, borrowed, residueSubtractionInverse(RESIDUE_LT_HALF), rounding, ctxnull)
+		return finalizeAddSubFnz_128_ctxnull(zSign, qAlign, borrowed, residueSubtractionInverse(const_RESIDUE_LT_HALF), rounding, ctxnull)
 	}
 	qr := div_128_pow10_checked_q128res(sCoeff, shiftSRight)
 	rawResidue := qr.residue
 	zCoeff = sub_128_128x128(zCoeff.dw0, zCoeff.dw1, qr.quotDw0, qr.quotDw1)
-	res := RESIDUE_EXACT
-	if rawResidue != RESIDUE_EXACT {
+	res := const_RESIDUE_EXACT
+	if rawResidue != const_RESIDUE_EXACT {
 		res = residueSubtractionInverse(rawResidue)
 		zCoeff = sub_128_128x128(zCoeff.dw0, zCoeff.dw1, 1, 0)
 	}

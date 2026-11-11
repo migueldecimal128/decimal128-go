@@ -22,7 +22,7 @@ func digitLen_int_32(x int) int {
 func calcDigitLen64(bitLen int, x uint64) int {
 	loDigitCount := (bitLen * 1233) >> 12
 	hiDigitCount := loDigitCount + 1
-	if x < uint64(pow10[(loDigitCount<<1)&pow10Bce]) {
+	if x < uint64(const_POW10[(loDigitCount<<1)&const_POW10_BCE]) {
 		return loDigitCount
 	}
 	return hiDigitCount
@@ -42,7 +42,7 @@ func digitLen_int_128(xDw0, xDw1 int64) int {
 func digitLen_int_128_withBitLen(xDw0, xDw1 int64, bitLen int) int {
 	loDigitCount := (bitLen * 1233) >> 12
 	hiDigitCount := loDigitCount + 1
-	if cmp_int_128x128(xDw0, xDw1, pow10[(loDigitCount<<1)&pow10Bce], pow10[((loDigitCount<<1)|1)&pow10Bce]) < 0 {
+	if cmp_int_128x128(xDw0, xDw1, const_POW10[(loDigitCount<<1)&const_POW10_BCE], const_POW10[((loDigitCount<<1)|1)&const_POW10_BCE]) < 0 {
 		return loDigitCount
 	}
 	return hiDigitCount
@@ -75,8 +75,8 @@ func digitLen_int_256_withBitLen(xDw0, xDw1, xDw2, xDw3 int64, bitLen int) int {
 	// bitLen > 128: needs the POW10_256 lookup. 10^39 has bit length 130.
 	loDigitCount := max((bitLen*1233)>>12, 39)
 	b := loDigitCount - 39
-	base := (pow10QuadBase + (b << 2)) & pow10Bce
-	pow := u256{pow10[base], pow10[base+1], pow10[base+2], pow10[base+3]}
+	base := (const_POW10_QUAD_BASE + (b << 2)) & const_POW10_BCE
+	pow := u256{const_POW10[base], const_POW10[base+1], const_POW10[base+2], const_POW10[base+3]}
 	x := u256{xDw0, xDw1, xDw2, xDw3}
 	if x.less(pow) {
 		return loDigitCount

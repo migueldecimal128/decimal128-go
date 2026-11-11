@@ -72,6 +72,14 @@ genuinely diverges and should be locked before coding.
   `int`-backed value-class analogue), `SCREAMING_SNAKE_CASE` names, load-bearing values
   (Residue 0–3, Round 0–4, Exception754 bit positions 0–4). User-facing wrapper enums
   are idiomatic Go (`camelCase`/exported), crossing the boundary as `int`.
+- **D-G7a — `const_` prefix.** Every core constant (enum `const`, scalar `const`,
+  and constant-valued package `var`: tables, `d128`/`d48`/`u320` values) is named
+  `const_` + its cross-port `SCREAMING_SNAKE_CASE` name: `const_ROUND_TIES_TO_EVEN`,
+  `const_D128_QNAN0`, `const_D48_LN_TABLE`, `const_POW10`. The lowercase prefix keeps
+  it unexported (Go decides visibility by case; an exported `var` could be reassigned
+  by any caller), and the suffix stays greppable against the sibling ports.
+  Constants Swift itself spells in camelCase (`padeExpPWeights`, `ascii_0`, `maxMask`)
+  keep that spelling.
 - **D-G8 — `Int` width.** The core passes `qExp` and similar small values as Go `int`
   (64-bit on target platforms, like Swift's `Int`). Safe per §4.4 (qExp fits in far
   fewer than 32 bits).

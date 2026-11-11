@@ -9,7 +9,7 @@ package decimal128
 func d48_divide(x, y d48) d48 {
 	verify("", func() bool { return !d48_isZero(y) })
 	if d48_isZero(x) {
-		return d48_ZERO
+		return const_D48_ZERO
 	}
 	zSign := d48_signFlag(x) != d48_signFlag(y)
 	digitLenDelta := d48_digitLen(x) - d48_digitLen(y)

@@ -11,7 +11,7 @@ func TestDivPow10Barrett128(t *testing.T) {
 	for i := 0; i < oracleIters; i++ {
 		x := randU128(r)
 		bx := bigU128(x)
-		p := r.Intn(barrettPow10Max) + 1 // 1..13
+		p := r.Intn(const_BARRETT_POW10_MAX) + 1 // 1..13
 		div := pow10big(p)
 		wantQ, wantR := new(big.Int).QuoRem(bx, div, new(big.Int))
 
@@ -36,7 +36,7 @@ func TestDivPow10Barrett256(t *testing.T) {
 	for i := 0; i < oracleIters; i++ {
 		x := randU256(r)
 		bx := bigU256(x)
-		p := r.Intn(barrettPow10Max) + 1
+		p := r.Intn(const_BARRETT_POW10_MAX) + 1
 		div := pow10big(p)
 		wantQ, wantR := new(big.Int).QuoRem(bx, div, new(big.Int))
 

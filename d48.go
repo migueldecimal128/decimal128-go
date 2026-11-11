@@ -27,9 +27,9 @@ func d48Raw(qExpAndSignBit int32, coeffDw0, coeffDw1, coeffDw2 int64) d48 {
 	return d48{coeffDw0, coeffDw1, coeffDw2, qExpAndSignBit}
 }
 
-const D48_DIGITS = 48
+const const_D48_DIGITS = 48
 
-var d48_ZERO = d48{0, 0, 0, 0}
+var const_D48_ZERO = d48{0, 0, 0, 0}
 
 // d48_fromSignQExp_160 is from an explicit sign, qExp, and a coefficient below
 // 10^48 (< 2^160, held as a u192).
@@ -72,13 +72,13 @@ func d48_multiply(x, y d48) d48 {
 	zSign := d48_signFlag(x) != d48_signFlag(y)
 	zExp := d48_qExp(x) + d48_qExp(y)
 	p := mul_320_192x192(d48_u160(x), d48_u160(y))
-	return d48_finalize_320(zSign, zExp, p, RESIDUE_EXACT)
+	return d48_finalize_320(zSign, zExp, p, const_RESIDUE_EXACT)
 }
 
 func d48_square(x d48) d48 {
 	zExp := d48_qExp(x) + d48_qExp(x)
 	p := mul_320_192x192(d48_u160(x), d48_u160(x))
-	return d48_finalize_320(false, zExp, p, RESIDUE_EXACT)
+	return d48_finalize_320(false, zExp, p, const_RESIDUE_EXACT)
 }
 
 // d48_fromInt32 is n as a D48 (|n| taken as unsigned, so the minimum is safe).

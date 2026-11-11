@@ -12,33 +12,33 @@ package decimal128
 type round int
 
 const (
-	ROUND_TIES_TO_EVEN    round = 0
-	ROUND_TIES_TO_AWAY    round = 1
-	ROUND_TOWARD_ZERO     round = 2
-	ROUND_TOWARD_POSITIVE round = 3
-	ROUND_TOWARD_NEGATIVE round = 4
+	const_ROUND_TIES_TO_EVEN    round = 0
+	const_ROUND_TIES_TO_AWAY    round = 1
+	const_ROUND_TOWARD_ZERO     round = 2
+	const_ROUND_TOWARD_POSITIVE round = 3
+	const_ROUND_TOWARD_NEGATIVE round = 4
 )
 
 func roundName(r round) string {
-	if r == ROUND_TIES_TO_EVEN {
+	if r == const_ROUND_TIES_TO_EVEN {
 		return "tiesToEven"
 	}
-	if r == ROUND_TIES_TO_AWAY {
+	if r == const_ROUND_TIES_TO_AWAY {
 		return "tiesToAway"
 	}
-	if r == ROUND_TOWARD_ZERO {
+	if r == const_ROUND_TOWARD_ZERO {
 		return "towardZero"
 	}
-	if r == ROUND_TOWARD_POSITIVE {
+	if r == const_ROUND_TOWARD_POSITIVE {
 		return "towardPositive"
 	}
-	if r == ROUND_TOWARD_NEGATIVE {
+	if r == const_ROUND_TOWARD_NEGATIVE {
 		return "towardNegative"
 	}
 	return "<< INVALID Round >>"
 }
 
-const ulpBiasMap int64 = 0b0_00000000_00001110_00000000_00001100_00001000
+const const_ULP_BIAS_MAP int64 = 0b0_00000000_00001110_00000000_00001100_00001000
 
 func needsRoundUp(rounding round, sign, isOdd bool, res residue) bool {
 	return ulpBias(forMagnitude(rounding, sign), isOdd, res) != 0
@@ -46,7 +46,7 @@ func needsRoundUp(rounding round, sign, isOdd bool, res residue) bool {
 
 func ulpBias(rounding round, isOdd bool, res residue) int64 {
 	verify("", func() bool { return res&^3 == 0 })
-	biasMapEvenOdd := ulpBiasMap | (boolToInt64(isOdd) << 2)
+	biasMapEvenOdd := const_ULP_BIAS_MAP | (boolToInt64(isOdd) << 2)
 	bitIndex := (int(rounding) << 3) + res
 	return (biasMapEvenOdd >> uint(bitIndex)) & 1
 }

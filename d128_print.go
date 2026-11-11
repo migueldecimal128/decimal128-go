@@ -8,10 +8,10 @@ import "unsafe"
 
 // Format-style selector codes for d128_format.
 const (
-	FORMAT_AUTO             = 0 // GDAS auto: plain within [-6,0], scientific otherwise
-	FORMAT_EXPONENTIAL      = 1 // always exponential
-	FORMAT_ENGINEERING      = 2 // scientific, exponent a multiple of 3
-	FORMAT_COEFFICIENT_QEXP = 3 // raw coefficient × 10^qExp
+	const_FORMAT_AUTO             = 0 // GDAS auto: plain within [-6,0], scientific otherwise
+	const_FORMAT_EXPONENTIAL      = 1 // always exponential
+	const_FORMAT_ENGINEERING      = 2 // scientific, exponent a multiple of 3
+	const_FORMAT_COEFFICIENT_QEXP = 3 // raw coefficient × 10^qExp
 )
 
 func withStringBuffer(length int, f func(p unsafe.Pointer)) string {
@@ -34,19 +34,19 @@ func d128ToString(x d128, formatStyle int) string {
 }
 
 // [Inf+, Inf-, NaN+, NaN-, sNaN+, sNaN-]
-var specialValueStrings = []string{"Infinity", "-Infinity", "NaN", "-NaN", "sNaN", "-sNaN"}
+var const_SPECIAL_VALUE_STRINGS = []string{"Infinity", "-Infinity", "NaN", "-NaN", "sNaN", "-sNaN"}
 
 func toNonFiniteString(x d128) string {
 	signBit := d128_signBit(x)
 	if d128_isINF(x) {
-		return specialValueStrings[signBit]
+		return const_SPECIAL_VALUE_STRINGS[signBit]
 	}
 	snanBit := 0
 	if !d128_isNotSNAN(x) {
 		snanBit = 1
 	}
 	nanIndex := 2 + (snanBit << 1)
-	nanStr := specialValueStrings[nanIndex+signBit]
+	nanStr := const_SPECIAL_VALUE_STRINGS[nanIndex+signBit]
 	nanPayload := d128_nanPayload(x)
 	if isZero_bool_128(nanPayload.dw0, nanPayload.dw1) {
 		return nanStr
@@ -82,42 +82,42 @@ func toNonFiniteString(x d128) string {
 func toFiniteString(sign bool, qExp int, coeff u128, formatStyle int) string {
 	digitLen := digitLen_int_128(coeff.dw0, coeff.dw1)
 	eExp := qExp + digitLen + (-digitLen >> 63)
-	if formatStyle == FORMAT_COEFFICIENT_QEXP {
+	if formatStyle == const_FORMAT_COEFFICIENT_QEXP {
 		return toCoefficientQExpString(sign, qExp, coeff, digitLen)
 	}
-	if formatStyle != FORMAT_EXPONENTIAL {
+	if formatStyle != const_FORMAT_EXPONENTIAL {
 		if qExp == 0 {
 			return toIntegerString(sign, coeff)
 		}
-		if qExp < 0 && eExp >= minPlainExponent {
+		if qExp < 0 && eExp >= const_MIN_PLAIN_EXPONENT {
 			return toDecimalPointString(sign, qExp, coeff, digitLen)
 		}
-		if formatStyle == FORMAT_ENGINEERING {
+		if formatStyle == const_FORMAT_ENGINEERING {
 			return toEngineeringString(sign, qExp, eExp, coeff, digitLen)
 		}
 	}
 	return toExponentialString(sign, qExp, eExp, coeff, digitLen)
 }
 
-const minPlainExponent = -6
+const const_MIN_PLAIN_EXPONENT = -6
 
-var smallIntegerStrings = []string{
+var const_SMALL_INTEGER_STRINGS = []string{
 	"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15",
 	"-0", "-1", "-2", "-3", "-4", "-5", "-6", "-7", "-8", "-9", "-10", "-11", "-12", "-13", "-14", "-15",
 }
 
 const (
-	smallIntegerMaxxPow2       = 4
-	smallIntegerMaxx     int64 = 1 << smallIntegerMaxxPow2
-	smallIntegerBCE            = (1 << (smallIntegerMaxxPow2 + 1)) - 1
+	const_SMALL_INTEGER_MAXX_POW2       = 4
+	const_SMALL_INTEGER_MAXX      int64 = 1 << const_SMALL_INTEGER_MAXX_POW2
+	const_SMALL_INTEGER_BCE             = (1 << (const_SMALL_INTEGER_MAXX_POW2 + 1)) - 1
 )
 
 func toIntegerString(sign bool, coeff u128) string {
 	signBit := boolToInt64(sign)
-	if cmp_int_128x128(coeff.dw0, coeff.dw1, smallIntegerMaxx, 0) < 0 {
-		raw := (signBit << smallIntegerMaxxPow2) + coeff.dw0
-		i := int(raw & int64(smallIntegerBCE))
-		return smallIntegerStrings[i]
+	if cmp_int_128x128(coeff.dw0, coeff.dw1, const_SMALL_INTEGER_MAXX, 0) < 0 {
+		raw := (signBit << const_SMALL_INTEGER_MAXX_POW2) + coeff.dw0
+		i := int(raw & int64(const_SMALL_INTEGER_BCE))
+		return const_SMALL_INTEGER_STRINGS[i]
 	}
 	digitLen := digitLen_int_128(coeff.dw0, coeff.dw1)
 	signLen := int(signBit)

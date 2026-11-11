@@ -1,6 +1,6 @@
 // Trailing-zero decimal-digit stripping (D18, relocated by D20). Bulk removal
 // goes through the exact-remainder Barrett pow10 unit in chunks of
-// barrettPow10Max; a nonzero remainder ends the bulk phase and the dword tail
+// const_BARRETT_POW10_MAX; a nonzero remainder ends the bulk phase and the dword tail
 // helper finishes the job.
 
 package decimal128
@@ -14,13 +14,13 @@ func strip_s128sc_128(cDw0, cDw1 int64, maxToStrip int) stripped128StripCount {
 	remaining := maxToStrip
 	stripCount128 := 0
 	for {
-		// trailingZeros of dw0 is 64 when dw0 == 0; both exceed barrettPow10Max,
+		// trailingZeros of dw0 is 64 when dw0 == 0; both exceed const_BARRETT_POW10_MAX,
 		// so the chunk computation below is unaffected.
 		ntzBits := bits.TrailingZeros64(uint64(stripped.dw0))
 		if ntzBits == 0 || remaining == 0 {
 			return stripped128StripCount{stripped.dw0, stripped.dw1, int64(stripCount128)}
 		}
-		chunk := min(ntzBits, remaining, barrettPow10Max)
+		chunk := min(ntzBits, remaining, const_BARRETT_POW10_MAX)
 		qr := divPow10_q128r64_128_barrett(stripped.dw0, stripped.dw1, chunk)
 		q := fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1)
 		rem := uint64(qr.remDw0)

@@ -48,8 +48,8 @@ func d48_addWideUnlikeSign(mSign bool, mQ int, mCoeff u320, nSign bool, nQ int, 
 	res := qr.residue
 
 	c := cmp_int_320x320(mAligned, nAligned)
-	if (c == 0) && (res == RESIDUE_EXACT) {
-		return d48_ZERO
+	if (c == 0) && (res == const_RESIDUE_EXACT) {
+		return const_D48_ZERO
 	}
 	if c < 0 {
 		// |n| > |m|: the result takes n's sign; m was exact, no inversion.
@@ -58,8 +58,8 @@ func d48_addWideUnlikeSign(mSign bool, mQ int, mCoeff u320, nSign bool, nQ int, 
 	diff := sub_320_320x320(mAligned, nAligned)
 	// |m| >= |n|: the result takes m's sign; a non-exact n-residue means diff is
 	// one ULP too large by a sub-ULP amount -- decrement and invert the residue.
-	if res == RESIDUE_EXACT {
-		return d48_finalize_320(mSign, qAlign, diff, RESIDUE_EXACT)
+	if res == const_RESIDUE_EXACT {
+		return d48_finalize_320(mSign, qAlign, diff, const_RESIDUE_EXACT)
 	}
 	return d48_finalize_320(mSign, qAlign, sub_320_320x320(diff, u320FromDw0(1)), residueSubtractionInverse(res))
 }
@@ -89,7 +89,7 @@ func d48_fma(x, y, c d48) d48 {
 	prodSign := d48_signFlag(x) != d48_signFlag(y)
 	prodQ := d48_qExp(x) + d48_qExp(y)
 	if d48_isZero(c) {
-		return d48_finalize_320(prodSign, prodQ, prod, RESIDUE_EXACT)
+		return d48_finalize_320(prodSign, prodQ, prod, const_RESIDUE_EXACT)
 	}
 	return d48_addWide(prodSign, prodQ, prod, d48_signFlag(c), d48_qExp(c), d48_u320(c))
 }

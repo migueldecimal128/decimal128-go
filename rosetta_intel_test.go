@@ -207,10 +207,10 @@ func intelNumber(op1, op2, expected d128, isMax bool) d128 {
 	}
 
 	if !xNaN && !yNaN &&
-		comparePartialQuiet754(op1, op2) == CMP754_EQ &&
-		comparePartialQuiet754(op1, intelZero) != CMP754_EQ &&
+		comparePartialQuiet754(op1, op2) == const_CMP754_EQ &&
+		comparePartialQuiet754(op1, intelZero) != const_CMP754_EQ &&
 		!d128_bitwiseEQ(op1, op2) {
-		negative := comparePartialQuiet754(op1, intelZero) == CMP754_LT
+		negative := comparePartialQuiet754(op1, intelZero) == const_CMP754_LT
 		var wantLargerExponent bool
 		if isMax {
 			wantLargerExponent = !negative

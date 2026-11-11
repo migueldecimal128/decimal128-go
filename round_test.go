@@ -28,7 +28,7 @@ func refNeedsRoundUp(code int, sign, isOdd bool, res int) bool {
 }
 
 func TestNeedsRoundUp(t *testing.T) {
-	codes := []round{ROUND_TIES_TO_EVEN, ROUND_TIES_TO_AWAY, ROUND_TOWARD_ZERO, ROUND_TOWARD_POSITIVE, ROUND_TOWARD_NEGATIVE}
+	codes := []round{const_ROUND_TIES_TO_EVEN, const_ROUND_TIES_TO_AWAY, const_ROUND_TOWARD_ZERO, const_ROUND_TOWARD_POSITIVE, const_ROUND_TOWARD_NEGATIVE}
 	for _, rnd := range codes {
 		for _, sign := range []bool{false, true} {
 			for _, isOdd := range []bool{false, true} {
@@ -46,7 +46,7 @@ func TestNeedsRoundUp(t *testing.T) {
 }
 
 func TestRoundingOverflowUnderflow(t *testing.T) {
-	codes := []round{ROUND_TIES_TO_EVEN, ROUND_TIES_TO_AWAY, ROUND_TOWARD_ZERO, ROUND_TOWARD_POSITIVE, ROUND_TOWARD_NEGATIVE}
+	codes := []round{const_ROUND_TIES_TO_EVEN, const_ROUND_TIES_TO_AWAY, const_ROUND_TOWARD_ZERO, const_ROUND_TOWARD_POSITIVE, const_ROUND_TOWARD_NEGATIVE}
 	for _, rnd := range codes {
 		for _, sign := range []bool{false, true} {
 			var wantOvf, wantUnf bool
@@ -75,17 +75,17 @@ func TestFlags(t *testing.T) {
 	if f.raw() != 0 || f.exceptionLetters() != "" {
 		t.Fatalf("fresh flags not empty")
 	}
-	f.set(INEXACT)
-	f.set(INVALID_OPERATION)
-	f.set(OVERFLOW)
-	if !f.isSet(INEXACT) || !f.isSet(OVERFLOW) || !f.isSet(INVALID_OPERATION) {
+	f.set(const_INEXACT)
+	f.set(const_INVALID_OPERATION)
+	f.set(const_OVERFLOW)
+	if !f.isSet(const_INEXACT) || !f.isSet(const_OVERFLOW) || !f.isSet(const_INVALID_OPERATION) {
 		t.Fatalf("set/isSet wrong")
 	}
 	if f.exceptionLetters() != "xoi" {
 		t.Fatalf("letters = %q want xoi", f.exceptionLetters())
 	}
-	f.clear(OVERFLOW)
-	if f.isSet(OVERFLOW) || f.exceptionLetters() != "xi" {
+	f.clear(const_OVERFLOW)
+	if f.isSet(const_OVERFLOW) || f.exceptionLetters() != "xi" {
 		t.Fatalf("clear wrong: %q", f.exceptionLetters())
 	}
 	f.clearAll()
@@ -122,11 +122,11 @@ func refResidueVsHalf(value *big.Int, digitLen int) residue {
 	half := new(big.Int).Rsh(pow10big(digitLen), 1) // floor(10^d / 2)
 	switch value.Cmp(half) {
 	case -1:
-		return RESIDUE_LT_HALF
+		return const_RESIDUE_LT_HALF
 	case 0:
-		return RESIDUE_HALF
+		return const_RESIDUE_HALF
 	default:
-		return RESIDUE_GT_HALF
+		return const_RESIDUE_GT_HALF
 	}
 }
 

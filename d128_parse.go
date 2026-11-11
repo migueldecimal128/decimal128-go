@@ -11,7 +11,7 @@ type d128ParseResult struct {
 
 func parseSuccess(value d128) d128ParseResult { return d128ParseResult{psSuccess, value} }
 func parseFailure(status parseStatus) d128ParseResult {
-	return d128ParseResult{status, d128_QNAN0()}
+	return d128ParseResult{status, const_D128_QNAN0}
 }
 
 type finiteParseResult struct {
@@ -23,7 +23,7 @@ type finiteParseResult struct {
 }
 
 func finiteFailure(status parseStatus) finiteParseResult {
-	return finiteParseResult{status, false, 0, u128{0, 0}, RESIDUE_EXACT}
+	return finiteParseResult{status, false, 0, u128{0, 0}, const_RESIDUE_EXACT}
 }
 
 // --- parse (boundary API) ---
@@ -36,7 +36,7 @@ func d128_parse_ctxnull(s string, ctxnull *context) (d128, bool) {
 	}
 	verify("", func() bool { return d128_isNAN(r.value) })
 	ctxSignalInvalidOperation_ctxnull(ctxnull, causeParseMalformed)
-	return d128_QNAN0(), false
+	return const_D128_QNAN0, false
 }
 
 func d128_parse(s string) (d128, bool)                   { return d128_parse_ctxnull(s, nil) }
@@ -47,12 +47,12 @@ func d128_parseOrNaN(s string) d128 {
 	if ok {
 		return d
 	}
-	return d128_QNAN0()
+	return const_D128_QNAN0
 }
 
 // d48_parse parses a D48 exactly: an optional sign, digits with at most one
 // '.', an optional exponent; at most 48 significant digits. Panics (impossible)
-// on malformed or inexact input (Swift d48_parse). A zero parses to d48_ZERO
+// on malformed or inexact input (Swift d48_parse). A zero parses to const_D48_ZERO
 // (no −0).
 func d48_parse(s string) d48 {
 	b := []byte(s)
@@ -118,7 +118,7 @@ func d48_parse(s string) d48 {
 		impossible("D48 parse error")
 	}
 	if coeff.isZero() {
-		return d48_ZERO // the internal domain has no −0
+		return const_D48_ZERO // the internal domain has no −0
 	}
 	return d48_fromSignQExp_160(sign, exp-fracDigits, coeff.u192())
 }
@@ -158,7 +158,7 @@ func parseDec34_ctxnull(t *txt, ctxnull *context) d128ParseResult {
 	if (ch >= ascii_0 && ch <= ascii_9) || ch == ascii_dot {
 		r := parseFiniteValueText(sign, ch, t, 34)
 		if r.status == psSuccess {
-			rounding := ROUND_TIES_TO_EVEN
+			rounding := const_ROUND_TIES_TO_EVEN
 			if ctxnull != nil {
 				rounding = ctxnull.round
 			}
@@ -281,7 +281,7 @@ func parseNanText(sign bool, chFirst byte, t *txt) d128ParseResult {
 }
 
 func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) finiteParseResult {
-	res := RESIDUE_EXACT
+	res := const_RESIDUE_EXACT
 	hasCoefficientDigit := false
 	significantDigitCount := 0
 	hasDot := false

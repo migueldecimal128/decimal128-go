@@ -34,7 +34,7 @@ func extractKMostSigDigitRounded(x d48) int {
 	}
 	qr := divPow10_checked_q320res(d48_u320(x), digitLen-1)
 	d := int(qr.quotDw0)
-	if (qr.residue == RESIDUE_HALF) || (qr.residue == RESIDUE_GT_HALF) {
+	if (qr.residue == const_RESIDUE_HALF) || (qr.residue == const_RESIDUE_GT_HALF) {
 		d++ // ties away from zero
 	}
 	return d
@@ -57,11 +57,11 @@ func d48_logMagnitude(xd d48, isLog10 bool) d48 {
 	cPrime := d48_divide(xd, divisor)
 
 	// Square-root reduction until |c' − 1| < 0.02; ln(c') = 2^N · ln(c'^(1/2^N)).
-	zArg := d48_subtract(cPrime, d48_ONE)
+	zArg := d48_subtract(cPrime, const_D48_ONE)
 	sqrtCount := 0
-	for d48_cmpMag(zArg, d48_Z_THRESHOLD) >= 0 {
+	for d48_cmpMag(zArg, const_D48_Z_THRESHOLD) >= 0 {
 		cPrime = d48_sqrt(cPrime)
-		zArg = d48_subtract(cPrime, d48_ONE)
+		zArg = d48_subtract(cPrime, const_D48_ONE)
 		sqrtCount++
 	}
 
@@ -76,12 +76,12 @@ func d48_logMagnitude(xd d48, isLog10 bool) d48 {
 
 	if isLog10 {
 		// log10(x) = 2^N·r + log10(k) + e
-		r = d48_fma(r, twoPowN, d48_LOG10_TABLE[k])
+		r = d48_fma(r, twoPowN, const_D48_LOG10_TABLE[k])
 		r = d48_add(r, eVal)
 	} else {
 		// ln(x) = 2^N·r + ln(k) + e·ln(10)
-		r = d48_fma(r, twoPowN, d48_LN_TABLE[k])
-		r = d48_fma(eVal, d48_LN10, r)
+		r = d48_fma(r, twoPowN, const_D48_LN_TABLE[k])
+		r = d48_fma(eVal, const_D48_LN10, r)
 	}
 	return r
 }

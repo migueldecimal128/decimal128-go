@@ -227,10 +227,10 @@ func check256(t *testing.T, op string, got u256, want *big.Int) {
 
 func TestResidue(t *testing.T) {
 	wantDigit := []residue{
-		RESIDUE_EXACT,
-		RESIDUE_LT_HALF, RESIDUE_LT_HALF, RESIDUE_LT_HALF, RESIDUE_LT_HALF,
-		RESIDUE_HALF,
-		RESIDUE_GT_HALF, RESIDUE_GT_HALF, RESIDUE_GT_HALF, RESIDUE_GT_HALF,
+		const_RESIDUE_EXACT,
+		const_RESIDUE_LT_HALF, const_RESIDUE_LT_HALF, const_RESIDUE_LT_HALF, const_RESIDUE_LT_HALF,
+		const_RESIDUE_HALF,
+		const_RESIDUE_GT_HALF, const_RESIDUE_GT_HALF, const_RESIDUE_GT_HALF, const_RESIDUE_GT_HALF,
 	}
 	for d := 0; d < 10; d++ {
 		if got := residueFromDecimalDigit(d); got != wantDigit[d] {
@@ -261,15 +261,15 @@ func TestResidue(t *testing.T) {
 // refResidue is the reference classification of remainder vs divisor.
 func refResidue(rem, div *big.Int) residue {
 	if rem.Sign() == 0 {
-		return RESIDUE_EXACT
+		return const_RESIDUE_EXACT
 	}
 	twice := new(big.Int).Lsh(rem, 1)
 	switch twice.Cmp(div) {
 	case -1:
-		return RESIDUE_LT_HALF
+		return const_RESIDUE_LT_HALF
 	case 0:
-		return RESIDUE_HALF
+		return const_RESIDUE_HALF
 	default:
-		return RESIDUE_GT_HALF
+		return const_RESIDUE_GT_HALF
 	}
 }

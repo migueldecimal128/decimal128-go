@@ -6,9 +6,9 @@
 package decimal128
 
 const (
-	eighteenNines int64 = 999_999_999_999_999_999 // 10^18 - 1
-	tenPow15U64   int64 = 1_000_000_000_000_000
-	tenPow18U64   int64 = 1_000_000_000_000_000_000
+	const_EIGHTEEN_NINES int64 = 999_999_999_999_999_999 // 10^18 - 1
+	const_TEN_POW_15_U64 int64 = 1_000_000_000_000_000
+	const_TEN_POW_18_U64 int64 = 1_000_000_000_000_000_000
 )
 
 func dpd128Decode(dpdHi, dpdLo int64) d128 {
@@ -59,7 +59,7 @@ func dpd128Decode(dpdHi, dpdLo int64) d128 {
 		coeffLo = binLo
 		coeffHi = 0
 	} else {
-		prodHi := mul_128_64x64(binHi, tenPow18U64)
+		prodHi := mul_128_64x64(binHi, const_TEN_POW_18_U64)
 		sum := add_128_128x128(prodHi.dw0, prodHi.dw1, binLo, 0)
 		coeffLo = sum.dw0
 		coeffHi = sum.dw1
@@ -95,17 +95,17 @@ func dpd128Encode(d d128) u128 {
 	var binLo int64
 
 	if dlen > 18 {
-		qr := divRem_q128r64_128x64(coeff.dw0, coeff.dw1, tenPow18U64)
+		qr := divRem_q128r64_128x64(coeff.dw0, coeff.dw1, const_TEN_POW_18_U64)
 		binLo = qr.remDw0
 		verify("", func() bool { return qr.quotDw1 == 0 })
 		binHi := qr.quotDw0
-		if ucmp_int_64x64(binHi, tenPow15U64) >= 0 {
-			tt := udiv_64_64x64(binHi, tenPow15U64)
-			binHi = binHi - (tt * tenPow15U64)
+		if ucmp_int_64x64(binHi, const_TEN_POW_15_U64) >= 0 {
+			tt := udiv_64_64x64(binHi, const_TEN_POW_15_U64)
+			binHi = binHi - (tt * const_TEN_POW_15_U64)
 			mostSigBcd4 = int(tt)
 			verify("", func() bool { return mostSigBcd4 >= 0 && mostSigBcd4 <= 9 })
 		}
-		verify("", func() bool { return ucmp_int_64x64(binHi, tenPow15U64) < 0 })
+		verify("", func() bool { return ucmp_int_64x64(binHi, const_TEN_POW_15_U64) < 0 })
 		declets5Hi = declets6FromBin(binHi)
 	} else {
 		verify("", func() bool { return coeff.dw1 == 0 })
@@ -166,7 +166,7 @@ func binFromDecletsUpTo7(declets7 int64) int64 {
 }
 
 func declets6FromBin(bin int64) int64 {
-	verify("", func() bool { return ucmp_int_64x64(bin, eighteenNines) <= 0 })
+	verify("", func() bool { return ucmp_int_64x64(bin, const_EIGHTEEN_NINES) <= 0 })
 	t := bin
 	var declets6 int64 = 0
 	shift := 0

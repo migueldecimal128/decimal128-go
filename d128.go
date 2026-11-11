@@ -106,60 +106,60 @@ func bothFinite(x, y d128) bool { return d128_isFIN(x) && d128_isFIN(y) }
 // --- IEEE 754-2019 §5.7.2 class codes (matching Intel bid128_class 0-9) ---
 
 const (
-	CLASS_SIGNALING_NAN      = 0
-	CLASS_QUIET_NAN          = 1
-	CLASS_NEGATIVE_INFINITY  = 2
-	CLASS_NEGATIVE_NORMAL    = 3
-	CLASS_NEGATIVE_SUBNORMAL = 4
-	CLASS_NEGATIVE_ZERO      = 5
-	CLASS_POSITIVE_ZERO      = 6
-	CLASS_POSITIVE_SUBNORMAL = 7
-	CLASS_POSITIVE_NORMAL    = 8
-	CLASS_POSITIVE_INFINITY  = 9
+	const_CLASS_SIGNALING_NAN      = 0
+	const_CLASS_QUIET_NAN          = 1
+	const_CLASS_NEGATIVE_INFINITY  = 2
+	const_CLASS_NEGATIVE_NORMAL    = 3
+	const_CLASS_NEGATIVE_SUBNORMAL = 4
+	const_CLASS_NEGATIVE_ZERO      = 5
+	const_CLASS_POSITIVE_ZERO      = 6
+	const_CLASS_POSITIVE_SUBNORMAL = 7
+	const_CLASS_POSITIVE_NORMAL    = 8
+	const_CLASS_POSITIVE_INFINITY  = 9
 )
 
 func d128_ieeeClass(x d128) int {
 	if d128_isSNAN(x) {
-		return CLASS_SIGNALING_NAN
+		return const_CLASS_SIGNALING_NAN
 	}
 	if d128_isQNAN(x) {
-		return CLASS_QUIET_NAN
+		return const_CLASS_QUIET_NAN
 	}
 	if d128_isINF(x) {
 		if d128_isNegative(x) {
-			return CLASS_NEGATIVE_INFINITY
+			return const_CLASS_NEGATIVE_INFINITY
 		}
-		return CLASS_POSITIVE_INFINITY
+		return const_CLASS_POSITIVE_INFINITY
 	}
 	if d128_isZER(x) {
 		if d128_isNegative(x) {
-			return CLASS_NEGATIVE_ZERO
+			return const_CLASS_NEGATIVE_ZERO
 		}
-		return CLASS_POSITIVE_ZERO
+		return const_CLASS_POSITIVE_ZERO
 	}
 	if d128_isSubnormal(x) {
 		if d128_isNegative(x) {
-			return CLASS_NEGATIVE_SUBNORMAL
+			return const_CLASS_NEGATIVE_SUBNORMAL
 		}
-		return CLASS_POSITIVE_SUBNORMAL
+		return const_CLASS_POSITIVE_SUBNORMAL
 	}
 	if d128_isNegative(x) {
-		return CLASS_NEGATIVE_NORMAL
+		return const_CLASS_NEGATIVE_NORMAL
 	}
-	return CLASS_POSITIVE_NORMAL
+	return const_CLASS_POSITIVE_NORMAL
 }
 
 // --- non-finite factories ---
 
 const (
-	d128NonFiniteBias int64 = 0x1_F000_0000_0000
-	d128InfHi64       int64 = 14 << 59
-	d128NanHi64       int64 = 15 << 59
+	const_D128_NON_FINITE_BIAS int64 = 0x1_F000_0000_0000
+	const_D128_INF_HI64        int64 = 14 << 59
+	const_D128_NAN_HI64        int64 = 15 << 59
 )
 
 func d128_infinity(sign bool) d128 {
 	signBit := boolToInt64(sign) << 49
-	return d128{ubdLo64: 0, ubdHi64: d128InfHi64 | signBit | d128NonFiniteBias}
+	return d128{ubdLo64: 0, ubdHi64: const_D128_INF_HI64 | signBit | const_D128_NON_FINITE_BIAS}
 }
 
 func d128_nan_64x64(sign, signaling bool, payloadDw0, payloadDw1 int64) d128 {
@@ -175,29 +175,21 @@ func d128_nan_64x64(sign, signaling bool, payloadDw0, payloadDw1 int64) d128 {
 	payloadHi46 := payload110Hi
 	payloadHi2 := ushr_64_64(payloadHi46, 44)
 	payloadMid44 := payloadHi46 & ((1 << 44) - 1)
-	payloadMid44Biased := d128NonFiniteBias + payloadMid44
+	payloadMid44Biased := const_D128_NON_FINITE_BIAS + payloadMid44
 	verify("", func() bool { return payloadMid44Biased < (1 << 49) })
 	signBit := boolToInt64(sign) << 49
 	payloadQBits := payloadHi2 << 50
 	snanBit := boolToInt64(signaling) << 58
-	ubdHi := d128NanHi64 | snanBit | payloadQBits | signBit | payloadMid44Biased
+	ubdHi := const_D128_NAN_HI64 | snanBit | payloadQBits | signBit | payloadMid44Biased
 	return d128{ubdLo64: payloadLo64, ubdHi64: ubdHi}
 }
 
-// Special-value getters (Swift: computed `D128_QNAN0` etc.). Functions, not
-// package vars: Go has no struct constants, and an exported var could be
-// reassigned by any caller. Each inlines to immediate words.
-func d128_QNAN0() d128 {
-	return d128{ubdLo64: 0, ubdHi64: d128NanHi64 | d128NonFiniteBias}
-}
-
-func d128_SNAN0() d128 {
-	return d128{ubdLo64: 0, ubdHi64: d128NanHi64 | (1 << 58) | d128NonFiniteBias}
-}
-
-func d128_POS_INFINITY() d128 { return d128_infinity(false) }
-
-func d128_NEG_INFINITY() d128 { return d128_infinity(true) }
+var (
+	const_D128_QNAN0        = d128{ubdLo64: 0, ubdHi64: const_D128_NAN_HI64 | const_D128_NON_FINITE_BIAS}
+	const_D128_SNAN0        = d128{ubdLo64: 0, ubdHi64: const_D128_NAN_HI64 | (1 << 58) | const_D128_NON_FINITE_BIAS}
+	const_D128_POS_INFINITY = d128_infinity(false)
+	const_D128_NEG_INFINITY = d128_infinity(true)
+)
 
 func d128_nanPayload(x d128) u128 {
 	if !d128_isNAN(x) {
@@ -205,8 +197,8 @@ func d128_nanPayload(x d128) u128 {
 	}
 	ubdHi := x.ubdHi64
 	payloadMid44Biased := ubdHi & ((1 << 49) - 1)
-	verify("", func() bool { return payloadMid44Biased >= d128NonFiniteBias })
-	payloadMid44 := payloadMid44Biased - d128NonFiniteBias
+	verify("", func() bool { return payloadMid44Biased >= const_D128_NON_FINITE_BIAS })
+	payloadMid44 := payloadMid44Biased - const_D128_NON_FINITE_BIAS
 	payloadHi2 := ushr_64_64(ubdHi, 50) & 0x03
 	payloadHi46 := (payloadHi2 << 44) | payloadMid44
 	return fromLoHi_128_64x64(x.ubdLo64, payloadHi46)

@@ -156,7 +156,7 @@ func d48f(sign bool, qExp int, coeff string) d48 {
 func TestD48PackUnpackSignQExpThreeLimbs(t *testing.T) {
 	a := d48f(true, -1234, strings.Repeat("9", 48))
 	if (d48_qExp(a) != -1234) || !d48_signFlag(a) || (d48_digitLen(a) != 48) ||
-		d48_signFlag(d48_negated(a)) || !d48_isZero(d48_ZERO) {
+		d48_signFlag(d48_negated(a)) || !d48_isZero(const_D48_ZERO) {
 		t.Errorf("pack/unpack: %s", d48Show(a))
 	}
 }
@@ -179,16 +179,16 @@ func TestD48MultiplyKeepsExactProductsRoundsWideOnes(t *testing.T) {
 func TestD48FinalizeRoundsAndRescales(t *testing.T) {
 	// 49 nines → 10^48 after rounding → 10^47 at qExp 2.
 	nines49 := sub_320_320x320(mulPow10_320(u320FromDw0(1), 49), u320FromDw0(1))
-	if got := d48Show(d48_finalize_320(false, 0, nines49, RESIDUE_EXACT)); got != "1"+strings.Repeat("0", 47)+"E2" {
+	if got := d48Show(d48_finalize_320(false, 0, nines49, const_RESIDUE_EXACT)); got != "1"+strings.Repeat("0", 47)+"E2" {
 		t.Errorf("49 nines: %s", got)
 	}
 	// 10^95 + 5·10^47: drop 48 → 10^47 (even), exactly half → keep; with a
 	// sticky incoming residue → round up.
 	c := add_320_320x320(mulPow10_320(u320FromDw0(1), 95), mulPow10_320(u320FromDw0(5), 47))
-	if got := d48Show(d48_finalize_320(false, 0, c, RESIDUE_EXACT)); got != "1"+strings.Repeat("0", 47)+"E48" {
+	if got := d48Show(d48_finalize_320(false, 0, c, const_RESIDUE_EXACT)); got != "1"+strings.Repeat("0", 47)+"E48" {
 		t.Errorf("half, exact: %s", got)
 	}
-	if got := d48Show(d48_finalize_320(false, 0, c, RESIDUE_LT_HALF)); got != "1"+strings.Repeat("0", 46)+"1E48" {
+	if got := d48Show(d48_finalize_320(false, 0, c, const_RESIDUE_LT_HALF)); got != "1"+strings.Repeat("0", 46)+"1E48" {
 		t.Errorf("half, sticky: %s", got)
 	}
 }
@@ -202,8 +202,8 @@ func TestD48CmpMagAlignsExponents(t *testing.T) {
 		{d48f(false, 0, "12"), d48f(false, -1, "120"), 0},
 		{d48f(true, 0, "3"), d48f(false, 0, "9"), -1},
 		{d48f(false, 100000, "1"), d48f(false, -100000, "7"), 1}, // huge gap
-		{d48_ZERO, d48f(false, -100000, "7"), -1},
-		{d48_ZERO, d48_ZERO, 0},
+		{const_D48_ZERO, d48f(false, -100000, "7"), -1},
+		{const_D48_ZERO, const_D48_ZERO, 0},
 	}
 	for i, c := range cases {
 		if got := d48_cmpMag(c.x, c.y); got != c.want {
@@ -245,7 +245,7 @@ func TestD48SquareRoot(t *testing.T) {
 	if d48_sciExp(d48_sqrt(d48f(false, 0, "4"))) != 0 {
 		t.Errorf("sqrt(4) sciExp")
 	}
-	if !d48_isZero(d48_sqrt(d48_ZERO)) {
+	if !d48_isZero(d48_sqrt(const_D48_ZERO)) {
 		t.Errorf("sqrt(0) not zero")
 	}
 	if got := d48Show(d48_sqrt(d48f(false, 0, "2"))); got != "141421356237309504880168872420969807856967187538E-47" {
@@ -276,7 +276,7 @@ func TestD48RoundToIntegralAndToLong(t *testing.T) {
 		x    d48
 		want int64
 	}{
-		{d48_ZERO, 0},
+		{const_D48_ZERO, 0},
 		{d48f(false, 2, "5"), 500},
 		{d48f(true, 0, "42"), -42},
 		{d48f(false, -1, "25"), math.MinInt64},

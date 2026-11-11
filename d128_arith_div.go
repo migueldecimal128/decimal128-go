@@ -6,7 +6,9 @@
 
 package decimal128
 
-func d128_divide_tte(x, y d128) d128            { return d128_divide_rnd_ctxnull(x, y, ROUND_TIES_TO_EVEN, nil) }
+func d128_divide_tte(x, y d128) d128 {
+	return d128_divide_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
+}
 func d128_divide_rnd(x, y d128, rnd round) d128 { return d128_divide_rnd_ctxnull(x, y, rnd, nil) }
 func d128_divide_ctx(x, y d128, ctx *context) d128 {
 	return d128_divide_rnd_ctxnull(x, y, ctx.round, ctx)
@@ -75,7 +77,7 @@ func d128_divideInteger_ctxnull(x, y d128, ctxnull *context) d128 {
 }
 
 func divIntFnzFnz_rnd_ctx(x, y d128, ctxnull *context) d128 {
-	q1 := d128_divide_rnd_ctxnull(x, y, ROUND_TOWARD_ZERO, nil) // quiet
+	q1 := d128_divide_rnd_ctxnull(x, y, const_ROUND_TOWARD_ZERO, nil) // quiet
 	verify("", func() bool { return d128_isFIN(q1) })
 	q2 := d128_roundToIntegralTowardZeroSignalInexact_ctxnull(q1, nil)
 	verify("", func() bool { return d128_isFIN(q2) })
@@ -149,7 +151,7 @@ func d128_remainderNear_ctxnull(x, y d128, ctxnull *context) d128 {
 
 // remTruncFnzFnz returns (r = x - trunc(x/y)*y, truncQuotientIsOdd).
 func remTruncFnzFnz(x, y d128, ctxnull *context) (d128, bool) {
-	truncCtx := newContextRound(ROUND_TOWARD_ZERO) // scratch: discards flags
+	truncCtx := newContextRound(const_ROUND_TOWARD_ZERO) // scratch: discards flags
 	n1 := d128_divide_ctx(x, y, truncCtx)
 	if truncCtx.isOverflow() {
 		nan := ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivIntOverflowsCoefficient)
@@ -187,9 +189,9 @@ func remainderNearFnzFnz(x, y d128, ctxnull *context) d128 {
 	}
 	var truncCtx *context
 	if ctxnull != nil {
-		truncCtx = ctxnull.withRoundingAndNewFlags(ROUND_TOWARD_ZERO)
+		truncCtx = ctxnull.withRoundingAndNewFlags(const_ROUND_TOWARD_ZERO)
 	} else {
-		truncCtx = newContextRound(ROUND_TOWARD_ZERO)
+		truncCtx = newContextRound(const_ROUND_TOWARD_ZERO)
 	}
 	var r2 d128
 	if d128_signFlag(r1) {
@@ -218,7 +220,7 @@ func divPow10Divisor_rnd_ctx(x d128, resultSign bool, qPreferred, m int, roundin
 		coefficient = u128{ss.strippedDw0, ss.strippedDw1}
 		qZ += int(ss.stripCount)
 	}
-	return finalize_128_ctxnull(resultSign, qZ, coefficient, RESIDUE_EXACT, rounding, ctxnull)
+	return finalize_128_ctxnull(resultSign, qZ, coefficient, const_RESIDUE_EXACT, rounding, ctxnull)
 }
 
 func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *context) d128 {
@@ -248,7 +250,7 @@ func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *cont
 		qint := divRem_q128r64_128x64(cx.dw0, cx.dw1, yCoeff.dw0)
 		if qint.remDw0 == 0 && !isZero_bool_128(qint.quotDw0, qint.quotDw1) {
 			return finalize_128_ctxnull(resultSign, qPreferred,
-				fromLoHi_128_64x64(qint.quotDw0, qint.quotDw1), RESIDUE_EXACT, rounding, ctxnull)
+				fromLoHi_128_64x64(qint.quotDw0, qint.quotDw1), const_RESIDUE_EXACT, rounding, ctxnull)
 		}
 		digitLenDeltaCD := d128_digitLen(x) - (m + 1)
 		numeratorScaleCD := 34 - digitLenDeltaCD
@@ -258,7 +260,7 @@ func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *cont
 		residueCD := residueFromRemainderDivisor_64(qr.remDw0, yCoeff.dw0)
 		qZcd := qPreferred - numeratorScaleCD
 		coefficientCD := fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1)
-		if residueCD == RESIDUE_EXACT && qZcd < qPreferred {
+		if residueCD == const_RESIDUE_EXACT && qZcd < qPreferred {
 			ss := strip_s128sc_128(coefficientCD.dw0, coefficientCD.dw1, qPreferred-qZcd)
 			coefficientCD = u128{ss.strippedDw0, ss.strippedDw1}
 			qZcd += int(ss.stripCount)
@@ -277,7 +279,7 @@ func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *cont
 
 	qZ := qPreferred - numeratorScale
 
-	if res == RESIDUE_EXACT && qZ < qPreferred {
+	if res == const_RESIDUE_EXACT && qZ < qPreferred {
 		ss := strip_s128sc_128(coefficient.dw0, coefficient.dw1, qPreferred-qZ)
 		coefficient = u128{ss.strippedDw0, ss.strippedDw1}
 		qZ += int(ss.stripCount)

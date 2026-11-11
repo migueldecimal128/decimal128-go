@@ -28,10 +28,10 @@ func divPow10_q320res_320_recipmul_1(x u320) quot320Residue { return recipmul320
 func recipmul320(x u320, k int) quot320Residue {
 	verify("", func() bool { return (k >= 1) && (k <= 96) })
 	verify("x >= 10^96", func() bool { return cmp_int_320_pow10(x, 96) < 0 })
-	kk := k & RMP10_320_BCE
+	kk := k & const_RMP10_320_BCE
 	b := kk * 5
-	m := u320{rmp10_320_m[b], rmp10_320_m[b+1], rmp10_320_m[b+2], rmp10_320_m[b+3], rmp10_320_m[b+4]}
-	s := int(rmp10_320_s[kk])
+	m := u320{const_RMP10_320_M[b], const_RMP10_320_M[b+1], const_RMP10_320_M[b+2], const_RMP10_320_M[b+3], const_RMP10_320_M[b+4]}
+	s := int(const_RMP10_320_S[kk])
 	verify("", func() bool { return (s >= 322) && (s <= 447) }) // gen_recipmul320: S - 320 in 2..127
 
 	// Strip k-1 low bits (the 2^(k-1) factor of 10^k); track them as sticky.
@@ -170,13 +170,13 @@ func recipmul320(x u320, k int) quot320Residue {
 
 	var res residue
 	if roundBit && sticky {
-		res = RESIDUE_GT_HALF
+		res = const_RESIDUE_GT_HALF
 	} else if roundBit {
-		res = RESIDUE_HALF
+		res = const_RESIDUE_HALF
 	} else if sticky {
-		res = RESIDUE_LT_HALF
+		res = const_RESIDUE_LT_HALF
 	} else {
-		res = RESIDUE_EXACT
+		res = const_RESIDUE_EXACT
 	}
 	return quot320Residue{q.dw0, q.dw1, q.dw2, q.dw3, q.dw4, res}
 }
@@ -185,7 +185,7 @@ func recipmul320(x u320, k int) quot320Residue {
 // 0 <= k <= 96, x < 10^96.
 func divPow10_q320res(x u320, k int) quot320Residue {
 	if k == 0 {
-		return quot320Residue{x.dw0, x.dw1, x.dw2, x.dw3, x.dw4, RESIDUE_EXACT}
+		return quot320Residue{x.dw0, x.dw1, x.dw2, x.dw3, x.dw4, const_RESIDUE_EXACT}
 	}
 	return divPow10_q320res_320_recipmul(x, k)
 }
@@ -198,7 +198,7 @@ func divPow10_checked_q320res(x u320, k int) quot320Residue {
 	// The kernel directly, not through divPow10_q320res: one call layer fewer
 	// on the FMA alignment path (D48GoWorkOrder.md Phase 5, option A).
 	if k == 0 {
-		return quot320Residue{x.dw0, x.dw1, x.dw2, x.dw3, x.dw4, RESIDUE_EXACT}
+		return quot320Residue{x.dw0, x.dw1, x.dw2, x.dw3, x.dw4, const_RESIDUE_EXACT}
 	}
 	if k == 1 {
 		return recipmul320_k1(x) // the FMA alignment's common gap of one digit
@@ -207,7 +207,7 @@ func divPow10_checked_q320res(x u320, k int) quot320Residue {
 		return recipmul320(x, k)
 	}
 	if x.isZero() {
-		return quot320Residue{residue: RESIDUE_EXACT}
+		return quot320Residue{residue: const_RESIDUE_EXACT}
 	}
-	return quot320Residue{residue: RESIDUE_LT_HALF}
+	return quot320Residue{residue: const_RESIDUE_LT_HALF}
 }

@@ -37,7 +37,7 @@ func TestToUInt64(t *testing.T) {
 		if got != c.want {
 			t.Errorf("d128_toUInt64TowardZero_ctxnull(%q) = %d, want %d", c.in, got, c.want)
 		}
-		if ctx.isSet(INVALID_OPERATION) {
+		if ctx.isSet(const_INVALID_OPERATION) {
 			t.Errorf("d128_toUInt64TowardZero_ctxnull(%q) raised invalidOperation, want none", c.in)
 		}
 	}
@@ -60,7 +60,7 @@ func TestToUInt64(t *testing.T) {
 		if got != 0 {
 			t.Errorf("d128_toUInt64TowardZero_ctxnull(%q) = %d, want 0", in, got)
 		}
-		if !ctx.isSet(INVALID_OPERATION) {
+		if !ctx.isSet(const_INVALID_OPERATION) {
 			t.Errorf("d128_toUInt64TowardZero_ctxnull(%q) did not raise invalidOperation", in)
 		}
 	}

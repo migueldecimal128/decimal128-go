@@ -6,9 +6,9 @@
 
 package decimal128
 
-var finOne = d128_fromInt64(1)
-var finZero = d128_zero(false, 0)
-var finHalfCent = decimalFNZ_64x64(false, -3, 5, 0) // 0.005
+var const_FIN_ONE = d128_fromInt64(1)
+var const_FIN_ZERO = d128_zero(false, 0)
+var const_FIN_HALF_CENT = decimalFNZ_64x64(false, -3, 5, 0) // 0.005
 
 // --- simple & compound interest ---
 
@@ -25,7 +25,7 @@ func d128_compoundInterest_tte(principal, rate d128, numPeriods int) d128 {
 // d128_effectiveAnnualRate_tte: (1 + nominalRate / timesPerYear)^timesPerYear − 1.
 func d128_effectiveAnnualRate_tte(nominalRate d128, timesPerYear int) d128 {
 	perPeriod := d128_divide_tte(nominalRate, d128_fromInt64(timesPerYear))
-	return d128_subtract_tte(d128_compound_tte(perPeriod, timesPerYear), finOne)
+	return d128_subtract_tte(d128_compound_tte(perPeriod, timesPerYear), const_FIN_ONE)
 }
 
 // --- mortgage / annuity payment ---
@@ -37,7 +37,7 @@ func d128_mortgagePayment_tte(principal, periodicRate d128, numPayments int) d12
 	}
 	factor := d128_compound_tte(periodicRate, numPayments) // (1+r)^n
 	num := d128_multiply_tte(d128_multiply_tte(principal, periodicRate), factor)
-	denom := d128_subtract_tte(factor, finOne)
+	denom := d128_subtract_tte(factor, const_FIN_ONE)
 	return d128_divide_tte(num, denom)
 }
 
@@ -62,8 +62,8 @@ func d128_amortizationSchedule_tte(principal, periodicRate d128, numPayments int
 		interest := d128_multiply_tte(balance, periodicRate)
 		principalPaid := d128_subtract_tte(payment, interest)
 		balance = d128_subtract_tte(balance, principalPaid)
-		if p == numPayments && d128_isLess(d128_abs(balance), finHalfCent) {
-			balance = finZero
+		if p == numPayments && d128_isLess(d128_abs(balance), const_FIN_HALF_CENT) {
+			balance = const_FIN_ZERO
 		}
 		rows = append(rows, amortizationRowCore{p, payment, interest, principalPaid, balance})
 	}
@@ -77,8 +77,8 @@ func d128_presentValueAnnuity_tte(payment, periodicRate d128, numPeriods int) d1
 	if d128_isZER(periodicRate) {
 		return d128_multiply_tte(payment, d128_fromInt64(numPeriods))
 	}
-	discount := d128_divide_tte(finOne, d128_compound_tte(periodicRate, numPeriods))
-	oneMinus := d128_subtract_tte(finOne, discount)
+	discount := d128_divide_tte(const_FIN_ONE, d128_compound_tte(periodicRate, numPeriods))
+	oneMinus := d128_subtract_tte(const_FIN_ONE, discount)
 	return d128_divide_tte(d128_multiply_tte(payment, oneMinus), periodicRate)
 }
 
@@ -87,7 +87,7 @@ func d128_futureValueAnnuity_tte(payment, periodicRate d128, numPeriods int) d12
 	if d128_isZER(periodicRate) {
 		return d128_multiply_tte(payment, d128_fromInt64(numPeriods))
 	}
-	growth := d128_subtract_tte(d128_compound_tte(periodicRate, numPeriods), finOne)
+	growth := d128_subtract_tte(d128_compound_tte(periodicRate, numPeriods), const_FIN_ONE)
 	return d128_divide_tte(d128_multiply_tte(payment, growth), periodicRate)
 }
 
@@ -105,17 +105,17 @@ func d128_futureValue_tte(presentValue, rate d128, numPeriods int) d128 {
 
 // d128_cagr_tte: (FV/PV)^(1/n) − 1. PV and FV must be positive.
 func d128_cagr_tte(presentValue, futureValue d128, numPeriods int) d128 {
-	verify("cagr: presentValue must be positive", func() bool { return d128_isGreater(presentValue, finZero) })
-	verify("cagr: futureValue must be positive", func() bool { return d128_isGreater(futureValue, finZero) })
+	verify("cagr: presentValue must be positive", func() bool { return d128_isGreater(presentValue, const_FIN_ZERO) })
+	verify("cagr: futureValue must be positive", func() bool { return d128_isGreater(futureValue, const_FIN_ZERO) })
 	ratio := d128_divide_tte(futureValue, presentValue)
-	return d128_subtract_tte(d128_rootn_tte(ratio, numPeriods), finOne)
+	return d128_subtract_tte(d128_rootn_tte(ratio, numPeriods), const_FIN_ONE)
 }
 
 // --- NPV / IRR / MIRR ---
 
 // d128_npv_tte: Σ CF_t / (1+rate)^t. cashFlows[0] is the immediate (t=0) flow.
 func d128_npv_tte(rate d128, cashFlows []d128) d128 {
-	result := finZero
+	result := const_FIN_ZERO
 	for t := 0; t < len(cashFlows); t++ {
 		factor := d128_compound_tte(rate, t) // (1+rate)^t
 		result = d128_add_tte(result, d128_divide_tte(cashFlows[t], factor))
@@ -130,10 +130,10 @@ func d128_irr_tte(cashFlows []d128, guess, tolerance d128, maxIter int) d128 {
 	verify("irr: need at least 2 cash flows", func() bool { return len(cashFlows) >= 2 })
 	rate := guess
 	for iter := 0; iter < maxIter; iter++ {
-		npvVal := finZero
-		npvDeriv := finZero
-		divisor := finOne
-		onePlusR := d128_add_tte(finOne, rate)
+		npvVal := const_FIN_ZERO
+		npvDeriv := const_FIN_ZERO
+		divisor := const_FIN_ONE
+		onePlusR := d128_add_tte(const_FIN_ONE, rate)
 		for t := 0; t < len(cashFlows); t++ {
 			cf := cashFlows[t]
 			npvVal = d128_add_tte(npvVal, d128_divide_tte(cf, divisor))
@@ -146,7 +146,7 @@ func d128_irr_tte(cashFlows []d128, guess, tolerance d128, maxIter int) d128 {
 			divisor = d128_multiply_tte(divisor, onePlusR)
 		}
 		if d128_isZER(npvDeriv) {
-			return d128_QNAN0()
+			return const_D128_QNAN0
 		}
 		step := d128_divide_tte(npvVal, npvDeriv)
 		rate = d128_subtract_tte(rate, step)
@@ -154,24 +154,24 @@ func d128_irr_tte(cashFlows []d128, guess, tolerance d128, maxIter int) d128 {
 			return rate
 		}
 	}
-	return d128_QNAN0() // did not converge
+	return const_D128_QNAN0 // did not converge
 }
 
 // d128_mirr_tte: (FV_pos / |PV_neg|)^(1/(n−1)) − 1 — positive flows reinvested at
 // reinvestRate, negative flows discounted at financeRate. Needs ≥ 1 negative flow.
 func d128_mirr_tte(cashFlows []d128, financeRate, reinvestRate d128) d128 {
 	n := len(cashFlows)
-	pvNeg := finZero
-	fvPos := finZero
+	pvNeg := const_FIN_ZERO
+	fvPos := const_FIN_ZERO
 	for t := 0; t < n; t++ {
 		cf := cashFlows[t]
-		if d128_isLess(cf, finZero) {
+		if d128_isLess(cf, const_FIN_ZERO) {
 			pvNeg = d128_add_tte(pvNeg, d128_divide_tte(cf, d128_compound_tte(financeRate, t)))
-		} else if d128_isGreater(cf, finZero) {
+		} else if d128_isGreater(cf, const_FIN_ZERO) {
 			fvPos = d128_add_tte(fvPos, d128_multiply_tte(cf, d128_compound_tte(reinvestRate, n-1-t)))
 		}
 	}
 	verify("mirr: no negative cash flows found", func() bool { return !d128_isZER(pvNeg) })
 	ratio := d128_divide_tte(fvPos, d128_negate(pvNeg))
-	return d128_subtract_tte(d128_rootn_tte(ratio, n-1), finOne)
+	return d128_subtract_tte(d128_rootn_tte(ratio, n-1), const_FIN_ONE)
 }

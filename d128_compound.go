@@ -14,10 +14,10 @@
 
 package decimal128
 
-var d128CompoundOne = d128_fromInt64(1)
+var const_D128_COMPOUND_ONE = d128_fromInt64(1)
 
 func d128_compound_tte(x d128, n int) d128 {
-	return d128_compound_rnd_ctxnull(x, n, ROUND_TIES_TO_EVEN, nil)
+	return d128_compound_rnd_ctxnull(x, n, const_ROUND_TIES_TO_EVEN, nil)
 }
 func d128_compound_rnd(x d128, n int, rnd round) d128 {
 	return d128_compound_rnd_ctxnull(x, n, rnd, nil)
@@ -46,7 +46,7 @@ func d128_compound_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) 
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne)
 	}
 	if n > 0 {
-		return d128_POS_INFINITY() // (1 + ∞)^(n>0) = +∞
+		return const_D128_POS_INFINITY // (1 + ∞)^(n>0) = +∞
 	}
 	if n == 0 {
 		return d128_fromInt64(1) // compound(+∞, 0) = 1
@@ -102,7 +102,7 @@ func compoundRoundToOdd(x d128, t48 d48) d48 {
 	one := d48_fromInt32(1)
 	x48 := d48_fromD128(x, d128_signFlag(x))
 	var r d48
-	if d128_sciExp(x) >= D48_DIGITS {
+	if d128_sciExp(x) >= const_D48_DIGITS {
 		r = d48_subtract(one, d48_subtract(t48, x48))
 	} else {
 		r = d48_subtract(x48, d48_subtract(t48, one))
@@ -113,9 +113,9 @@ func compoundRoundToOdd(x d128, t48 d48) d48 {
 	// Put t on the 48-digit grid so a unit is its last digit.
 	c := d48_u320(t48)
 	q := d48_qExp(t48)
-	if n := digitLen_320(c); n < D48_DIGITS {
-		c = mulPow10_320(c, D48_DIGITS-n)
-		q -= D48_DIGITS - n
+	if n := digitLen_320(c); n < const_D48_DIGITS {
+		c = mulPow10_320(c, const_D48_DIGITS-n)
+		q -= const_D48_DIGITS - n
 	}
 	if (c.dw0 & 1) == 0 {
 		// t is even: 999…9 is odd, so a step up never reaches 49 digits.
@@ -137,7 +137,7 @@ func compoundStripToU128(t d48) d48 {
 	q := d48_qExp(t)
 	for c.dw2 != 0 {
 		qr := divPow10_q320res_320_recipmul_1(c)
-		if qr.residue != RESIDUE_EXACT {
+		if qr.residue != const_RESIDUE_EXACT {
 			break
 		}
 		c = qr.quot()
@@ -175,9 +175,9 @@ func compoundPowerD48(t d48, tExact bool, n int, rounding round, ctxnull *contex
 func compoundFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 	// |n| > 2^31: pown's log route on ε = x itself, with the tiny rule; neither
 	// t = 1 + x nor round-to-odd (PownLargeNWorkOrder.md LN-4).
-	if absU64(n) > POWN_LARGE_N {
+	if absU64(n) > const_POWN_LARGE_N {
 		if d128_signFlag(x) {
-			cmp := cmpMagFnzFnz(x, d128CompoundOne)
+			cmp := cmpMagFnzFnz(x, const_D128_COMPOUND_ONE)
 			if cmp > 0 {
 				return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne) // x < -1
 			}
@@ -191,7 +191,7 @@ func compoundFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 	span := compoundOnePlusXSpan(x)
 	if span <= 34 {
 		// 1 + x is an exact D128: the add below never rounds.
-		t := d128_add_rnd_ctxnull(d128CompoundOne, x, rounding, ctxnull)
+		t := d128_add_rnd_ctxnull(const_D128_COMPOUND_ONE, x, rounding, ctxnull)
 		if d128_signFlag(t) && !d128_isZER(t) {
 			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne) // x < -1
 		}
@@ -216,10 +216,10 @@ func compoundFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 		return compoundMinusOne(x, n, ctxnull)
 	}
 	if n == 1 {
-		return d128_add_rnd_ctxnull(d128CompoundOne, x, rounding, ctxnull) // one rounding already
+		return d128_add_rnd_ctxnull(const_D128_COMPOUND_ONE, x, rounding, ctxnull) // one rounding already
 	}
-	if span > D48_DIGITS {
+	if span > const_D48_DIGITS {
 		t = compoundRoundToOdd(x, t)
 	}
-	return compoundZeroResult(x, n, compoundPowerD48(t, span <= D48_DIGITS, n, rounding, ctxnull))
+	return compoundZeroResult(x, n, compoundPowerD48(t, span <= const_D48_DIGITS, n, rounding, ctxnull))
 }

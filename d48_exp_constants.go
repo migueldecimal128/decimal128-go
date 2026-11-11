@@ -18,16 +18,16 @@ func u320c(dw0, dw1, dw2, dw3, dw4 uint64) u320 {
 	return u320{int64(dw0), int64(dw1), int64(dw2), int64(dw3), int64(dw4)}
 }
 
-const PADE_EXP_COUNT = 13
+const const_PADE_EXP_COUNT = 13
 
-const LN10_WIDE_QEXP = -89
+const const_LN10_WIDE_QEXP = -89
 
-var d48_EIGHT = d48c(0, 0x8, 0x0, 0x0) // 8
+var const_D48_EIGHT = d48c(0, 0x8, 0x0, 0x0) // 8
 
-// ln(10) to 90 significant digits: u320_LN10_WIDE_COEFF × 10^LN10_WIDE_QEXP.
+// ln(10) to 90 significant digits: const_U320_LN10_WIDE_COEFF × 10^const_LN10_WIDE_QEXP.
 // The exp range reduction r = x − n·ln10 needs absolute error ≪ 10^-50 for |n|
 // up to ~4.4·10^5; n·coeff stays < 10^96 (fits u320).
-var u320_LN10_WIDE_COEFF = u320c(0x455a261f4fc23a69, 0x5a1be27baceea66e, 0x9bd4e1c0d35b9cb6, 0x708294bbb1aa03fa, 0x000001cefee4ca12)
+var const_U320_LN10_WIDE_COEFF = u320c(0x455a261f4fc23a69, 0x5a1be27baceea66e, 0x9bd4e1c0d35b9cb6, 0x708294bbb1aa03fa, 0x000001cefee4ca12)
 
 // [12/12] Padé numerator weights for exp(z); Q(z) = P(−z) (odd weights negated).
 var padeExpPWeights = []d48{
@@ -97,7 +97,7 @@ var padeExp10QWeights = []d48{
 
 // expm1 series weights 1/k!, k = 1..9: expm1(x) = x·Σ w[k−1]·x^(k−1)
 // for |x| < 10^-5 (expm1 / exp10m1, LogP1ExpM1WorkOrder.md).
-var d48_EXPM1_WEIGHTS = []d48{
+var const_D48_EXPM1_WEIGHTS = []d48{
 	d48c(0, 0x0000000000000001, 0x0000000000000000, 0x0000000000000000),    // 1
 	d48c(-2, 0x0000000000000005, 0x0000000000000000, 0x0000000000000000),   // 0.5
 	d48c(-96, 0x3fe02aaaaaaaaaab, 0xd7b5ee4e6e681d87, 0x000000001d319780),  // 0.166666666666666666666666666666666666666666666667

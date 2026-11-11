@@ -75,13 +75,13 @@ func recipmul320_k48(x u320) quot320Residue {
 	sticky := stickyAlfa || lowFraction || !lt_320(pLo, m)
 	var res residue
 	if roundBit && sticky {
-		res = RESIDUE_GT_HALF
+		res = const_RESIDUE_GT_HALF
 	} else if roundBit {
-		res = RESIDUE_HALF
+		res = const_RESIDUE_HALF
 	} else if sticky {
-		res = RESIDUE_LT_HALF
+		res = const_RESIDUE_LT_HALF
 	} else {
-		res = RESIDUE_EXACT
+		res = const_RESIDUE_EXACT
 	}
 	return quot320Residue{q.dw0, q.dw1, q.dw2, q.dw3, q.dw4, res}
 }
@@ -154,13 +154,13 @@ func recipmul320_k47(x u320) quot320Residue {
 	sticky := stickyAlfa || lowFraction || !lt_320(pLo, m)
 	var res residue
 	if roundBit && sticky {
-		res = RESIDUE_GT_HALF
+		res = const_RESIDUE_GT_HALF
 	} else if roundBit {
-		res = RESIDUE_HALF
+		res = const_RESIDUE_HALF
 	} else if sticky {
-		res = RESIDUE_LT_HALF
+		res = const_RESIDUE_LT_HALF
 	} else {
-		res = RESIDUE_EXACT
+		res = const_RESIDUE_EXACT
 	}
 	return quot320Residue{q.dw0, q.dw1, q.dw2, q.dw3, q.dw4, res}
 }
@@ -229,13 +229,13 @@ func recipmul320_k1(x u320) quot320Residue {
 	sticky := stickyAlfa || lowFraction || !lt_320(pLo, m)
 	var res residue
 	if roundBit && sticky {
-		res = RESIDUE_GT_HALF
+		res = const_RESIDUE_GT_HALF
 	} else if roundBit {
-		res = RESIDUE_HALF
+		res = const_RESIDUE_HALF
 	} else if sticky {
-		res = RESIDUE_LT_HALF
+		res = const_RESIDUE_LT_HALF
 	} else {
-		res = RESIDUE_EXACT
+		res = const_RESIDUE_EXACT
 	}
 	return quot320Residue{q.dw0, q.dw1, q.dw2, q.dw3, q.dw4, res}
 }

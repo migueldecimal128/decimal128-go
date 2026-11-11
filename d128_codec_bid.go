@@ -8,16 +8,16 @@
 package decimal128
 
 const (
-	qtinyNeg6176 = -6176
-	qmax6111     = 6111
+	const_QTINY_NEG_6176 = -6176
+	const_QMAX_6111      = 6111
 
-	coeffMaxHi   int64 = 0x0001_ED09_BEAD_87C0 // 10^34 - 1, hi half
-	coeffMaxLo   int64 = 0x378D_8E63_FFFF_FFFF // 10^34 - 1, lo half
-	payloadMaxHi int64 = 0x0000_314D_C644_8D93 // 10^33 - 1, hi half
-	payloadMaxLo int64 = 0x38C1_5B09_FFFF_FFFF // 10^33 - 1, lo half
+	const_COEFF_MAX_HI   int64 = 0x0001_ED09_BEAD_87C0 // 10^34 - 1, hi half
+	const_COEFF_MAX_LO   int64 = 0x378D_8E63_FFFF_FFFF // 10^34 - 1, lo half
+	const_PAYLOAD_MAX_HI int64 = 0x0000_314D_C644_8D93 // 10^33 - 1, hi half
+	const_PAYLOAD_MAX_LO int64 = 0x38C1_5B09_FFFF_FFFF // 10^33 - 1, lo half
 
-	coeff64Max   int64 = 9_999_999_999_999_999 // 10^16 - 1, decimal64 coeff max (one word)
-	payload64Max int64 = 999_999_999_999_999   // 10^15 - 1, decimal64 NaN payload max
+	const_COEFF64_MAX   int64 = 9_999_999_999_999_999 // 10^16 - 1, decimal64 coeff max (one word)
+	const_PAYLOAD64_MAX int64 = 999_999_999_999_999   // 10^15 - 1, decimal64 NaN payload max
 )
 
 // bid128Encode encodes a d128 into its 128-bit BID representation.
@@ -49,8 +49,8 @@ func encodeSignAndGCombinationFieldBid128(d d128, mostSigBits3 int) int64 {
 
 	if d128_isFIN(d) {
 		qExp := d128_qExp(d)
-		verify("", func() bool { return qExp >= qtinyNeg6176 && qExp <= qmax6111 })
-		biasedQExp := qExp - qtinyNeg6176
+		verify("", func() bool { return qExp >= const_QTINY_NEG_6176 && qExp <= const_QMAX_6111 })
+		biasedQExp := qExp - const_QTINY_NEG_6176
 		verify("", func() bool { return (biasedQExp & 0x3000) != 0x3000 })
 		gCombinationField = (biasedQExp << 3) | mostSigBits3
 	} else if d128_isINF(d) {
@@ -99,8 +99,8 @@ func bid128Decode(bidHi, bidLo int64) d128 {
 		verify("", func() bool { return top5 == 0b11111 })
 		isSignaling := ((combination >> (w5 - 6)) & 1) != 0
 		var payloadCanonLo, payloadCanonHi int64
-		if ucmp_int_64x64(coeffTHi, payloadMaxHi) > 0 ||
-			(coeffTHi == payloadMaxHi && ucmp_int_64x64(bidLo, payloadMaxLo) > 0) {
+		if ucmp_int_64x64(coeffTHi, const_PAYLOAD_MAX_HI) > 0 ||
+			(coeffTHi == const_PAYLOAD_MAX_HI && ucmp_int_64x64(bidLo, const_PAYLOAD_MAX_LO) > 0) {
 			payloadCanonLo = 0
 			payloadCanonHi = 0
 		} else {
@@ -116,8 +116,8 @@ func bid128Decode(bidHi, bidLo int64) d128 {
 
 	// Non-canonical finite coefficient (> 10^34 - 1) is treated as zero.
 	if isZero_bool_128(dw0Bits, dw1Bits) ||
-		ucmp_int_64x64(dw1Bits, coeffMaxHi) > 0 ||
-		(dw1Bits == coeffMaxHi && ucmp_int_64x64(dw0Bits, coeffMaxLo) > 0) {
+		ucmp_int_64x64(dw1Bits, const_COEFF_MAX_HI) > 0 ||
+		(dw1Bits == const_COEFF_MAX_HI && ucmp_int_64x64(dw0Bits, const_COEFF_MAX_LO) > 0) {
 		return d128_zero(sign, qExp)
 	}
 	return decimalFNZ_64x64(sign, qExp, dw0Bits, dw1Bits)
@@ -165,7 +165,7 @@ func bid64Decode(bid64 int64) d128 {
 		verify("", func() bool { return top5 == 0b11111 })
 		isSignaling := ((combination >> (w5 - 6)) & 1) != 0
 		var payloadCanon int64
-		if ucmp_int_64x64(coeffT, payload64Max) > 0 {
+		if ucmp_int_64x64(coeffT, const_PAYLOAD64_MAX) > 0 {
 			payloadCanon = 0
 		} else {
 			payloadCanon = coeffT
@@ -177,7 +177,7 @@ func bid64Decode(bid64 int64) d128 {
 	coeff := (coeffPrefix << t) | coeffT
 
 	// Non-canonical finite coefficient (> 10^16 - 1) is treated as zero.
-	if coeff == 0 || ucmp_int_64x64(coeff, coeff64Max) > 0 {
+	if coeff == 0 || ucmp_int_64x64(coeff, const_COEFF64_MAX) > 0 {
 		return d128_zero(sign, qExp)
 	}
 	return decimalFNZ_64x64(sign, qExp, coeff, 0)

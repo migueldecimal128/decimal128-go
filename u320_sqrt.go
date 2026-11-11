@@ -27,11 +27,11 @@ func sqrtFloorScaled48(coeff u192, qExp, digitLen int) sqrtFloor48 {
 	// impossible: (s+½)² = s²+s+¼ and rem is an integer.
 	var res residue
 	if rem.isZero() {
-		res = RESIDUE_EXACT
+		res = const_RESIDUE_EXACT
 	} else if cmp_int_320x320(rem, s) <= 0 {
-		res = RESIDUE_LT_HALF
+		res = const_RESIDUE_LT_HALF
 	} else {
-		res = RESIDUE_GT_HALF
+		res = const_RESIDUE_GT_HALF
 	}
 
 	resultQExp := (qExp - scaleUp) >> 1 // (qExp − scaleUp) is even ⇒ exact

@@ -35,11 +35,11 @@ func (c Comparison) String() string {
 // comparisonFromCode maps a core CMP754_* code to the public Comparison.
 func comparisonFromCode(code comparison754) Comparison {
 	switch code {
-	case CMP754_LT:
+	case const_CMP754_LT:
 		return CmpLess
-	case CMP754_EQ:
+	case const_CMP754_EQ:
 		return CmpEqual
-	case CMP754_GT:
+	case const_CMP754_GT:
 		return CmpGreater
 	default:
 		return CmpUnordered

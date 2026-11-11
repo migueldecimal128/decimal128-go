@@ -19,11 +19,11 @@ var edgeModes = []struct {
 	name string
 	rnd  round
 }{
-	{"TIES_TO_EVEN", ROUND_TIES_TO_EVEN},
-	{"TIES_TO_AWAY", ROUND_TIES_TO_AWAY},
-	{"TOWARD_ZERO", ROUND_TOWARD_ZERO},
-	{"TOWARD_POSITIVE", ROUND_TOWARD_POSITIVE},
-	{"TOWARD_NEGATIVE", ROUND_TOWARD_NEGATIVE},
+	{"TIES_TO_EVEN", const_ROUND_TIES_TO_EVEN},
+	{"TIES_TO_AWAY", const_ROUND_TIES_TO_AWAY},
+	{"TOWARD_ZERO", const_ROUND_TOWARD_ZERO},
+	{"TOWARD_POSITIVE", const_ROUND_TOWARD_POSITIVE},
+	{"TOWARD_NEGATIVE", const_ROUND_TOWARD_NEGATIVE},
 }
 
 func edgeDec(t *testing.T, s string) d128 {
@@ -65,7 +65,7 @@ func edgeUnderflow(t *testing.T, neg bool, mode string) d128 {
 func edgeCheck(t *testing.T, what, x, mode string, got, want d128) {
 	t.Helper()
 	if !d128_bitwiseEQ(got, want) {
-		t.Errorf("%s(%s) %s: got %s, want %s", what, x, mode, d128_format(got, FORMAT_AUTO), d128_format(want, FORMAT_AUTO))
+		t.Errorf("%s(%s) %s: got %s, want %s", what, x, mode, d128_format(got, const_FORMAT_AUTO), d128_format(want, const_FORMAT_AUTO))
 	}
 }
 
@@ -107,15 +107,15 @@ func TestD48PownAtTheIntEdges(t *testing.T) {
 }
 
 func TestD48PownAtTheIntEdgesSignalsFlags(t *testing.T) {
-	c1 := newContextRound(ROUND_TIES_TO_EVEN)
+	c1 := newContextRound(const_ROUND_TIES_TO_EVEN)
 	r1 := d128_pown_ctx(edgeDec(t, "2"), math.MinInt, c1)
-	if !d128_isZER(r1) || !c1.isSet(UNDERFLOW) || !c1.isSet(INEXACT) {
-		t.Errorf("pown(2, MinInt): %s flags %s", d128_format(r1, FORMAT_AUTO), c1.exceptionLetters())
+	if !d128_isZER(r1) || !c1.isSet(const_UNDERFLOW) || !c1.isSet(const_INEXACT) {
+		t.Errorf("pown(2, MinInt): %s flags %s", d128_format(r1, const_FORMAT_AUTO), c1.exceptionLetters())
 	}
-	c2 := newContextRound(ROUND_TIES_TO_EVEN)
+	c2 := newContextRound(const_ROUND_TIES_TO_EVEN)
 	r2 := d128_pown_ctx(edgeDec(t, "2"), math.MaxInt, c2)
-	if !d128_isINF(r2) || !c2.isSet(OVERFLOW) || !c2.isSet(INEXACT) {
-		t.Errorf("pown(2, MaxInt): %s flags %s", d128_format(r2, FORMAT_AUTO), c2.exceptionLetters())
+	if !d128_isINF(r2) || !c2.isSet(const_OVERFLOW) || !c2.isSet(const_INEXACT) {
+		t.Errorf("pown(2, MaxInt): %s flags %s", d128_format(r2, const_FORMAT_AUTO), c2.exceptionLetters())
 	}
 }
 
@@ -147,7 +147,7 @@ func TestD48RootnAtMinInt(t *testing.T) {
 		// An odd n of extreme size takes the pow path: |x|^(1/n) stays next to 1.
 		r := d128_rootn_rnd(edgeDec(t, "2"), math.MaxInt, m.rnd)
 		if !d128_isFNZ(r) || (cmpMagFnzFnz(r, one) < 0) || (cmpMagFnzFnz(r, upper) > 0) {
-			t.Errorf("rootn(2, MAX) %s: %s out of range", m.name, d128_format(r, FORMAT_AUTO))
+			t.Errorf("rootn(2, MAX) %s: %s out of range", m.name, d128_format(r, const_FORMAT_AUTO))
 		}
 	}
 }

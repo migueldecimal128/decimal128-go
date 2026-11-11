@@ -9,8 +9,8 @@
 package decimal128
 
 const (
-	mask16L = 0xFFFF
-	mask32L = 0xFFFF_FFFF
-	mask48L = 0xFFFF_FFFF_FFFF
-	mask54L = 0x003F_FFFF_FFFF_FFFF
+	const_MASK16L = 0xFFFF
+	const_MASK32L = 0xFFFF_FFFF
+	const_MASK48L = 0xFFFF_FFFF_FFFF
+	const_MASK54L = 0x003F_FFFF_FFFF_FFFF
 )

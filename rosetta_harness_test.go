@@ -106,7 +106,7 @@ func decodeOperand(s string) d128 {
 	if s == "#" {
 		// dectest's bare "#" is an operand syntax-error marker: an op receiving it
 		// must raise invalidOperation. A signaling NaN produces exactly that.
-		return d128_SNAN0()
+		return const_D128_SNAN0
 	}
 	if len(s) > 0 {
 		if s[0] == '#' {
@@ -152,13 +152,13 @@ func dispatch(c *rosettaCase) (outcome, string) {
 	}
 	switch c.operation {
 	case "d128_toString":
-		return checkFormat(c, FORMAT_AUTO)
+		return checkFormat(c, const_FORMAT_AUTO)
 	case "d128_toExpString":
-		return checkFormat(c, FORMAT_EXPONENTIAL)
+		return checkFormat(c, const_FORMAT_EXPONENTIAL)
 	case "d128_toEngString":
-		return checkFormat(c, FORMAT_ENGINEERING)
+		return checkFormat(c, const_FORMAT_ENGINEERING)
 	case "d128_toRawString":
-		return checkFormat(c, FORMAT_COEFFICIENT_QEXP)
+		return checkFormat(c, const_FORMAT_COEFFICIENT_QEXP)
 	case "d128_isSigned":
 		return checkPredicate(c, d128_isNegative)
 	case "d128_isInf":
@@ -403,9 +403,9 @@ func dispatch(c *rosettaCase) (outcome, string) {
 	// dectest to-string conversions: the operand is parsed in the case's context
 	// (rounding to 34 digits and raising flags), then rendered.
 	case "tosci":
-		return checkDectestFormat(c, FORMAT_AUTO)
+		return checkDectestFormat(c, const_FORMAT_AUTO)
 	case "toeng":
-		return checkDectestFormat(c, FORMAT_ENGINEERING)
+		return checkDectestFormat(c, const_FORMAT_ENGINEERING)
 
 	// Intel-only conversions (RosettaCoveragePartitionWorkOrder.md Phase 1).
 	case "from_int64":
@@ -426,7 +426,7 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		ctx := newContextRound(roundingFromToken(c.rounding))
 		z, ok := d128_parse_ctx(c.operands[0], ctx)
 		if !ok {
-			z = d128_QNAN0()
+			z = const_D128_QNAN0
 		}
 		return checkValueFlags(c, z, ctx.exceptionLetters())
 	case "round_integral_mode":
@@ -471,8 +471,8 @@ func checkValueFlags(c *rosettaCase, z d128, flags string) (outcome, string) {
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
-		d128_format(z, FORMAT_COEFFICIENT_QEXP), flags,
-		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+		d128_format(z, const_FORMAT_COEFFICIENT_QEXP), flags,
+		d128_format(expected, const_FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 // checkUnaryValueOnly runs a unary op and compares the value only (bitwise).
@@ -482,7 +482,7 @@ func checkUnaryValueOnly(c *rosettaCase, op func(x d128) d128) (outcome, string)
 	if d128_bitwiseEQ(z, expected) {
 		return outPass, ""
 	}
-	return outFail, "got " + d128_format(z, FORMAT_COEFFICIENT_QEXP) + " want " + d128_format(expected, FORMAT_COEFFICIENT_QEXP)
+	return outFail, "got " + d128_format(z, const_FORMAT_COEFFICIENT_QEXP) + " want " + d128_format(expected, const_FORMAT_COEFFICIENT_QEXP)
 }
 
 // checkDectestFormat parses the operand in the case's context (round + flags)
@@ -494,7 +494,7 @@ func checkDectestFormat(c *rosettaCase, style int) (outcome, string) {
 	ctx := newContextRound(roundingFromToken(c.rounding))
 	x, ok := d128_parse_ctx(c.operands[0], ctx)
 	if !ok {
-		x = d128_QNAN0()
+		x = const_D128_QNAN0
 	}
 	got := d128_format(x, style)
 	if got == c.result && ctx.exceptionLetters() == c.expectedFlags {
@@ -539,11 +539,11 @@ func checkFptest(c *rosettaCase) (outcome, string) {
 				delta = -fptestTrapWrapBias
 			}
 			if delta == 0 {
-				return outFail, "got " + d128_format(z, FORMAT_COEFFICIENT_QEXP) + " want " + d128_format(expected, FORMAT_COEFFICIENT_QEXP)
+				return outFail, "got " + d128_format(z, const_FORMAT_COEFFICIENT_QEXP) + " want " + d128_format(expected, const_FORMAT_COEFFICIENT_QEXP)
 			}
 			unwrapped := d128_scaleB_ctxnull(expected, delta, newContextRound(roundingFromToken(c.rounding)))
 			if !d128_bitwiseEQ(unwrapped, z) {
-				return outFail, "trap-unwrap mismatch: got " + d128_format(z, FORMAT_COEFFICIENT_QEXP)
+				return outFail, "trap-unwrap mismatch: got " + d128_format(z, const_FORMAT_COEFFICIENT_QEXP)
 			}
 			return outPass, ""
 		}
@@ -602,17 +602,17 @@ var dectestSkips = map[string]bool{
 func roundingFromToken(tok string) round {
 	switch tok {
 	case "TIES_TO_EVEN":
-		return ROUND_TIES_TO_EVEN
+		return const_ROUND_TIES_TO_EVEN
 	case "TIES_TO_AWAY":
-		return ROUND_TIES_TO_AWAY
+		return const_ROUND_TIES_TO_AWAY
 	case "TOWARD_ZERO":
-		return ROUND_TOWARD_ZERO
+		return const_ROUND_TOWARD_ZERO
 	case "TOWARD_POSITIVE":
-		return ROUND_TOWARD_POSITIVE
+		return const_ROUND_TOWARD_POSITIVE
 	case "TOWARD_NEGATIVE":
-		return ROUND_TOWARD_NEGATIVE
+		return const_ROUND_TOWARD_NEGATIVE
 	default:
-		return ROUND_TIES_TO_EVEN
+		return const_ROUND_TIES_TO_EVEN
 	}
 }
 
@@ -635,8 +635,8 @@ func checkBinaryCtx(c *rosettaCase, op func(x, y d128, ctx *context) d128) (outc
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
-		d128_format(z, FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
-		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+		d128_format(z, const_FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
+		d128_format(expected, const_FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 // checkScaleB adapts decNumber's scaleb — whose second operand is a decimal
@@ -669,8 +669,8 @@ func checkScaleB(c *rosettaCase) (outcome, string) {
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
-		d128_format(z, FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
-		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+		d128_format(z, const_FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
+		d128_format(expected, const_FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 func scaleBFromDecimalArg(x, y d128, ctx *context) d128 {
@@ -721,8 +721,8 @@ func checkMinMaxNumber(c *rosettaCase, op func(x, y d128, ctx *context) d128) (o
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
-		d128_format(z, FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
-		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+		d128_format(z, const_FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
+		d128_format(expected, const_FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 // checkCompareInt runs a two-operand op returning a memcmp-style -1/0/1 code
@@ -768,8 +768,8 @@ func checkIntExpOp(c *rosettaCase, op func(x d128, n int, ctx *context) d128) (o
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
-		d128_format(z, FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
-		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+		d128_format(z, const_FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
+		d128_format(expected, const_FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 func checkUnaryQuiet(c *rosettaCase, op func(x d128) d128) (outcome, string) {
@@ -781,8 +781,8 @@ func checkUnaryQuiet(c *rosettaCase, op func(x d128) d128) (outcome, string) {
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
-		d128_format(z, FORMAT_COEFFICIENT_QEXP), "",
-		d128_format(decodeOperand(c.result), FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+		d128_format(z, const_FORMAT_COEFFICIENT_QEXP), "",
+		d128_format(decodeOperand(c.result), const_FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 // checkFromWord64 runs a decimal64->decimal128 widening-decode op
@@ -800,8 +800,8 @@ func checkFromWord64(c *rosettaCase, op func(u uint64) d128) (outcome, string) {
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
-		d128_format(z, FORMAT_COEFFICIENT_QEXP), "",
-		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+		d128_format(z, const_FORMAT_COEFFICIENT_QEXP), "",
+		d128_format(expected, const_FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 // decodeNativeResult decodes a native-corpus result token, honoring the bare
@@ -811,9 +811,9 @@ func checkFromWord64(c *rosettaCase, op func(u uint64) d128) (outcome, string) {
 func decodeNativeResult(s string) d128 {
 	switch s {
 	case "Q":
-		return d128_QNAN0()
+		return const_D128_QNAN0
 	case "S":
-		return d128_SNAN0()
+		return const_D128_SNAN0
 	default:
 		return decodeOperand(s)
 	}
@@ -835,20 +835,20 @@ func checkParse(c *rosettaCase) (outcome, string) {
 		if !ok {
 			return outPass, ""
 		}
-		return outFail, "expected FAIL but parsed " + d128_format(z, FORMAT_COEFFICIENT_QEXP)
+		return outFail, "expected FAIL but parsed " + d128_format(z, const_FORMAT_COEFFICIENT_QEXP)
 	}
 	// Success line: a failed parse here is an impl error; poison with sNaN0 so it
 	// mismatches the authored expected (never collides except a literal sNaN).
 	if !ok {
-		z = d128_SNAN0()
+		z = const_D128_SNAN0
 	}
 	expected := decodeNativeResult(c.result)
 	if d128_bitwiseEQ(z, expected) && c.expectedFlags == "" {
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
-		d128_format(z, FORMAT_COEFFICIENT_QEXP), "",
-		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+		d128_format(z, const_FORMAT_COEFFICIENT_QEXP), "",
+		d128_format(expected, const_FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 // checkBinaryQuiet runs a non-computational binary op (copySign) — bitwise
@@ -862,8 +862,8 @@ func checkBinaryQuiet(c *rosettaCase, op func(x, y d128) d128) (outcome, string)
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
-		d128_format(z, FORMAT_COEFFICIENT_QEXP), "",
-		d128_format(decodeOperand(c.result), FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+		d128_format(z, const_FORMAT_COEFFICIENT_QEXP), "",
+		d128_format(decodeOperand(c.result), const_FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 // checkQuantExp runs Intel's quantexp: the quantum (encoded) exponent of x as an
@@ -936,16 +936,16 @@ func checkToUInt64(c *rosettaCase, op func(x d128, ctxnull *context) uint64) (ou
 
 // decNumber class strings indexed by d128_ieeeClass code (0..9).
 var classStrings = [...]string{
-	CLASS_SIGNALING_NAN:      "sNaN",
-	CLASS_QUIET_NAN:          "NaN",
-	CLASS_NEGATIVE_INFINITY:  "-Infinity",
-	CLASS_NEGATIVE_NORMAL:    "-Normal",
-	CLASS_NEGATIVE_SUBNORMAL: "-Subnormal",
-	CLASS_NEGATIVE_ZERO:      "-Zero",
-	CLASS_POSITIVE_ZERO:      "+Zero",
-	CLASS_POSITIVE_SUBNORMAL: "+Subnormal",
-	CLASS_POSITIVE_NORMAL:    "+Normal",
-	CLASS_POSITIVE_INFINITY:  "+Infinity",
+	const_CLASS_SIGNALING_NAN:      "sNaN",
+	const_CLASS_QUIET_NAN:          "NaN",
+	const_CLASS_NEGATIVE_INFINITY:  "-Infinity",
+	const_CLASS_NEGATIVE_NORMAL:    "-Normal",
+	const_CLASS_NEGATIVE_SUBNORMAL: "-Subnormal",
+	const_CLASS_NEGATIVE_ZERO:      "-Zero",
+	const_CLASS_POSITIVE_ZERO:      "+Zero",
+	const_CLASS_POSITIVE_SUBNORMAL: "+Subnormal",
+	const_CLASS_POSITIVE_NORMAL:    "+Normal",
+	const_CLASS_POSITIVE_INFINITY:  "+Infinity",
 }
 
 // checkClass runs §5.7.2 class: maps the ieeeClass code to decNumber's class
@@ -1012,8 +1012,8 @@ func checkTernaryCtx(c *rosettaCase, op func(x, y, a d128, ctx *context) d128) (
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
-		d128_format(z, FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
-		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+		d128_format(z, const_FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
+		d128_format(expected, const_FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 // checkUnaryCtx runs a one-operand context op and checks the result (bitwise)
@@ -1032,8 +1032,8 @@ func checkUnaryCtx(c *rosettaCase, op func(x d128, ctx *context) d128) (outcome,
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
-		d128_format(z, FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
-		d128_format(expected, FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+		d128_format(z, const_FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
+		d128_format(expected, const_FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
 // checkCompareCtx runs the tri-state compare and maps the CMP754 code to the
@@ -1056,18 +1056,18 @@ func checkCompareCtx(c *rosettaCase, signaling bool) (outcome, string) {
 	}
 	var match bool
 	var got string
-	if code == CMP754_UNORDERED {
+	if code == const_CMP754_UNORDERED {
 		// Unordered (a NaN operand): the op result is the propagated NaN value
 		// (selected/quieted without re-signaling — compare already raised flags).
 		gotNaN := ctxNanOperand2_ctxnull(nil, x, y)
 		match = d128_bitwiseEQ(gotNaN, decodeOperand(c.result))
-		got = d128_format(gotNaN, FORMAT_AUTO)
+		got = d128_format(gotNaN, const_FORMAT_AUTO)
 	} else {
 		n := code - 1 // LT->-1, EQ->0, GT->1
 		if len(c.result) > 0 && (c.result[0] == '#' || c.result[0] == '[') {
 			// dqCanonical gives the result as a canonical encoding of the
 			// -1/0/1 code rather than its decimal text — compare bitwise.
-			got = d128_format(d128_fromInt64(n), FORMAT_COEFFICIENT_QEXP)
+			got = d128_format(d128_fromInt64(n), const_FORMAT_COEFFICIENT_QEXP)
 			match = d128_bitwiseEQ(d128_fromInt64(n), decodeOperand(c.result))
 		} else {
 			got = strconv.Itoa(n)
@@ -1114,7 +1114,7 @@ func dispatchApply(c *rosettaCase) (outcome, string) {
 		}
 		return outFail, "encode got " + got + " want " + c.result
 	}
-	got := d128_format(val, FORMAT_AUTO)
+	got := d128_format(val, const_FORMAT_AUTO)
 	if got == c.result {
 		return outPass, ""
 	}
