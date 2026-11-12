@@ -108,28 +108,42 @@ func wrapCheck(c *rosettaCase, ctx *Context, got Decimal128) (outcome, string) {
 
 // intelNormalizeWant applies the Intel result-normalization (NaN cohort choice
 // for binary/ternary ops, min/max cohort selection) to the expected value before
-// the bitwise compare — reusing the internal-d128 helpers from the core Intel
-// machinery. Public Decimal128 operands are unwrapped to d128 via the (same
-// package) core field. Mirrors the c.src == srcIntel branches in the core
-// harness's checkBinaryCtx / checkTernaryCtx / checkMinMaxNumber.
+// the bitwise compare, reusing the core runner's intelNanBinary / intelNanTernary
+// / intelNumber by reference (WrapperIntelNormalizeWorkOrder.md WN-2). Values
+// cross the boundary through the public BID interchange encoding (BID128 /
+// FromBID128), never the wrapper's stored rep; only the expected value changes.
+// Mirrors the c.src == srcIntel branches in the core harness's checkBinaryCtx /
+// checkTernaryCtx / checkMinMaxNumber.
 func intelNormalizeWant(c *rosettaCase, want Decimal128) Decimal128 {
 	switch len(c.operands) {
 	case 2:
-		o1 := decodeOperandWrapper(c.operands[0]).core
-		o2 := decodeOperandWrapper(c.operands[1]).core
-		w := intelNanBinary(o1, o2, want.core)
+		o1 := bidToCore(decodeOperandWrapper(c.operands[0]))
+		o2 := bidToCore(decodeOperandWrapper(c.operands[1]))
+		w := intelNanBinary(o1, o2, bidToCore(want))
 		if isMinMaxOp(c.operation) {
 			w = intelNumber(o1, o2, w, strings.Contains(c.operation, "max"))
 		}
-		return Decimal128{w}
+		return coreToBid(w)
 	case 3:
-		o1 := decodeOperandWrapper(c.operands[0]).core
-		o2 := decodeOperandWrapper(c.operands[1]).core
-		o3 := decodeOperandWrapper(c.operands[2]).core
-		return Decimal128{intelNanTernary(o1, o2, o3, want.core)}
+		o1 := bidToCore(decodeOperandWrapper(c.operands[0]))
+		o2 := bidToCore(decodeOperandWrapper(c.operands[1]))
+		o3 := bidToCore(decodeOperandWrapper(c.operands[2]))
+		return coreToBid(intelNanTernary(o1, o2, o3, bidToCore(want)))
 	default:
 		return want
 	}
+}
+
+// bidToCore / coreToBid move a value across the wrapper boundary through its
+// public BID128 encoding, for the Intel expectation-normalize only.
+func bidToCore(v Decimal128) d128 {
+	hi, lo := v.BID128()
+	return d128_from_bid128(u128{int64(lo), int64(hi)})
+}
+
+func coreToBid(x d128) Decimal128 {
+	u := d128_to_bid128(x)
+	return FromBID128(uint64(u.dw1), uint64(u.dw0))
 }
 
 // isMinMaxOp reports whether op is one of the canonical min/max tokens (the
