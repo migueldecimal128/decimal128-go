@@ -10,14 +10,13 @@ import (
 // totals exact at WrapperDispatchCoverageWorkOrder.md Phase 2.
 const (
 	nativeWrapperFloor = 30981
-	wrapperTotalFloor  = 158247
+	wrapperTotalFloor  = 158205
 	wrapperPassedFloor = 158205
 )
 
 // TestWrapperRosetta drives the conformance corpora through the public
 // Decimal128 / Context API. The gate is zero failures. Every op the core runner
-// dispatches has a public-API case; the one wrapper-only skip is decTest scaleb
-// with a non-integer argument (see wrapScaleB).
+// dispatches has a public-API case, so the only skips are the shared lists.
 func TestWrapperRosetta(t *testing.T) {
 	var total rosettaResult
 

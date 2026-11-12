@@ -103,7 +103,7 @@ func TestRosettaDectest(t *testing.T) {
 // Core pass-count floors; dectest exact at WrapperDispatchCoverageWorkOrder.md
 // Phase 2.
 const (
-	dectestPassedFloor = 12573
+	dectestPassedFloor = 12531
 	fptestPassedFloor  = 24602
 	intelPassedFloor   = 24714
 )

@@ -579,8 +579,7 @@ func fptestTrapUnwrapPublic(c *rosettaCase, observed, expected Decimal128, overf
 
 // dectestSkips are per-line dectest cases skipped (counted, not failed), with
 // reasons. The lines come from Swift's RosettaDectestSkips (the ones this
-// harness reaches; Go's scaleb decimal-argument adapter passes the scaleb lines
-// Swift skips).
+// harness reaches).
 // Matched by trimmed line text.
 var dectestSkips = map[string]bool{
 	// dqabs abs: dectest abs quiets a NaN and signals on sNaN (and reads "#" as a
@@ -682,6 +681,52 @@ var dectestSkips = map[string]bool{
 	"dqmxg197 maxmag  0      sNaN91  ->  NaN91 Invalid_operation": true,
 	"dqmxg198 maxmag  Inf   -sNaN90  -> -NaN90 Invalid_operation": true,
 
+	// dqscb scaleb: decTest's second operand is a decimal; decNumber makes a NaN,
+	// infinite, non-integral or out-of-range (|n| > 12356) one NaN. IEEE 754-2019
+	// scaleB takes an integer, so these lines have no IEEE form (Swift's list).
+	"dqscb018 scaleb  10  Infinity -> NaN Invalid_operation":         true,
+	"dqscb019 scaleb  10 -Infinity -> NaN Invalid_operation":         true,
+	"dqscb025 scaleb    4    NaN    -> NaN":                          true,
+	"dqscb026 scaleb -Inf   -NaN    -> -NaN":                         true,
+	"dqscb027 scaleb    4   sNaN    -> NaN Invalid_operation":        true,
+	"dqscb028 scaleb  Inf  -sNaN    -> -NaN Invalid_operation":       true,
+	"dqscb031 scaleb  1.23    1.00 ->  NaN Invalid_operation":        true,
+	"dqscb032 scaleb  1.23    1.1  ->  NaN Invalid_operation":        true,
+	"dqscb033 scaleb  1.23    1.01 ->  NaN Invalid_operation":        true,
+	"dqscb034 scaleb  1.23    0.01 ->  NaN Invalid_operation":        true,
+	"dqscb035 scaleb  1.23    0.11 ->  NaN Invalid_operation":        true,
+	"dqscb036 scaleb  1.23    0.999999999 ->  NaN Invalid_operation": true,
+	"dqscb039 scaleb  1.23   -1.1  ->  NaN Invalid_operation":        true,
+	"dqscb040 scaleb  1.23   -1.01 ->  NaN Invalid_operation":        true,
+	"dqscb041 scaleb  1.23   -0.01 ->  NaN Invalid_operation":        true,
+	"dqscb042 scaleb  1.23   -0.11 ->  NaN Invalid_operation":        true,
+	"dqscb043 scaleb  1.23   -0.999999999 ->  NaN Invalid_operation": true,
+	"dqscb044 scaleb  1.23    0.1         ->  NaN Invalid_operation": true,
+	"dqscb045 scaleb  1.23    1E+1        ->  NaN Invalid_operation": true,
+	"dqscb046 scaleb  1.23    1.1234E+6   ->  NaN Invalid_operation": true,
+	"dqscb047 scaleb  1.23    1.123E+4    ->  NaN Invalid_operation": true,
+	"dqscb0614 scaleb  1.23   -1.00 ->  NaN Invalid_operation":       true,
+	"dqscb122 scaleb  1.23    12357       ->  NaN Invalid_operation": true,
+	"dqscb123 scaleb  1.23    12358       ->  NaN Invalid_operation": true,
+	"dqscb126 scaleb  1.23   -12357       ->  NaN Invalid_operation": true,
+	"dqscb127 scaleb  1.23   -12358       ->  NaN Invalid_operation": true,
+	"dqscb861 scaleb  NaN01   -Inf     ->  NaN1":                     true,
+	"dqscb864 scaleb  NaN04    Inf     ->  NaN4":                     true,
+	"dqscb865 scaleb  NaN05    NaN61   ->  NaN5":                     true,
+	"dqscb866 scaleb -Inf     -NaN71   -> -NaN71":                    true,
+	"dqscb867 scaleb -1000     NaN81   ->  NaN81":                    true,
+	"dqscb868 scaleb  1000     NaN91   ->  NaN91":                    true,
+	"dqscb869 scaleb  Inf      NaN101  ->  NaN101":                   true,
+	"dqscb871 scaleb  sNaN011  -Inf    ->  NaN11  Invalid_operation": true,
+	"dqscb874 scaleb  sNaN014   NaN171 ->  NaN14  Invalid_operation": true,
+	"dqscb875 scaleb  sNaN015  sNaN181 ->  NaN15  Invalid_operation": true,
+	"dqscb876 scaleb  NaN016   sNaN191 ->  NaN191 Invalid_operation": true,
+	"dqscb877 scaleb -Inf      sNaN201 ->  NaN201 Invalid_operation": true,
+	"dqscb878 scaleb -1000     sNaN211 ->  NaN211 Invalid_operation": true,
+	"dqscb879 scaleb  1000    -sNaN221 -> -NaN221 Invalid_operation": true,
+	"dqscb880 scaleb  Inf      sNaN231 ->  NaN231 Invalid_operation": true,
+	"dqscb881 scaleb  NaN025   sNaN241 ->  NaN241 Invalid_operation": true,
+
 	// dqmns minus: dectest minus is 0 - x (quiets NaN, signals sNaN, keeps +0);
 	// IEEE negate flips the sign bit.
 	"dqmns021 minus         NaN  -> NaN":                       true,
@@ -763,10 +808,9 @@ func checkBinaryCtx(c *rosettaCase, op func(x, y d128, ctx *context) d128) (outc
 		d128_format(expected, const_FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
 }
 
-// checkScaleB adapts decNumber's scaleb — whose second operand is a decimal
-// integer argument — to the IEEE d128_scaleB_ctxnull(x, int). decNumber requires that
-// argument to be NaN (propagated), or a finite integer with exponent 0 whose
-// magnitude is at most 2*(emax+digits)=12356; anything else signals invalid.
+// checkScaleB runs scaleB(x, n) with an integer scale (IEEE 754-2019 §5.3.3),
+// for Intel's scalbn and decTest's scaleb. decTest's decimal second operands
+// that are not integers in range are in dectestSkips.
 func checkScaleB(c *rosettaCase) (outcome, string) {
 	if len(c.operands) != 2 {
 		return outUnsupported, "bad operand count"
@@ -774,20 +818,12 @@ func checkScaleB(c *rosettaCase) (outcome, string) {
 	if c.rounding == roundingUnsupported {
 		return outUnsupported, "rounding mode not representable"
 	}
-	ctx := newContextRound(roundingFromToken(c.rounding))
-	x := decodeOperand(c.operands[0])
-	var z d128
-	if c.src == srcIntel {
-		// Intel's scalbn takes a plain integer scale (which may exceed decNumber's
-		// bounded decimal-argument range), applied directly via d128_scaleB.
-		n, err := strconv.Atoi(c.operands[1])
-		if err != nil {
-			return outUnsupported, "non-integer scalbn argument"
-		}
-		z = d128_scaleB_ctxnull(x, n, ctx)
-	} else {
-		z = scaleBFromDecimalArg(x, decodeOperand(c.operands[1]), ctx)
+	n, err := strconv.Atoi(c.operands[1])
+	if err != nil {
+		return outUnsupported, "non-integer scaleB argument"
 	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	z := d128_scaleB_ctxnull(decodeOperand(c.operands[0]), n, ctx)
 	expected := decodeOperand(c.result)
 	if d128_bitwiseEQ(z, expected) && ctx.exceptionLetters() == c.expectedFlags {
 		return outPass, ""
@@ -795,24 +831,6 @@ func checkScaleB(c *rosettaCase) (outcome, string) {
 	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
 		d128_format(z, const_FORMAT_COEFFICIENT_QEXP), ctx.exceptionLetters(),
 		d128_format(expected, const_FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
-}
-
-func scaleBFromDecimalArg(x, y d128, ctx *context) d128 {
-	if d128_isNAN(x) || d128_isNAN(y) {
-		return ctxNanOperand2_ctxnull(ctx, x, y)
-	}
-	if d128_isINF(y) || d128_qExp(y) != 0 {
-		return ctxSignalInvalidOperation_ctxnull(ctx, causeOther)
-	}
-	coeff := d128_u128(y)
-	if coeff.dw1 != 0 || coeff.dw0 > 12356 {
-		return ctxSignalInvalidOperation_ctxnull(ctx, causeOther)
-	}
-	n := int(coeff.dw0)
-	if d128_signFlag(y) {
-		n = -n
-	}
-	return d128_scaleB_ctxnull(x, n, ctx)
 }
 
 // checkMinMaxNumber runs a min/max "Number" (NaN-as-missing) corpus case.

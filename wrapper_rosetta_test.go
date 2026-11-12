@@ -15,10 +15,7 @@ import (
 //
 // Every op the core runner dispatches has a case here
 // (WrapperDispatchCoverageWorkOrder.md WC-1). Flag-free public forms are checked
-// by value only, as Swift's wrapper does. The one wrapper-only skip is decTest
-// scaleb with a second operand that is not an integer in [-12356, 12356]: the
-// core runs it through a test-side decimal-argument adapter, and the public
-// ScaleB takes an int.
+// by value only, as Swift's wrapper does.
 
 // decodeOperandWrapper decodes a corpus operand into a Decimal128 through the
 // public constructors (DPD/BID interchange for hex, ParseOrNaN for decimals).
@@ -585,10 +582,8 @@ func wrapMinMaxNumber(c *rosettaCase, op func(*Context, Decimal128, Decimal128) 
 }
 
 // wrapScaleB runs scaleB through the public Context.ScaleB, whose scale is an
-// int. Intel's scalbn argument is a plain integer. decTest's is a decimal: the
-// core runner's adapter maps a NaN, infinite, non-integral or out-of-range
-// (|n| > 12356) argument to NaN, which has no public form, so only integer
-// arguments in range run here (Swift's wrapper does the same).
+// int. decTest's decimal second operands that are not integers in range are in
+// dectestSkips.
 func wrapScaleB(c *rosettaCase) (outcome, string) {
 	if len(c.operands) != 2 {
 		return outUnsupported, "bad operand count"
@@ -598,11 +593,8 @@ func wrapScaleB(c *rosettaCase) (outcome, string) {
 		return outUnsupported, "rounding mode not representable"
 	}
 	n, err := strconv.Atoi(c.operands[1])
-	if c.src == srcDectest && (err != nil || n < -12356 || n > 12356) {
-		return outUnsupported, "scaleb decimal argument outside the public int form"
-	}
 	if err != nil {
-		return outUnsupported, "non-integer scalbn argument"
+		return outUnsupported, "non-integer scaleB argument"
 	}
 	ctx := NewContextWithRounding(rnd)
 	return wrapCheck(c, ctx, ctx.ScaleB(decodeOperandWrapper(c.operands[0]), n))
