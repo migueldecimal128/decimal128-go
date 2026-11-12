@@ -1159,6 +1159,26 @@ func loadNativeFile(path string) ([]rosettaCase, error) {
 	return cases, nil
 }
 
+// stripDectestComment strips a trailing `--` comment: the leftmost `--` outside
+// a single- or double-quoted operand (dqbas504 toSci '--1', dqbas555 toSci
+// '1E--1'; RosettaHarnessAlignmentWorkOrder.md Phase 4). A doubled quote
+// toggles twice.
+func stripDectestComment(line string) string {
+	var quote byte
+	for i := 0; i < len(line); i++ {
+		c := line[i]
+		switch {
+		case quote == 0 && (c == '\'' || c == '"'):
+			quote = c
+		case quote == 0 && c == '-' && i+1 < len(line) && line[i+1] == '-':
+			return line[:i]
+		case quote != 0 && c == quote:
+			quote = 0
+		}
+	}
+	return line
+}
+
 // parseDectestLine parses an IBM dectest line "id op operand... -> result
 // [conditions]". Returns ok=false for comments ("--"), directives (no "->"),
 // and blank lines.
@@ -1167,9 +1187,7 @@ func parseDectestLine(line string) (rosettaCase, bool) {
 	if line == "" || strings.HasPrefix(line, "--") {
 		return rosettaCase{}, false
 	}
-	if i := strings.Index(line, "--"); i >= 0 {
-		line = strings.TrimSpace(line[:i])
-	}
+	line = strings.TrimSpace(stripDectestComment(line))
 	arrow := strings.Index(line, "->")
 	if arrow < 0 {
 		return rosettaCase{}, false // directive
