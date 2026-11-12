@@ -104,7 +104,7 @@ func TestRosettaDectest(t *testing.T) {
 const (
 	dectestPassedFloor = 12515
 	fptestPassedFloor  = 24602
-	intelPassedFloor   = 24600
+	intelPassedFloor   = 24690
 )
 
 // TestRosettaFptest runs the IEEE fptest corpus (decimal128 lines) through the
