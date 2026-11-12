@@ -33,6 +33,7 @@ const (
 type rosettaCase struct {
 	src           source
 	text          string
+	token         string // corpus operator token (dectest lower-cased; native: the canonical op name)
 	operation     string
 	operands      []string
 	result        string
@@ -306,7 +307,7 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkUnaryCtx(c, d128_sqrt_ctx)
 	case "d128_stripTrailingZeros", "reduce":
 		return checkUnaryCtx(c, func(x d128, ctx *context) d128 { return d128_stripTrailingZeros_ctx(x, 6176, ctx) })
-	case "d128_quantize_ctxnull", "quantize":
+	case "d128_quantize_ctx", "quantize":
 		return checkBinaryCtx(c, d128_quantize_ctx)
 	case "d128_logB_ctxnull", "logb":
 		return checkUnaryCtx(c, d128_logB_ctxnull)
@@ -577,197 +578,6 @@ func fptestTrapUnwrapPublic(c *rosettaCase, observed, expected Decimal128, overf
 	return coreToBid(unwrapped), true
 }
 
-// dectestSkips are per-line dectest cases skipped (counted, not failed), with
-// reasons. The lines come from Swift's RosettaDectestSkips (the ones this
-// harness reaches).
-// Matched by trimmed line text.
-var dectestSkips = map[string]bool{
-	// dqabs abs: dectest abs quiets a NaN and signals on sNaN (and reads "#" as a
-	// syntax error); IEEE abs is a quiet bit operation. Value-only arm, so these
-	// sNaN / NaN-sign lines are out of its domain.
-	"dqabs523 abs  sNaN    ->  NaN   Invalid_operation": true,
-	"dqabs525 abs  sNaN33  ->  NaN33 Invalid_operation": true,
-	"dqabs526 abs  -NaN22  -> -NaN22":                   true,
-	"dqabs527 abs -sNaN33  -> -NaN33 Invalid_operation": true,
-	"dqabs900 abs  # -> NaN Invalid_operation":          true,
-
-	// dqbas toSci: strings this parser accepts as NaN that decNumber rejects as
-	// Conversion_syntax ("qNaN", over-long payloads).
-	"dqbas561 toSci \"qNaN\"            -> NaN Conversion_syntax":                      true,
-	"dqbas725 toSci 'NaN1234567890123456781234567890123456' -> NaN Conversion_syntax":  true,
-	"dqbas745 toSci 'sNaN1234567890123456787234561234567890' -> NaN Conversion_syntax": true,
-
-	// dqmax / dqmin / dqmxg / dqmng: decNumber min/max is 754-2008 minNum, which
-	// returns NaN for (sNaN, number); IEEE 754-2019 minimumNumber returns the number
-	// (still signalling invalid), as the library does.
-	"dqmax161 max  sNaN -Inf   ->  NaN  Invalid_operation":        true,
-	"dqmax162 max  sNaN -1000  ->  NaN  Invalid_operation":        true,
-	"dqmax163 max  sNaN -1     ->  NaN  Invalid_operation":        true,
-	"dqmax164 max  sNaN -0     ->  NaN  Invalid_operation":        true,
-	"dqmax165 max  sNaN  0     ->  NaN  Invalid_operation":        true,
-	"dqmax166 max  sNaN  1     ->  NaN  Invalid_operation":        true,
-	"dqmax167 max  sNaN  1000  ->  NaN  Invalid_operation":        true,
-	"dqmax171 max -Inf  sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmax172 max -1000 sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmax173 max -1    sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmax174 max -0    sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmax175 max  0    sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmax176 max  1    sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmax177 max  1000 sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmax178 max  Inf  sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmax191 max  sNaN99 -Inf    ->  NaN99 Invalid_operation":    true,
-	"dqmax192 max  sNaN98 -1      ->  NaN98 Invalid_operation":    true,
-	"dqmax196 max -Inf    sNaN92  ->  NaN92 Invalid_operation":    true,
-	"dqmax197 max  0      sNaN91  ->  NaN91 Invalid_operation":    true,
-	"dqmax198 max  Inf   -sNaN90  -> -NaN90 Invalid_operation":    true,
-	"dqmin161 min  sNaN -Inf   ->  NaN  Invalid_operation":        true,
-	"dqmin162 min  sNaN -1000  ->  NaN  Invalid_operation":        true,
-	"dqmin163 min  sNaN -1     ->  NaN  Invalid_operation":        true,
-	"dqmin164 min  sNaN -0     ->  NaN  Invalid_operation":        true,
-	"dqmin165 min -sNaN  0     -> -NaN  Invalid_operation":        true,
-	"dqmin166 min -sNaN  1     -> -NaN  Invalid_operation":        true,
-	"dqmin167 min  sNaN  1000  ->  NaN  Invalid_operation":        true,
-	"dqmin171 min -Inf  sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmin172 min -1000 sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmin173 min -1    sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmin174 min -0    sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmin175 min  0    sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmin176 min  1    sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmin177 min  1000 sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmin178 min  Inf  sNaN   ->  NaN  Invalid_operation":        true,
-	"dqmin191 min  sNaN99 -Inf    ->  NaN99 Invalid_operation":    true,
-	"dqmin192 min  sNaN98 -11     ->  NaN98 Invalid_operation":    true,
-	"dqmin196 min -Inf    sNaN92  ->  NaN92 Invalid_operation":    true,
-	"dqmin197 min  088    sNaN91  ->  NaN91 Invalid_operation":    true,
-	"dqmin198 min  Inf   -sNaN90  -> -NaN90 Invalid_operation":    true,
-	"dqmng161 minmag  sNaN -Inf   ->  NaN  Invalid_operation":     true,
-	"dqmng162 minmag  sNaN -1000  ->  NaN  Invalid_operation":     true,
-	"dqmng163 minmag  sNaN -1     ->  NaN  Invalid_operation":     true,
-	"dqmng164 minmag  sNaN -0     ->  NaN  Invalid_operation":     true,
-	"dqmng165 minmag -sNaN  0     -> -NaN  Invalid_operation":     true,
-	"dqmng166 minmag -sNaN  1     -> -NaN  Invalid_operation":     true,
-	"dqmng167 minmag  sNaN  1000  ->  NaN  Invalid_operation":     true,
-	"dqmng171 minmag -Inf  sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmng172 minmag -1000 sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmng173 minmag -1    sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmng174 minmag -0    sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmng175 minmag  0    sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmng176 minmag  1    sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmng177 minmag  1000 sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmng178 minmag  Inf  sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmng191 minmag  sNaN99 -Inf    ->  NaN99 Invalid_operation": true,
-	"dqmng192 minmag  sNaN98 -11     ->  NaN98 Invalid_operation": true,
-	"dqmng196 minmag -Inf    sNaN92  ->  NaN92 Invalid_operation": true,
-	"dqmng197 minmag  088    sNaN91  ->  NaN91 Invalid_operation": true,
-	"dqmng198 minmag  Inf   -sNaN90  -> -NaN90 Invalid_operation": true,
-	"dqmxg161 maxmag  sNaN -Inf   ->  NaN  Invalid_operation":     true,
-	"dqmxg162 maxmag  sNaN -1000  ->  NaN  Invalid_operation":     true,
-	"dqmxg163 maxmag  sNaN -1     ->  NaN  Invalid_operation":     true,
-	"dqmxg164 maxmag  sNaN -0     ->  NaN  Invalid_operation":     true,
-	"dqmxg165 maxmag  sNaN  0     ->  NaN  Invalid_operation":     true,
-	"dqmxg166 maxmag  sNaN  1     ->  NaN  Invalid_operation":     true,
-	"dqmxg167 maxmag  sNaN  1000  ->  NaN  Invalid_operation":     true,
-	"dqmxg171 maxmag -Inf  sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmxg172 maxmag -1000 sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmxg173 maxmag -1    sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmxg174 maxmag -0    sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmxg175 maxmag  0    sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmxg176 maxmag  1    sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmxg177 maxmag  1000 sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmxg178 maxmag  Inf  sNaN   ->  NaN  Invalid_operation":     true,
-	"dqmxg191 maxmag  sNaN99 -Inf    ->  NaN99 Invalid_operation": true,
-	"dqmxg192 maxmag  sNaN98 -1      ->  NaN98 Invalid_operation": true,
-	"dqmxg196 maxmag -Inf    sNaN92  ->  NaN92 Invalid_operation": true,
-	"dqmxg197 maxmag  0      sNaN91  ->  NaN91 Invalid_operation": true,
-	"dqmxg198 maxmag  Inf   -sNaN90  -> -NaN90 Invalid_operation": true,
-
-	// dqscb scaleb: decTest's second operand is a decimal; decNumber makes a NaN,
-	// infinite, non-integral or out-of-range (|n| > 12356) one NaN. IEEE 754-2019
-	// scaleB takes an integer, so these lines have no IEEE form (Swift's list).
-	"dqscb018 scaleb  10  Infinity -> NaN Invalid_operation":         true,
-	"dqscb019 scaleb  10 -Infinity -> NaN Invalid_operation":         true,
-	"dqscb025 scaleb    4    NaN    -> NaN":                          true,
-	"dqscb026 scaleb -Inf   -NaN    -> -NaN":                         true,
-	"dqscb027 scaleb    4   sNaN    -> NaN Invalid_operation":        true,
-	"dqscb028 scaleb  Inf  -sNaN    -> -NaN Invalid_operation":       true,
-	"dqscb031 scaleb  1.23    1.00 ->  NaN Invalid_operation":        true,
-	"dqscb032 scaleb  1.23    1.1  ->  NaN Invalid_operation":        true,
-	"dqscb033 scaleb  1.23    1.01 ->  NaN Invalid_operation":        true,
-	"dqscb034 scaleb  1.23    0.01 ->  NaN Invalid_operation":        true,
-	"dqscb035 scaleb  1.23    0.11 ->  NaN Invalid_operation":        true,
-	"dqscb036 scaleb  1.23    0.999999999 ->  NaN Invalid_operation": true,
-	"dqscb039 scaleb  1.23   -1.1  ->  NaN Invalid_operation":        true,
-	"dqscb040 scaleb  1.23   -1.01 ->  NaN Invalid_operation":        true,
-	"dqscb041 scaleb  1.23   -0.01 ->  NaN Invalid_operation":        true,
-	"dqscb042 scaleb  1.23   -0.11 ->  NaN Invalid_operation":        true,
-	"dqscb043 scaleb  1.23   -0.999999999 ->  NaN Invalid_operation": true,
-	"dqscb044 scaleb  1.23    0.1         ->  NaN Invalid_operation": true,
-	"dqscb045 scaleb  1.23    1E+1        ->  NaN Invalid_operation": true,
-	"dqscb046 scaleb  1.23    1.1234E+6   ->  NaN Invalid_operation": true,
-	"dqscb047 scaleb  1.23    1.123E+4    ->  NaN Invalid_operation": true,
-	"dqscb0614 scaleb  1.23   -1.00 ->  NaN Invalid_operation":       true,
-	"dqscb122 scaleb  1.23    12357       ->  NaN Invalid_operation": true,
-	"dqscb123 scaleb  1.23    12358       ->  NaN Invalid_operation": true,
-	"dqscb126 scaleb  1.23   -12357       ->  NaN Invalid_operation": true,
-	"dqscb127 scaleb  1.23   -12358       ->  NaN Invalid_operation": true,
-	"dqscb861 scaleb  NaN01   -Inf     ->  NaN1":                     true,
-	"dqscb864 scaleb  NaN04    Inf     ->  NaN4":                     true,
-	"dqscb865 scaleb  NaN05    NaN61   ->  NaN5":                     true,
-	"dqscb866 scaleb -Inf     -NaN71   -> -NaN71":                    true,
-	"dqscb867 scaleb -1000     NaN81   ->  NaN81":                    true,
-	"dqscb868 scaleb  1000     NaN91   ->  NaN91":                    true,
-	"dqscb869 scaleb  Inf      NaN101  ->  NaN101":                   true,
-	"dqscb871 scaleb  sNaN011  -Inf    ->  NaN11  Invalid_operation": true,
-	"dqscb874 scaleb  sNaN014   NaN171 ->  NaN14  Invalid_operation": true,
-	"dqscb875 scaleb  sNaN015  sNaN181 ->  NaN15  Invalid_operation": true,
-	"dqscb876 scaleb  NaN016   sNaN191 ->  NaN191 Invalid_operation": true,
-	"dqscb877 scaleb -Inf      sNaN201 ->  NaN201 Invalid_operation": true,
-	"dqscb878 scaleb -1000     sNaN211 ->  NaN211 Invalid_operation": true,
-	"dqscb879 scaleb  1000    -sNaN221 -> -NaN221 Invalid_operation": true,
-	"dqscb880 scaleb  Inf      sNaN231 ->  NaN231 Invalid_operation": true,
-	"dqscb881 scaleb  NaN025   sNaN241 ->  NaN241 Invalid_operation": true,
-
-	// dqmns minus: dectest minus is 0 - x (quiets NaN, signals sNaN, keeps +0);
-	// IEEE negate flips the sign bit.
-	"dqmns021 minus         NaN  -> NaN":                       true,
-	"dqmns022 minus        -NaN  -> -NaN":                      true,
-	"dqmns023 minus        sNaN  -> NaN  Invalid_operation":    true,
-	"dqmns024 minus       -sNaN  -> -NaN Invalid_operation":    true,
-	"dqmns031 minus       NaN13  -> NaN13":                     true,
-	"dqmns032 minus      -NaN13  -> -NaN13":                    true,
-	"dqmns033 minus      sNaN13  -> NaN13   Invalid_operation": true,
-	"dqmns034 minus     -sNaN13  -> -NaN13  Invalid_operation": true,
-	"dqmns035 minus       NaN70  -> NaN70":                     true,
-	"dqmns036 minus      -NaN70  -> -NaN70":                    true,
-	"dqmns037 minus      sNaN101 -> NaN101  Invalid_operation": true,
-	"dqmns038 minus     -sNaN101 -> -NaN101 Invalid_operation": true,
-	"dqmns111 minus          0   -> 0":                         true,
-	"dqmns113 minus       0E+4   -> 0E+4":                      true,
-	"dqmns115 minus     0.0000   -> 0.0000":                    true,
-	"dqmns117 minus      0E-141  -> 0E-141":                    true,
-
-	// dqrem / dqrmn remainder, remaindernear: IEEE 754-2019 §5.3.1 exact; GDAS signals
-	// Division_impossible (RemainderExactWorkOrder.md RX-1/RX-2).
-	"dqrem1051 remainder  1e+277  1e-311 ->  NaN Division_impossible":                                true,
-	"dqrem1052 remainder  1e+277 -1e-311 ->  NaN Division_impossible":                                true,
-	"dqrem1053 remainder -1e+277  1e-311 ->  NaN Division_impossible":                                true,
-	"dqrem1054 remainder -1e+277 -1e-311 ->  NaN Division_impossible":                                true,
-	"dqrem421 remainder   1E+6144        1  ->   NaN Division_impossible":                            true,
-	"dqrem772  remainder  1234568888888887777777777890123456   0.1  ->  NaN Division_impossible":     true,
-	"dqrem773  remainder  1234568888888887777777777890123456   0.01 ->  NaN Division_impossible":     true,
-	"dqrmn1051 remaindernear  1e+277  1e-311 ->  NaN Division_impossible":                            true,
-	"dqrmn1052 remaindernear  1e+277 -1e-311 ->  NaN Division_impossible":                            true,
-	"dqrmn1053 remaindernear -1e+277  1e-311 ->  NaN Division_impossible":                            true,
-	"dqrmn1054 remaindernear -1e+277 -1e-311 ->  NaN Division_impossible":                            true,
-	"dqrmn421 remaindernear   1E+6144        1  ->   NaN Division_impossible":                        true,
-	"dqrmn772  remaindernear  1234500000000000000000067890123456   0.1  ->  NaN Division_impossible": true,
-	"dqrmn773  remaindernear  1234500000000000000000067890123456   0.01 ->  NaN Division_impossible": true,
-
-	// logx log10: the 35-digit operand is used unrounded by decNumber; as a
-	// decimal128 operand it rounds to exactly 1, so log10 is 0.
-	"logx1308 log10 1.0000000000000000000000000000000001 -> 4.342944819032518276511289189166051E-35 Inexact Rounded": true,
-}
-
 func roundingFromToken(tok string) round {
 	switch tok {
 	case "TIES_TO_EVEN":
@@ -810,7 +620,7 @@ func checkBinaryCtx(c *rosettaCase, op func(x, y d128, ctx *context) d128) (outc
 
 // checkScaleB runs scaleB(x, n) with an integer scale (IEEE 754-2019 §5.3.3),
 // for Intel's scalbn and decTest's scaleb. decTest's decimal second operands
-// that are not integers in range are in dectestSkips.
+// that are not integers in range are in resources/rosetta/dectest.skip.
 func checkScaleB(c *rosettaCase) (outcome, string) {
 	if len(c.operands) != 2 {
 		return outUnsupported, "bad operand count"
@@ -837,7 +647,7 @@ func checkScaleB(c *rosettaCase) (outcome, string) {
 // decNumber implements 754-2008 minNum, which propagates a signaling NaN as a
 // quiet NaN; our 754-2019 minimumNumber instead treats a signaling NaN as a
 // missing operand and returns the number (still signalling invalid). The dectest
-// lines where the two differ are in dectestSkips.
+// lines where the two differ are in resources/rosetta/dectest.skip.
 func checkMinMaxNumber(c *rosettaCase, op func(x, y d128, ctx *context) d128) (outcome, string) {
 	if len(c.operands) != 2 {
 		return outUnsupported, "bad operand count"
@@ -1262,6 +1072,10 @@ type rosettaResult struct {
 	failures    []string
 	// reasons counts unsupported cases by reason.
 	reasons map[string]int
+	// skipped counts per-line skips (resources/rosetta/<source>.skip), by tag in
+	// skipReasons. They are part of total.
+	skipped     int
+	skipReasons map[string]int
 }
 
 func (r *rosettaResult) tallyReason(reason string) {
@@ -1292,6 +1106,7 @@ func parseNativeLine(line string) (rosettaCase, bool) {
 	c := rosettaCase{
 		src:       srcNative,
 		text:      line,
+		token:     left[0],
 		operation: left[0],
 		rounding:  left[1],
 		operands:  append([]string(nil), left[2:]...),
@@ -1365,15 +1180,18 @@ func parseDectestLine(line string) (rosettaCase, bool) {
 		return rosettaCase{}, false
 	}
 	operands := append([]string(nil), left[2:]...)
-	// Every operation maps through the dectest include map (Rosetta.md §9); an
-	// excluded or undecided token is dropped here and caught by the coverage test.
-	op, ok := dectestInclude[strings.ToLower(left[1])]
+	// Every operation maps through resources/rosetta/dectest.map (Rosetta.md §9);
+	// an excluded or undecided token is dropped here and caught by
+	// check_rosetta.py.
+	token := strings.ToLower(left[1])
+	op, ok := sharedOpFor("dectest", token)
 	if !ok {
 		return rosettaCase{}, false
 	}
 	c := rosettaCase{
 		src:       srcDectest,
 		text:      line,
+		token:     token,
 		operation: op,
 		operands:  operands,
 		result:    right[0],
@@ -1502,6 +1320,11 @@ func loadDectestFile(path string) ([]rosettaCase, error) {
 	var cases []rosettaCase
 	rounding := "TIES_TO_EVEN"
 	precision := 34
+	// dectest.map's `precision` scope rule.
+	want, err := strconv.Atoi(sharedScope("dectest", "precision"))
+	if err != nil {
+		return nil, fmt.Errorf("dectest.map has no integer precision scope rule")
+	}
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 0, 1<<20), 1<<20)
 	for sc.Scan() {
@@ -1514,7 +1337,7 @@ func loadDectestFile(path string) ([]rosettaCase, error) {
 			precision = p
 			continue
 		}
-		if precision != 34 {
+		if precision != want {
 			// Only decimal128 (precision 34) cases are in scope.
 			continue
 		}
@@ -1536,30 +1359,39 @@ func loadDectestFile(path string) ([]rosettaCase, error) {
 	return cases, nil
 }
 
-// runRosetta dispatches each case and tallies outcomes. Unsupported cases are
-// counted but are not failures.
+// runRosetta dispatches each case and tallies outcomes (runCases).
 func runRosetta(cases []rosettaCase) rosettaResult {
+	return runCases(cases, dispatch)
+}
+
+// runCases runs each case through dispatchFn. A per-line skip
+// (resources/rosetta/<source>.skip) is counted by its reason tag; an
+// unsupported outcome is a failure: only the shared data may skip a case
+// (RosettaHarnessAlignmentWorkOrder.md R-5).
+func runCases(cases []rosettaCase, dispatchFn func(*rosettaCase) (outcome, string)) rosettaResult {
 	var r rosettaResult
 	r.total = len(cases)
 	for i := range cases {
-		if shouldSkip(&cases[i]) {
-			// Per-line skips are counted, not run: decrement total so the tally
-			// reflects only the cases actually dispatched.
-			r.total--
+		if tag := sharedSkipTag(&cases[i]); tag != "" {
+			r.skipped++
+			if r.skipReasons == nil {
+				r.skipReasons = map[string]int{}
+			}
+			r.skipReasons[tag]++
 			continue
 		}
-		out, diag := dispatch(&cases[i])
+		out, diag := dispatchFn(&cases[i])
 		switch out {
 		case outPass:
 			r.passed++
-		case outFail:
+		case outFail, outUnsupported:
 			r.failed++
+			if out == outUnsupported {
+				diag = "unsupported: " + diag
+			}
 			if len(r.failures) < maxRecordedFailures {
 				r.failures = append(r.failures, cases[i].text+" :: "+diag)
 			}
-		case outUnsupported:
-			r.unsupported++
-			r.tallyReason(diag)
 		}
 	}
 	return r

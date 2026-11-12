@@ -565,7 +565,7 @@ func wrapQuietBinary(c *rosettaCase, op func(Decimal128, Decimal128) Decimal128)
 
 // wrapMinMaxNumber runs a min/max "Number" (NaN-as-missing) op. The dectest
 // lines where decNumber minNum differs from 754-2019 minimumNumber are in
-// dectestSkips; the Intel cohort normalization in wrapCheck reconciles the
+// resources/rosetta/dectest.skip; the Intel cohort normalization in wrapCheck reconciles the
 // equal-value cohort selection.
 func wrapMinMaxNumber(c *rosettaCase, op func(*Context, Decimal128, Decimal128) Decimal128) (outcome, string) {
 	if len(c.operands) != 2 {
@@ -583,7 +583,7 @@ func wrapMinMaxNumber(c *rosettaCase, op func(*Context, Decimal128, Decimal128) 
 
 // wrapScaleB runs scaleB through the public Context.ScaleB, whose scale is an
 // int. decTest's decimal second operands that are not integers in range are in
-// dectestSkips.
+// resources/rosetta/dectest.skip.
 func wrapScaleB(c *rosettaCase) (outcome, string) {
 	if len(c.operands) != 2 {
 		return outUnsupported, "bad operand count"
@@ -910,7 +910,7 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapFromWord64(c, FromDPD64)
 	case "d128_parse":
 		return wrapParse(c)
-	case "d128_quantize_ctxnull", "quantize":
+	case "d128_quantize_ctx", "quantize":
 		return wrapBinaryCtx(c, (*Context).Quantize)
 	case "d128_remainderTrunc_ctx", "remainder":
 		return wrapBinaryCtx(c, (*Context).RemainderTrunc)
@@ -974,7 +974,7 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 	case "d128_copy", "copy", "d128_canonical", "canonical":
 		return wrapQuietUnary(c, func(d Decimal128) Decimal128 { return d })
 	// dectest computational abs / minus: value only, as the core runner (their
-	// NaN-quieting / sNaN lines are in dectestSkips).
+	// NaN-quieting / sNaN lines are in resources/rosetta/dectest.skip).
 	case "abs":
 		return wrapValueOnly(c, Decimal128.Abs)
 	case "minus":
@@ -1180,28 +1180,5 @@ func wrapComparePartial(c *rosettaCase, op func(*Context, Decimal128, Decimal128
 }
 
 func runWrapperRosetta(cases []rosettaCase) rosettaResult {
-	var r rosettaResult
-	r.total = len(cases)
-	for i := range cases {
-		if shouldSkip(&cases[i]) {
-			// Per-line skips (Intel cohort/NaN cases) are counted, not run:
-			// decrement total so the tally reflects only dispatched cases.
-			r.total--
-			continue
-		}
-		out, diag := dispatchWrapper(&cases[i])
-		switch out {
-		case outPass:
-			r.passed++
-		case outFail:
-			r.failed++
-			if len(r.failures) < maxRecordedFailures {
-				r.failures = append(r.failures, cases[i].text+" :: "+diag)
-			}
-		case outUnsupported:
-			r.unsupported++
-			r.tallyReason(diag)
-		}
-	}
-	return r
+	return runCases(cases, dispatchWrapper)
 }

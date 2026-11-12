@@ -65,11 +65,16 @@ func parseFptestLine(line string) (rosettaCase, bool) {
 	if len(tokens) < 2 {
 		return rosettaCase{}, false
 	}
-	t0 := tokens[0]
-	if !strings.HasPrefix(t0, "d128") {
+	// Coarse width pre-filter: only lines of fptest.map's `format` (d128).
+	format := sharedScope("fptest", "format")
+	if format == "" || !strings.HasPrefix(tokens[0], format) {
 		return rosettaCase{}, false
 	}
-	op := t0[len("d128"):]
+	op := tokens[0][len(format):]
+	mapped, ok := sharedOpFor("fptest", op)
+	if !ok {
+		return rosettaCase{}, false
+	}
 
 	rounding, ok := fptestRoundingToken(tokens[1])
 	if !ok {
@@ -102,21 +107,10 @@ func parseFptestLine(line string) (rosettaCase, bool) {
 		exceptions = tokens[idx]
 	}
 
-	mapped := op
-	switch op {
-	case "+":
-		mapped = "add"
-	case "-":
-		mapped = "subtract"
-	case "*":
-		mapped = "multiply"
-	case "/":
-		mapped = "divide"
-	}
-
 	return rosettaCase{
 		src:           srcFptest,
 		text:          line,
+		token:         op,
 		operation:     mapped,
 		operands:      operands,
 		result:        result,

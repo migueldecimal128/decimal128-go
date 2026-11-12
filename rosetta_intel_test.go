@@ -90,10 +90,10 @@ func parseIntelLine(line string) (rosettaCase, bool) {
 		body = body[:i]
 	}
 	tokens := strings.Fields(body)
-	if len(tokens) == 0 || !intelInScope(tokens[0]) {
+	if len(tokens) == 0 {
 		return rosettaCase{}, false
 	}
-	mapped, ok := intelInclude[tokens[0]]
+	mapped, ok := sharedOpFor("intel", tokens[0])
 	if !ok {
 		return rosettaCase{}, false
 	}
@@ -122,6 +122,7 @@ func parseIntelLine(line string) (rosettaCase, bool) {
 	return rosettaCase{
 		src:           srcIntel,
 		text:          line,
+		token:         tokens[0],
 		operation:     mapped,
 		operands:      append([]string(nil), tokens[2:fi-1]...),
 		result:        tokens[fi-1],
@@ -232,80 +233,6 @@ func intelNumber(op1, op2, expected d128, isMax bool) d128 {
 	}
 
 	return expected
-}
-
-// intelSkips are per-line Intel cases skipped (counted, not failed): a handful
-// where Intel's recorded cohort/NaN choice cannot be reconciled with decNumber's
-// convention, and the exp / exp10 lines where Intel marks a tiny-input result
-// exact (flags 00) although it is inexact. Mirrors Swift's RosettaIntelSkips.
-var intelSkips = map[string]bool{
-	"bid128_exp 0 [00000000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 0 [00000000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 0 [0000106F4216D9DBBD95C90355555555] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 0 [00420000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 0 [00420000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 1 [00000000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 1 [00000000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 1 [0000106F4216D9DBBD95C90355555555] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 1 [00420000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 1 [00420000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 2 [00000000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 2 [00000000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 2 [0000106F4216D9DBBD95C90355555555] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 2 [00420000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 2 [00420000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 3 [00000000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 3 [00000000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 3 [0000106F4216D9DBBD95C90355555556] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 3 [00420000000000000000000000000001] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp 3 [00420000000000000000000000000003] [2FFE314DC6448D9338C15B0A00000000] 00 ulp=0.0000000000e-01":                                                     true,
-	"bid128_exp10 0 [b0058bf72fa4eea6e98489819368194d] [00000000000000000000000000000000] 20":                                                                        true,
-	"bid128_exp10 0 [b005db5e877e758bfe53dd5e06733086] [00000000000000000000000000000000] 20":                                                                        true,
-	"bid128_exp10 0 [b005b1d75299a5aa378acaa543a24b82] [00000000000000000000000000000000] 20":                                                                        true,
-	"bid128_exp10 0 [b0053af01b8a0125ac5437185b9f74bb] [00000000000000000000000000000000] 20":                                                                        true,
-	"bid128_exp10 0 [b0057e657e0fef7b8b7572acc164e1f3] [00000000000000000000000000000000] 20":                                                                        true,
-	"bid128_exp10 0 [b00552f25788a4e163d781ec08d2be04] [00000000000000000000000000000000] 20":                                                                        true,
-	"bid128_exp10 0 [3005da8d9306b37a08cd74840506b073] [78000000000000000000000000000000] 20":                                                                        true,
-	"bid128_exp10 0 [30059144adac675798f2764aabb361f2] [78000000000000000000000000000000] 20":                                                                        true,
-	"bid128_exp10 0 [3005967f3b6dc2b69607e01ce2a77a34] [78000000000000000000000000000000] 20":                                                                        true,
-	"bid128_fma 0 [7f06536efdedf3ef,a00d0c0a84122060] [0008101000000000,8c6de2c3707e636c] [fd1f7eefdffff377,023b4c28d1de82a0] [fc000000000000000000000000000000] 01": true,
-	"bid128_maxnum 0 [dbf2000000000000,0000000000000000] [9e06000000000000,0000000000000000] [dbf20000000000000000000000000000] 00":                                  true,
-	"bid128_maxnum_mag 0 [0ad6000000000000,0000000000000000] [a3f2000000000000,0000000000000000] [a3f20000000000000000000000000000] 00":                              true,
-	"bid128_minnum_mag 0 [4a29fdd3add4507a,b6884d65b20ee626] [ed47f4a2ed981eb5,fe78fff8fbfd7fed] [4a280000000000000000000000000000] 00":                              true,
-	// from_string: malformed strings. We return NaN and raise invalid; Intel
-	// returns NaN with no flag (and reads the valid prefix of "1.1E-2E").
-	"bid128_from_string 0 1.. [7c000000000000000000000000000000] 00":        true,
-	"bid128_from_string 0 1.1P2 [7c000000000000000000000000000000] 00":      true,
-	"bid128_from_string 0 1.1EE [7c000000000000000000000000000000] 00":      true,
-	"bid128_from_string 0 1.1P-2 [7c000000000000000000000000000000] 00":     true,
-	"bid128_from_string 0 1.1E-2E [303a000000000000000000000000000b] 00":    true,
-	"bid128_from_string 0 +INFi [7c000000000000000000000000000000] 00":      true,
-	"bid128_from_string 0 +SNANi [7e000000000000000000000000000000] 00":     true,
-	"bid128_from_string 0 +INFINITYi [7c000000000000000000000000000000] 00": true,
-	"bid128_from_string 0 INFi [7c000000000000000000000000000000] 00":       true,
-	"bid128_from_string 0 SNANi [7e000000000000000000000000000000] 00":      true,
-	"bid128_from_string 0 INFINITYi [7c000000000000000000000000000000] 00":  true,
-}
-
-// isOutOfScopeIntelLine: lrint/lround tagged `longintsize=32` test a 32-bit
-// `long` result (like to_int32_*, out of scope). On scalbln the same tag
-// describes the exponent argument, so those lines run.
-func isOutOfScopeIntelLine(t string) bool {
-	return (strings.HasPrefix(t, "bid128_lrint ") || strings.HasPrefix(t, "bid128_lround ")) &&
-		strings.Contains(t, " longintsize=32")
-}
-
-// shouldSkip reports whether a case is on a per-line skip list (or out of
-// scope). Skipped cases are counted (total decremented) rather than failed.
-func shouldSkip(c *rosettaCase) bool {
-	t := strings.TrimSpace(c.text)
-	switch c.src {
-	case srcIntel:
-		return isOutOfScopeIntelLine(t) || intelSkips[t]
-	case srcDectest:
-		return dectestSkips[t]
-	}
-	return false
 }
 
 // loadIntelFile reads all in-scope Intel operation cases from readtest.in.

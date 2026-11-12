@@ -59,92 +59,63 @@ func sampleFailures(r rosettaResult) []string {
 	return r.failures[:min(len(r.failures), 10)]
 }
 
-// nativeCoreFloor is the core runner's native case count at the D48 switch
-// (D48GoWorkOrder.md Phase 4): all 40 native files, nothing excluded.
-const nativeCoreFloor = 30981
-
-// TestRosettaNative runs the native-corpus files (native.index minus this
-// port's exclusions) through the core harness. Every case must pass: a
-// malformed line, an unknown op or an unsupported case is a failure (G-10).
-func TestRosettaNative(t *testing.T) {
-	total := runNativeCorpus(t, "core", nativeCorpusFiles(t, "core"), dispatch)
-	if total.failed != 0 {
-		t.Fatalf("native core: %d/%d failed: %v", total.failed, total.total, sampleFailures(total))
-	}
-	if total.total < nativeCoreFloor {
-		t.Fatalf("native core: %d cases, below the floor %d", total.total, nativeCoreFloor)
-	}
-}
-
-// TestRosettaDectest runs every dectest file (the full list, R-6) through the
-// core dispatch (value + exception flags). Precision-34 cases only; dqPlus and
-// dqShift yield no cases (their ops are excluded, with reasons, in
-// dectestExclude). Gates on 0 failures.
-func TestRosettaDectest(t *testing.T) {
-	var total rosettaResult
-	for _, name := range dectestFiles {
-		cases, err := loadDectestFile(filepath.Join(resourcesDir(), "dectest", name))
+// rosettaSource runs one runner over one source: every file the shared data
+// selects (files.index), reported and checked against expected.tsv
+// (rosetta_shared_test.go).
+func rosettaSource(t *testing.T, runner, source string, dispatchFn func(*rosettaCase) (outcome, string)) {
+	rep := newRosettaReport(runner, source)
+	for _, name := range sharedFiles(source) {
+		path := filepath.Join(resourcesDir(), source, name)
+		var cases []rosettaCase
+		var err error
+		switch source {
+		case "dectest":
+			cases, err = loadDectestFile(path)
+		case "fptest":
+			cases, err = loadFptestFile(path)
+		case "intel":
+			cases, err = loadIntelFile(path)
+		}
 		if err != nil {
 			t.Fatalf("load %s: %v", name, err)
 		}
-		r := runRosetta(cases)
-		mergeResult(&total, r)
-		t.Logf("%s: %d cases — %d passed, %d unsupported, %d failed", name, r.total, r.passed, r.unsupported, r.failed)
+		rep.file(t, name, runCases(dropExcluded(cases, runner, source), dispatchFn))
 	}
-	logRosettaTotal(t, "dectest TOTAL", total)
-	if total.failed != 0 {
-		t.Fatalf("dectest: %d/%d failed: %v", total.failed, total.total, sampleFailures(total))
-	}
-	if total.passed < dectestPassedFloor {
-		t.Fatalf("dectest: %d passed, below the floor %d", total.passed, dectestPassedFloor)
-	}
+	rep.finish(t)
+	rep.check(t)
 }
 
-// Core pass-count floors; dectest exact at WrapperDispatchCoverageWorkOrder.md
-// Phase 2.
-const (
-	dectestPassedFloor = 12531
-	fptestPassedFloor  = 24602
-	intelPassedFloor   = 24714
-)
-
-// TestRosettaFptest runs the IEEE fptest corpus (decimal128 lines) through the
-// core arithmetic. Gates on 0 failures.
-func TestRosettaFptest(t *testing.T) {
-	var total rosettaResult
-	for _, name := range fptestFiles {
-		cases, err := loadFptestFile(filepath.Join(resourcesDir(), "fptest", name))
+// rosettaNative runs one runner over the native files it selects (native.index
+// minus native.exclude), each checked against its own row (no source total,
+// R-4); the selection must be exactly expected.tsv's native rows.
+func rosettaNative(t *testing.T, runner string, dispatchFn func(*rosettaCase) (outcome, string)) {
+	rep := newRosettaReport(runner, "native")
+	selected := map[string]bool{}
+	for _, p := range nativeCorpusFiles(t, runner) {
+		name := filepath.Base(p)
+		cases, err := loadNativeFile(p)
 		if err != nil {
-			t.Fatalf("load %s: %v", name, err)
+			t.Fatalf("native %s: %v", runner, err)
 		}
-		r := runRosetta(cases)
-		mergeResult(&total, r)
-		t.Logf("%s: %d cases — %d passed, %d unsupported, %d failed", name, r.total, r.passed, r.unsupported, r.failed)
+		rep.file(t, name, runCases(dropExcluded(cases, runner, "native"), dispatchFn))
+		selected[name] = true
 	}
-	logRosettaTotal(t, "fptest TOTAL", total)
-	if total.failed != 0 {
-		t.Fatalf("fptest: %d/%d failed: %v", total.failed, total.total, sampleFailures(total))
-	}
-	if total.passed < fptestPassedFloor {
-		t.Fatalf("fptest: %d passed, below the floor %d", total.passed, fptestPassedFloor)
-	}
+	rep.checkRows(selected)
+	rep.check(t)
 }
 
-// TestRosettaIntel runs the Intel BID operations corpus (readtest.in ~14k
-// bid128_* vectors) through the harness. Intel result normalization (NaN cohort
-// + min/max conventions) is applied in the shared compare helpers; per-line
-// skips are counted, not failed. Gates on 0 failures.
-func TestRosettaIntel(t *testing.T) {
-	cases, err := loadIntelFile(filepath.Join(resourcesDir(), "intel", "readtest.in"))
-	if err != nil {
-		t.Fatalf("load readtest.in: %v", err)
+// dropExcluded removes the cases whose token runner.exclude lists for runner.
+func dropExcluded(cases []rosettaCase, runner, source string) []rosettaCase {
+	out := cases[:0:0]
+	for _, c := range cases {
+		if !sharedExcludes(runner, source, c.token) {
+			out = append(out, c)
+		}
 	}
-	r := runRosetta(cases)
-	logRosettaTotal(t, "intel readtest.in", r)
-	if r.failed != 0 {
-		t.Fatalf("intel: %d/%d failed: %v", r.failed, r.total, sampleFailures(r))
-	}
-	if r.passed < intelPassedFloor {
-		t.Fatalf("intel: %d passed, below the floor %d", r.passed, intelPassedFloor)
-	}
+	return out
 }
+
+func TestRosettaCoreDectest(t *testing.T) { rosettaSource(t, "core", "dectest", dispatch) }
+func TestRosettaCoreFptest(t *testing.T)  { rosettaSource(t, "core", "fptest", dispatch) }
+func TestRosettaCoreIntel(t *testing.T)   { rosettaSource(t, "core", "intel", dispatch) }
+func TestRosettaCoreNative(t *testing.T)  { rosettaNative(t, "core", dispatch) }
