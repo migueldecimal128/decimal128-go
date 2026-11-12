@@ -157,9 +157,9 @@ func d128_remainderNear_ctxnull(x, y d128, ctxnull *context) d128 {
 //
 // r2 gives both the truncated remainder (r2 or r2 - h) and the parity of the
 // truncated quotient (odd iff r2 >= h), which remainderNear needs for ties.
-// When qExp(x) > qExp(y), X = cx * 10^k is never formed: r2 = cx * (10^k mod 2h)
+// When qExp(x) > qExp(y), X = xCoeff * 10^k is never formed: r2 = xCoeff * (10^k mod 2h)
 // mod 2h. No quotient is ever formed, and the result's coefficient is below h
-// (or below cx when qExp(x) < qExp(y)), so it always fits 34 digits at e.
+// (or below xCoeff when qExp(x) < qExp(y)), so it always fits 34 digits at e.
 // Signs are applied last: the result takes the sign of x, or its negation
 // when remainderNear rounds the quotient away from zero.
 
@@ -311,7 +311,7 @@ func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *cont
 	}
 
 	// CD-width divisor (digitLen(y) <= 4, so m <= 3). Two sub-paths:
-	//   (a) integer-exact: cx / cy has remainder 0, so qI already sits at the preferred
+	//   (a) integer-exact: xCoeff / yCoeff has remainder 0, so qI already sits at the preferred
 	//       exponent as the canonical cohort member -- return it directly, no scale and
 	//       no trailing-zero strip. This is the ET band: one 128/64 divide.
 	//   (b) inexact: the scaled dividend is exactly 34 + digitLen(y) <= 38 digits, so it
@@ -320,8 +320,8 @@ func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *cont
 	//       scaled-numerator path (below) narrowed to 128-bit width; it stays 128 bits
 	//       throughout rather than widening the dividend to 256 for a full-width divide.
 	if m <= 3 {
-		cx := d128_u128(x)
-		qint := divRem_q128r64_128x64(cx.dw0, cx.dw1, yCoeff.dw0)
+		xCoeff := d128_u128(x)
+		qint := divRem_q128r64_128x64(xCoeff.dw0, xCoeff.dw1, yCoeff.dw0)
 		if qint.remDw0 == 0 && !isZero_bool_128(qint.quotDw0, qint.quotDw1) {
 			return finalize_128_ctxnull(resultSign, qPreferred,
 				fromLoHi_128_64x64(qint.quotDw0, qint.quotDw1), const_RESIDUE_EXACT, rounding, ctxnull)
