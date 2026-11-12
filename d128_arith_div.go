@@ -108,8 +108,7 @@ func d128_remainderTrunc_ctx(x, y d128, ctx *context) d128 {
 func d128_remainderTrunc_ctxnull(x, y d128, ctxnull *context) d128 {
 	if bothFinite(x, y) {
 		if d128_isNotZER(x) && d128_isNotZER(y) {
-			r, _ := remTruncFnzFnz(x, y, ctxnull)
-			return r
+			return remainderTruncFnzFnz(x, y)
 		}
 		if d128_isZER(x) && d128_isNotZER(y) {
 			return d128_zero(d128_signFlag(x), min(d128_qExp(x), d128_qExp(y)))
@@ -133,7 +132,7 @@ func d128_remainderNear_ctx(x, y d128, ctx *context) d128 {
 func d128_remainderNear_ctxnull(x, y d128, ctxnull *context) d128 {
 	if bothFinite(x, y) {
 		if d128_isNotZER(x) && d128_isNotZER(y) {
-			return remainderNearFnzFnz(x, y, ctxnull)
+			return remainderNearFnzFnz(x, y)
 		}
 		if d128_isZER(x) && d128_isNotZER(y) {
 			return d128_zero(d128_signFlag(x), min(d128_qExp(x), d128_qExp(y)))
@@ -149,61 +148,136 @@ func d128_remainderNear_ctxnull(x, y d128, ctxnull *context) d128 {
 	return x
 }
 
-// remTruncFnzFnz returns (r = x - trunc(x/y)*y, truncQuotientIsOdd).
-func remTruncFnzFnz(x, y d128, ctxnull *context) (d128, bool) {
-	truncCtx := newContextRound(const_ROUND_TOWARD_ZERO) // scratch: discards flags
-	n1 := d128_divide_ctx(x, y, truncCtx)
-	if truncCtx.isOverflow() {
-		nan := ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivIntOverflowsCoefficient)
-		return nan, false
-	}
-	verify("", func() bool { return d128_isFIN(n1) })
-	n := n1
-	if d128_qExp(n1) < 0 {
-		n = d128_roundToIntegralTowardZeroSignalInexact_ctxnull(n1, truncCtx)
-	}
-	verify("", func() bool { return d128_qExp(n) >= 0 })
-	// If the integer quotient has more than 34 digits it cannot be represented
-	// exactly, so the remainder is undefined (dectest "Division_impossible").
-	if d128_digitLen(n)+d128_qExp(n) > 34 {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivIntOverflowsCoefficient), false
-	}
-	truncIsOdd := false
-	if !d128_isZER(n) && d128_qExp(n) == 0 {
-		truncIsOdd = (n.ubdLo64 & 1) != 0
-	}
-	r1 := d128_fma_tte(d128_negate(n), y, x) // r = x - n*y, single rounding
-	if d128_isZER(r1) {
-		return d128_zero(d128_signFlag(x), min(d128_qExp(x), d128_qExp(y))), truncIsOdd
-	}
-	return r1, truncIsOdd
+// RemainderExactWorkOrder.md §2. Both remainders are exact for every finite
+// non-zero x and y, however large the quotient x/y (IEEE 754-2019 §5.3.1).
+// Everything happens on coefficients at the common exponent
+// e = min(qExp(x), qExp(y)):
+//
+//	X = |x|'s coefficient at e,  h = |y|'s coefficient at e,  r2 = X mod 2h
+//
+// r2 gives both the truncated remainder (r2 or r2 - h) and the parity of the
+// truncated quotient (odd iff r2 >= h), which remainderNear needs for ties.
+// When qExp(x) > qExp(y), X = cx * 10^k is never formed: r2 = cx * (10^k mod 2h)
+// mod 2h. No quotient is ever formed, and the result's coefficient is below h
+// (or below cx when qExp(x) < qExp(y)), so it always fits 34 digits at e.
+// Signs are applied last: the result takes the sign of x, or its negation
+// when remainderNear rounds the quotient away from zero.
+
+// remQuotientIsZero: whether qExp(x) < qExp(y) and the digit lengths alone show
+// |y| > 2|x|: both quotients are 0 and both remainders are x itself.
+func remQuotientIsZero(x, y d128) bool {
+	d := d128_qExp(y) - d128_qExp(x)
+	return (d > 0) && (d128_digitLen(y)+d > d128_digitLen(x)+1)
 }
 
-func remainderNearFnzFnz(x, y d128, ctxnull *context) d128 {
-	r1, truncIsOdd := remTruncFnzFnz(x, y, ctxnull)
-	if !d128_isFIN(r1) {
-		return r1
+// remDivisorAtMinExp: h, |y|'s coefficient at e = min(qExp(x), qExp(y)).
+// Below 10^35 once remQuotientIsZero has been ruled out.
+func remDivisorAtMinExp(x, y d128) u128 {
+	d := d128_qExp(y) - d128_qExp(x)
+	if d <= 0 {
+		return d128_u128(y)
 	}
-	if d128_isZER(r1) {
-		return r1
+	verify("", func() bool { return d <= 34 })
+	return mulPow10_128_128(y.ubdLo64, d128_hi49(y), d)
+}
+
+// remMod: a mod m.
+func remMod(a, m u128) u128 {
+	qr := u256DivRem_128(u256{a.dw0, a.dw1, 0, 0}, m)
+	return u128{qr.remDw0, qr.remDw1}
+}
+
+// remMulMod: (a * b) mod m. The caller guarantees a * b / m < 2^128 (the
+// u256DivRem_128 contract): here always a < 2^128 and b < m, or a, b < m.
+func remMulMod(a, b, m u128) u128 {
+	p := mul_256_128x128(a.dw0, a.dw1, b.dw0, b.dw1)
+	qr := u256DivRem_128(p, m)
+	return u128{qr.remDw0, qr.remDw1}
+}
+
+// remPow10Mod: 10^k mod m, k in 1..12287, m >= 2. k <= 38 reads the table;
+// larger k runs left-to-right over 5-bit windows of k: acc <- acc^32 * 10^w
+// mod m. Each squaring has acc < m, and each window multiply has 10^w < 2^103,
+// so every quotient stays below 2^128.
+func remPow10Mod(k int, m u128) u128 {
+	if k <= 38 {
+		return remMod(pow10U128(k), m)
 	}
-	var truncCtx *context
-	if ctxnull != nil {
-		truncCtx = ctxnull.withRoundingAndNewFlags(const_ROUND_TOWARD_ZERO)
-	} else {
-		truncCtx = newContextRound(const_ROUND_TOWARD_ZERO)
+	shift := 0
+	for (k >> shift) > 31 {
+		shift += 5
 	}
-	var r2 d128
-	if d128_signFlag(r1) {
-		r2 = d128_add_ctx(r1, y, truncCtx)
-	} else {
-		r2 = d128_subtract_ctx(r1, y, truncCtx)
+	acc := remMod(pow10U128(k>>shift), m)
+	for shift > 0 {
+		shift -= 5
+		i := 0
+		for i < 5 {
+			acc = remMulMod(acc, acc, m)
+			i += 1
+		}
+		w := (k >> shift) & 31
+		if w != 0 {
+			acc = remMulMod(pow10U128(w), acc, m)
+		}
 	}
-	cmp := cmpMagFnzFnz(r1, r2)
-	if cmp > 0 || (cmp == 0 && truncIsOdd) {
-		return r2
+	return acc
+}
+
+// remCoeffMod2H: r2 = X mod 2h, X = |x|'s coefficient at e = min(qExp(x), qExp(y)).
+func remCoeffMod2H(x, y d128, h u128) u128 {
+	m := shl_128_128(h.dw0, h.dw1, 1)
+	k := d128_qExp(x) - d128_qExp(y)
+	if k <= 0 {
+		return remMod(d128_u128(x), m)
 	}
-	return r1
+	return remMulMod(d128_u128(x), remPow10Mod(k, m), m)
+}
+
+// remResult: the finite result sign * r * 10^e; a zero r gives a zero of that sign.
+func remResult(sign bool, e int, r u128) d128 {
+	if isZero_bool_128(r.dw0, r.dw1) {
+		return d128_zero(sign, e)
+	}
+	return decimalFNZ_128(sign, e, r.dw0, r.dw1)
+}
+
+// remainderTruncFnzFnz: x - trunc(x/y) * y, exact.
+func remainderTruncFnzFnz(x, y d128) d128 {
+	if remQuotientIsZero(x, y) {
+		return x
+	}
+	h := remDivisorAtMinExp(x, y)
+	r2 := remCoeffMod2H(x, y, h)
+	e := min(d128_qExp(x), d128_qExp(y))
+	if cmp_int_128x128(r2.dw0, r2.dw1, h.dw0, h.dw1) >= 0 {
+		return remResult(d128_signFlag(x), e, sub_128_128x128(r2.dw0, r2.dw1, h.dw0, h.dw1))
+	}
+	return remResult(d128_signFlag(x), e, r2)
+}
+
+// remainderNearFnzFnz: x - n * y, n = x/y rounded to the nearest integer, ties
+// to even; exact.
+func remainderNearFnzFnz(x, y d128) d128 {
+	if remQuotientIsZero(x, y) {
+		return x
+	}
+	h := remDivisorAtMinExp(x, y)
+	r2 := remCoeffMod2H(x, y, h)
+	e := min(d128_qExp(x), d128_qExp(y))
+	truncIsOdd := (cmp_int_128x128(r2.dw0, r2.dw1, h.dw0, h.dw1) >= 0)
+	r := r2
+	if truncIsOdd {
+		r = sub_128_128x128(r2.dw0, r2.dw1, h.dw0, h.dw1)
+	}
+	// Round the quotient away from zero when r > h/2, or r == h/2 and the
+	// truncated quotient is odd: the remainder becomes -(h - r), 0 < h - r < h.
+	twoR := shl_128_128(r.dw0, r.dw1, 1)
+	cmp := cmp_int_128x128(twoR.dw0, twoR.dw1, h.dw0, h.dw1)
+	if (cmp > 0) || ((cmp == 0) && truncIsOdd) {
+		hr := sub_128_128x128(h.dw0, h.dw1, r.dw0, r.dw1)
+		return decimalFNZ_128(!d128_signFlag(x), e, hr.dw0, hr.dw1)
+	}
+	return remResult(d128_signFlag(x), e, r)
 }
 
 // PT fast path: divide by a power of ten (value 10^(m + qExp(y))).

@@ -102,9 +102,9 @@ func TestRosettaDectest(t *testing.T) {
 
 // Core pass-count floors (RosettaCoveragePartitionWorkOrder.md Phase 4).
 const (
-	dectestPassedFloor = 12529
+	dectestPassedFloor = 12515
 	fptestPassedFloor  = 24602
-	intelPassedFloor   = 24589
+	intelPassedFloor   = 24600
 )
 
 // TestRosettaFptest runs the IEEE fptest corpus (decimal128 lines) through the

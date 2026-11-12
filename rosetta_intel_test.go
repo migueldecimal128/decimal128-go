@@ -272,17 +272,6 @@ var intelSkips = map[string]bool{
 	"bid128_maxnum 0 [dbf2000000000000,0000000000000000] [9e06000000000000,0000000000000000] [dbf20000000000000000000000000000] 00":                                  true,
 	"bid128_maxnum_mag 0 [0ad6000000000000,0000000000000000] [a3f2000000000000,0000000000000000] [a3f20000000000000000000000000000] 00":                              true,
 	"bid128_minnum_mag 0 [4a29fdd3add4507a,b6884d65b20ee626] [ed47f4a2ed981eb5,fe78fff8fbfd7fed] [4a280000000000000000000000000000] 00":                              true,
-	"bid128_rem 0 [26741c0590811072,ffffffff6ef7ffff] [0000000000000000,0300040220100840] [8000000000000000015515ab6c6033c0] 00":                                     true,
-	"bid128_rem 0 [397cdc9a254ff562,99bc2af7b316f57c] [268d807293a0dcac,afddbd631e831cbb] [a68c1d3c3991cbb19eee601c8bdcb12c] 00":                                     true,
-	"bid128_rem 0 [2000040000002200,f7fffffffd7fffff] [0100000000000000,0000000000000001] [01000000000000000000000000000000] 00":                                     true,
-	"bid128_rem 0 [4082000215010400,1f7dbeffb7fdff7d] [bfffbfff7ffa7fbf,240c30b8380ad037] [bffe0708356252ac4b444f585a0c6d93] 00":                                     true,
-	"bid128_rem 0 [97f3ca2bca3dcd34,321ba8822721f58f] [8000000000000000,bae106a1402505d6] [000000000000000025bf9a7041265ffe] 00":                                     true,
-	"bid128_rem 0 [9c5f9589d6c5fa51,caa6dcb43a12852e] [0080000000000000,0001000000000000] [80800000000000000000000000000000] 00":                                     true,
-	"bid128_rem 0 [a7f734b7f7e7a516,229ddcc454df042c] [0000000000000002,9fc80ebfc7fed6d1] [800000000000000118eb45cf8f8cc645] 00":                                     true,
-	"bid128_rem 1 [397cdc9a254ff562,99bc2af7b316f57c] [268d807293a0dcac,afddbd631e831cbb] [a68c1d3c3991cbb19eee601c8bdcb12c] 00":                                     true,
-	"bid128_rem 2 [397cdc9a254ff562,99bc2af7b316f57c] [268d807293a0dcac,afddbd631e831cbb] [a68c1d3c3991cbb19eee601c8bdcb12c] 00":                                     true,
-	"bid128_rem 3 [397cdc9a254ff562,99bc2af7b316f57c] [268d807293a0dcac,afddbd631e831cbb] [a68c1d3c3991cbb19eee601c8bdcb12c] 00":                                     true,
-	"bid128_rem 4 [397cdc9a254ff562,99bc2af7b316f57c] [268d807293a0dcac,afddbd631e831cbb] [a68c1d3c3991cbb19eee601c8bdcb12c] 00":                                     true,
 	// from_string: malformed strings. We return NaN and raise invalid; Intel
 	// returns NaN with no flag (and reads the valid prefix of "1.1E-2E").
 	"bid128_from_string 0 1.. [7c000000000000000000000000000000] 00":        true,

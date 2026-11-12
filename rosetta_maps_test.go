@@ -457,7 +457,7 @@ var rosettaArity = map[string]int{
 	"d128_totalOrderMag":                   2,
 	"d128_divideInteger_ctx":               2,
 	"divideint":                            2,
-	"d128_remainder_ctx":                   2,
+	"d128_remainderTrunc_ctx":              2,
 	"remainder":                            2,
 	"d128_remainderNear_ctx":               2,
 	"remaindernear":                        2,

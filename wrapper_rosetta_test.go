@@ -745,7 +745,7 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapParse(c)
 	case "d128_quantize_ctxnull", "quantize":
 		return wrapBinaryCtx(c, (*Context).Quantize)
-	case "d128_remainder_ctx", "remainder":
+	case "d128_remainderTrunc_ctx", "remainder":
 		return wrapBinaryCtx(c, (*Context).RemainderTrunc)
 	case "d128_remainderNear_ctx", "remaindernear":
 		return wrapBinaryCtx(c, (*Context).RemainderNear)

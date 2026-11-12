@@ -285,7 +285,7 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkBinaryCtx(c, d128_divideInteger_ctx)
 	case "d128_fma_ctx", "fma":
 		return checkTernaryCtx(c, d128_fma_ctx)
-	case "d128_remainder_ctx", "remainder":
+	case "d128_remainderTrunc_ctx", "remainder":
 		return checkBinaryCtx(c, d128_remainderTrunc_ctx)
 	case "d128_remainderNear_ctx", "remaindernear":
 		return checkBinaryCtx(c, d128_remainderNear_ctx)
@@ -556,9 +556,9 @@ func checkFptest(c *rosettaCase) (outcome, string) {
 
 // dectestSkips are per-line dectest cases skipped (counted, not failed), with
 // reasons. The lines come from Swift's RosettaDectestSkips (the ones this
-// harness reaches; Go's scaleb decimal-argument adapter and remainder arms pass
-// the scaleb / Division_impossible lines Swift skips, and the min/max sNaN lines
-// are handled by checkMinMaxNumber). Matched by trimmed line text.
+// harness reaches; Go's scaleb decimal-argument adapter passes the scaleb lines
+// Swift skips, and the min/max sNaN lines are handled by checkMinMaxNumber).
+// Matched by trimmed line text.
 var dectestSkips = map[string]bool{
 	// dqabs abs: dectest abs quiets a NaN and signals on sNaN (and reads "#" as a
 	// syntax error); IEEE abs is a quiet bit operation. Value-only arm, so these
@@ -593,6 +593,23 @@ var dectestSkips = map[string]bool{
 	"dqmns113 minus       0E+4   -> 0E+4":                      true,
 	"dqmns115 minus     0.0000   -> 0.0000":                    true,
 	"dqmns117 minus      0E-141  -> 0E-141":                    true,
+
+	// dqrem / dqrmn remainder, remaindernear: IEEE 754-2019 §5.3.1 exact; GDAS signals
+	// Division_impossible (RemainderExactWorkOrder.md RX-1/RX-2).
+	"dqrem1051 remainder  1e+277  1e-311 ->  NaN Division_impossible":                                true,
+	"dqrem1052 remainder  1e+277 -1e-311 ->  NaN Division_impossible":                                true,
+	"dqrem1053 remainder -1e+277  1e-311 ->  NaN Division_impossible":                                true,
+	"dqrem1054 remainder -1e+277 -1e-311 ->  NaN Division_impossible":                                true,
+	"dqrem421 remainder   1E+6144        1  ->   NaN Division_impossible":                            true,
+	"dqrem772  remainder  1234568888888887777777777890123456   0.1  ->  NaN Division_impossible":     true,
+	"dqrem773  remainder  1234568888888887777777777890123456   0.01 ->  NaN Division_impossible":     true,
+	"dqrmn1051 remaindernear  1e+277  1e-311 ->  NaN Division_impossible":                            true,
+	"dqrmn1052 remaindernear  1e+277 -1e-311 ->  NaN Division_impossible":                            true,
+	"dqrmn1053 remaindernear -1e+277  1e-311 ->  NaN Division_impossible":                            true,
+	"dqrmn1054 remaindernear -1e+277 -1e-311 ->  NaN Division_impossible":                            true,
+	"dqrmn421 remaindernear   1E+6144        1  ->   NaN Division_impossible":                        true,
+	"dqrmn772  remaindernear  1234500000000000000000067890123456   0.1  ->  NaN Division_impossible": true,
+	"dqrmn773  remaindernear  1234500000000000000000067890123456   0.01 ->  NaN Division_impossible": true,
 
 	// logx log10: the 35-digit operand is used unrounded by decNumber; as a
 	// decimal128 operand it rounds to exactly 1, so log10 is 0.
