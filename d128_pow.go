@@ -1,10 +1,11 @@
 // IEEE 754-2019 §9.2 pow(x, y): x raised to a decimal power. Integer exponents
-// delegate to pown; the finite-nonzero transcendental core computes
-// x^y = exp10(y · log10(x)) entirely in the 48-digit D48 intermediate (a single
-// final round), with an integer exactness test for results that are exact
-// decimals, then applies the GDAS preferred exponent ⌊y·Q(x)⌋. Correctly
-// rounded except in the documented 1-ulp gap for results very close to 1 in
-// directed modes (CrossPlatformArchitecture.md §12, "Transcendental accuracy").
+// delegate to pown; the finite-nonzero transcendental core computes x^y =
+// exp10(y · log10(x)) entirely in the 48-digit D48 intermediate (a single final
+// round), with an integer exactness test for results that are exact decimals;
+// an exact result takes the GDAS preferred exponent ⌊y·Q(x)⌋, an inexact one
+// keeps all 34 digits (IEEE 754-2019 §5.2). Correctly rounded except in the
+// documented 1-ulp gap for results very close to 1 in directed modes
+// (CrossPlatformArchitecture.md §12, "Transcendental accuracy").
 
 package decimal128
 
@@ -117,13 +118,9 @@ func powFnzFnz(x, y d128, rounding round, ctxnull *context) d128 {
 	if d128_signFlag(x) {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causePowerOfNegBaseNonIntegerExponent)
 	}
-	// GDAS preferred exponent ⌊y·Q(x)⌋ (applied to a finite-nonzero result).
+	// GDAS preferred exponent ⌊y·Q(x)⌋, taken by exact results only.
 	preferred := powPreferredQExp(x, y)
-	result := powFromD48(x, y, preferred, rounding, ctxnull)
-	if d128_isFNZ(result) {
-		return applyPreferredScale(result, preferred)
-	}
-	return result
+	return powFromD48(x, y, preferred, rounding, ctxnull)
 }
 
 func powPreferredQExp(x, y d128) int {
@@ -153,6 +150,11 @@ func powPreferredQExp(x, y d128) int {
 func powFromD48(x, y d128, preferred int, rounding round, ctxnull *context) d128 {
 	log10X48 := d48_logMagnitude(d48_fromD128(x, false), true)
 	u := d48_multiply(d48_fromD128(y, d128_signFlag(y)), log10X48)
+	// An integer u in range: x^y = 10^u exactly, at the preferred exponent
+	// (pow(100, 0.5) = 10, not 1E+1). Non-integers read as math.MinInt64.
+	if l := d48_toLongOrMin(u); (l >= -6176) && (l <= 6144) {
+		return d48_exactWithPreferred(false, u128{1, 0}, int(l), preferred, rounding, ctxnull)
+	}
 	if t, ok := exp10Trivial(false, u, rounding, ctxnull); ok {
 		return t
 	}
@@ -366,31 +368,6 @@ func stripTens(cIn u128, qIn int) (u128, int) {
 		q++
 	}
 	return c, q
-}
-
-// applyPreferredScale re-expresses a finite-nonzero result with quantum exponent
-// preferredQExp when the cohort allows — pad trailing zeros (if there is
-// precision headroom) or strip them. A no-op on a full-precision inexact result.
-// Value-preserving, raises no flags.
-func applyPreferredScale(x d128, preferredQExp int) d128 {
-	xQ := d128_qExp(x)
-	qDelta := xQ - preferredQExp
-	if qDelta == 0 {
-		return x
-	}
-	if qDelta > 0 {
-		// Lower the exponent toward preferred by padding trailing zeros.
-		digitLen := d128_digitLen(x)
-		headroom := min(34-digitLen, xQ-const_Q_TINY)
-		if qDelta <= headroom {
-			c := d128_u128(x)
-			scaled := mulPow10_128_128(c.dw0, c.dw1, qDelta)
-			return decimalFNZ_64x64(d128_signFlag(x), xQ-qDelta, scaled.dw0, scaled.dw1)
-		}
-		return x
-	}
-	// qDelta < 0: raise the exponent toward preferred by stripping trailing zeros.
-	return d128_stripTrailingZeros(x, -qDelta)
 }
 
 // --- integrality predicates ---
