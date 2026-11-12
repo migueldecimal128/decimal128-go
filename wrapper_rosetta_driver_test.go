@@ -57,8 +57,9 @@ func TestWrapperRosetta(t *testing.T) {
 			"readtest.in", r.total, r.passed, r.unsupported, r.failed)
 	}
 
-	// IEEE fptest corpora (raw cohort results, u-stripped flags, trap-enabled
-	// lines and "#" don't-care results handled in wrapCheck).
+	// IEEE fptest corpora (raw cohort results, u-stripped flags; trap-enabled
+	// lines un-wrapped and "#" don't-care results flag-checked in
+	// wrapCheckFptest, as the core runner does).
 	for _, name := range fptestFiles {
 		f := filepath.Join(resourcesDir(), "fptest", name)
 		cases, err := loadFptestFile(f)

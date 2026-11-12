@@ -532,12 +532,7 @@ func checkFptest(c *rosettaCase) (outcome, string) {
 	if c.result != "#" {
 		expected := decodeNativeResult(c.result)
 		if !d128_bitwiseEQ(z, expected) {
-			delta := 0
-			if strings.Contains(c.traps, "o") && strings.Contains(c.expectedFlags, "o") && strings.Contains(flags, "o") {
-				delta = fptestTrapWrapBias
-			} else if strings.Contains(c.traps, "u") && strings.Contains(c.expectedFlags, "u") && d128_isFinite(z) && !d128_isNormal(z) {
-				delta = -fptestTrapWrapBias
-			}
+			delta := fptestTrapWrapDelta(c, z, strings.Contains(flags, "o"))
 			if delta == 0 {
 				return outFail, "got " + d128_format(z, const_FORMAT_COEFFICIENT_QEXP) + " want " + d128_format(expected, const_FORMAT_COEFFICIENT_QEXP)
 			}
@@ -552,6 +547,33 @@ func checkFptest(c *rosettaCase) (outcome, string) {
 		return outFail, fmt.Sprintf("flags got %q want %q (u-stripped)", flags, c.expectedFlags)
 	}
 	return outPass, ""
+}
+
+// fptestTrapWrapDelta is the scaleB exponent delta to un-wrap a trap-enabled
+// fptest vector, or 0 if it is not one.
+func fptestTrapWrapDelta(c *rosettaCase, z d128, overflowed bool) int {
+	if strings.Contains(c.traps, "o") && strings.Contains(c.expectedFlags, "o") && overflowed {
+		return fptestTrapWrapBias
+	}
+	if strings.Contains(c.traps, "u") && strings.Contains(c.expectedFlags, "u") && d128_isFinite(z) && !d128_isNormal(z) {
+		return -fptestTrapWrapBias
+	}
+	return 0
+}
+
+// fptestTrapUnwrapPublic is the fptest trap un-wrap for the public-API (wrapper)
+// runner (WrapperSkipParityWorkOrder.md WS-2): the same delta and scaleB as
+// checkFptest, with values crossing as public BID128 patterns. It returns the
+// un-wrapped expected value and true, or false if the line is not a trapped
+// overflow/underflow (then the value compares as written). On true the caller
+// asserts the value only: trapped flags follow 1985 conventions.
+func fptestTrapUnwrapPublic(c *rosettaCase, observed, expected Decimal128, overflowed bool) (Decimal128, bool) {
+	delta := fptestTrapWrapDelta(c, bidToCore(observed), overflowed)
+	if delta == 0 {
+		return Decimal128{}, false
+	}
+	unwrapped := d128_scaleB_ctxnull(bidToCore(expected), delta, newContextRound(roundingFromToken(c.rounding)))
+	return coreToBid(unwrapped), true
 }
 
 // dectestSkips are per-line dectest cases skipped (counted, not failed), with
@@ -723,7 +745,9 @@ func checkMinMaxNumber(c *rosettaCase, op func(x, y d128, ctx *context) d128) (o
 	}
 	x := decodeOperand(c.operands[0])
 	y := decodeOperand(c.operands[1])
-	if (d128_isSNAN(x) && !d128_isNAN(y)) || (d128_isSNAN(y) && !d128_isNAN(x)) {
+	// dectest's bare min/max follow decNumber minNum; Intel's are 754-2019
+	// minimumNumber, reconciled by intelNumber below.
+	if c.src == srcDectest && ((d128_isSNAN(x) && !d128_isNAN(y)) || (d128_isSNAN(y) && !d128_isNAN(x))) {
 		return outUnsupported, "sNaN handling diverges: 754-2019 minimumNumber vs decNumber minNum"
 	}
 	ctx := newContextRound(roundingFromToken(c.rounding))

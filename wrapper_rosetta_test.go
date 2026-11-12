@@ -158,21 +158,32 @@ func isMinMaxOp(op string) bool {
 }
 
 // wrapCheckFptest compares against an fptest expected result: a raw cohort form
-// (`+coeff e exp`) or a special (Q/S/+inf/-inf/#). Trap-enabled lines are
-// skipped; a "#" result is a don't-care value (flags only). Flags are u-stripped
-// on both sides (fptest's tininess-before-rounding underflow convention differs
-// from ours). Mirrors the Swift wrapper compareFptest.
+// (`+coeff e exp`) or a special (Q/S/+inf/-inf/#). A "#" result is a don't-care
+// value (flags only). A trap-enabled overflow/underflow line is un-wrapped with
+// the core runner's fptestTrapUnwrapPublic and asserted by value only
+// (WrapperSkipParityWorkOrder.md WS-1/WS-2). Flags are u-stripped on both sides
+// (fptest's tininess-before-rounding underflow convention differs from ours).
+// Mirrors the Swift wrapper compareFptest.
 func wrapCheckFptest(c *rosettaCase, flags string, got Decimal128) (outcome, string) {
-	if c.traps != "" {
-		return outUnsupported, "fptest trap-enabled"
-	}
 	if c.result == "#" {
 		if fptestFlagsMatch(flags, c.expectedFlags) {
 			return outPass, ""
 		}
 		return outFail, fmt.Sprintf("flags got %q want %q (u-stripped)", flags, c.expectedFlags)
 	}
-	if fptestValueMatch(c.result, got) && fptestFlagsMatch(flags, c.expectedFlags) {
+	valueOK := fptestValueMatch(c.result, got)
+	if !valueOK && c.traps != "" {
+		if want, err := Parse(fptestToCoefExp(c.result)); err == nil {
+			if unwrapped, ok := fptestTrapUnwrapPublic(c, got, want, strings.Contains(flags, "o")); ok {
+				if unwrapped == got {
+					return outPass, ""
+				}
+				return outFail, fmt.Sprintf("trap-unwrap mismatch: got %s want %s",
+					got.Text(StyleCoefficientExponent), unwrapped.Text(StyleCoefficientExponent))
+			}
+		}
+	}
+	if valueOK && fptestFlagsMatch(flags, c.expectedFlags) {
 		return outPass, ""
 	}
 	return outFail, fmt.Sprintf("got %s flags=%q want %s→%s flags=%q",
@@ -579,7 +590,9 @@ func wrapMinMaxNumber(c *rosettaCase, op func(*Context, Decimal128, Decimal128) 
 	}
 	x := decodeOperandWrapper(c.operands[0])
 	y := decodeOperandWrapper(c.operands[1])
-	if (x.IsSignalingNaN() && !y.IsNaN()) || (y.IsSignalingNaN() && !x.IsNaN()) {
+	// dectest's bare min/max follow decNumber minNum; Intel's are 754-2019
+	// minimumNumber, reconciled by intelNormalizeWant in wrapCheck.
+	if c.src == srcDectest && ((x.IsSignalingNaN() && !y.IsNaN()) || (y.IsSignalingNaN() && !x.IsNaN())) {
 		return outUnsupported, "sNaN handling diverges: 754-2019 minimumNumber vs decNumber minNum"
 	}
 	ctx := NewContextWithRounding(rnd)
