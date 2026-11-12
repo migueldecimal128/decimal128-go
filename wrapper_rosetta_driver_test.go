@@ -2,21 +2,22 @@ package decimal128
 
 import (
 	"path/filepath"
+	"sort"
 	"testing"
 )
 
 // Floors: native at the D48 switch (D48GoWorkOrder.md Phase 4); the wrapper
-// totals as of the full corpus file lists (RosettaCoveragePartitionWorkOrder.md
-// Phase 4).
+// totals exact at WrapperDispatchCoverageWorkOrder.md Phase 2.
 const (
 	nativeWrapperFloor = 30981
-	wrapperTotalFloor  = 152649
-	wrapperPassedFloor = 136320
+	wrapperTotalFloor  = 158247
+	wrapperPassedFloor = 158205
 )
 
 // TestWrapperRosetta drives the conformance corpora through the public
-// Decimal128 / Context API. The gate is zero failures; operations without a
-// public-API arm are reported unsupported (and covered by the engine harness).
+// Decimal128 / Context API. The gate is zero failures. Every op the core runner
+// dispatches has a public-API case; the one wrapper-only skip is decTest scaleb
+// with a non-integer argument (see wrapScaleB).
 func TestWrapperRosetta(t *testing.T) {
 	var total rosettaResult
 
@@ -31,18 +32,20 @@ func TestWrapperRosetta(t *testing.T) {
 	}
 	mergeResult(&total, nat)
 
-	// dectest corpora: the full file list (R-6). Ops with no public-API arm are
-	// reported unsupported.
+	// dectest corpora: the full file list (R-6).
+	var dectestTotal rosettaResult
 	for _, name := range dectestFiles {
 		cases, err := loadDectestFile(filepath.Join(resourcesDir(), "dectest", name))
 		if err != nil {
 			t.Fatalf("load %s: %v", name, err)
 		}
 		r := runWrapperRosetta(cases)
-		mergeResult(&total, r)
+		mergeResult(&dectestTotal, r)
 		t.Logf("dectest %-20s %d cases — %d passed, %d unsupported, %d failed",
 			name, r.total, r.passed, r.unsupported, r.failed)
 	}
+	logRosettaTotal(t, "wrapper dectest", dectestTotal)
+	mergeResult(&total, dectestTotal)
 
 	// Intel BID operations corpus (readtest.in): NaN/min-max cohort normalization
 	// is applied in wrapCheck; per-line skips are counted, not failed.
@@ -53,13 +56,13 @@ func TestWrapperRosetta(t *testing.T) {
 	{
 		r := runWrapperRosetta(intelCases)
 		mergeResult(&total, r)
-		t.Logf("intel   %-20s %d cases — %d passed, %d unsupported, %d failed",
-			"readtest.in", r.total, r.passed, r.unsupported, r.failed)
+		logRosettaTotal(t, "wrapper intel", r)
 	}
 
 	// IEEE fptest corpora (raw cohort results, u-stripped flags; trap-enabled
 	// lines un-wrapped and "#" don't-care results flag-checked in
 	// wrapCheckFptest, as the core runner does).
+	var fptestTotal rosettaResult
 	for _, name := range fptestFiles {
 		f := filepath.Join(resourcesDir(), "fptest", name)
 		cases, err := loadFptestFile(f)
@@ -67,10 +70,12 @@ func TestWrapperRosetta(t *testing.T) {
 			t.Fatalf("load %s: %v", f, err)
 		}
 		r := runWrapperRosetta(cases)
-		mergeResult(&total, r)
+		mergeResult(&fptestTotal, r)
 		t.Logf("fptest  %-40s %d cases — %d passed, %d unsupported, %d failed",
 			filepath.Base(f), r.total, r.passed, r.unsupported, r.failed)
 	}
+	logRosettaTotal(t, "wrapper fptest", fptestTotal)
+	mergeResult(&total, fptestTotal)
 
 	if total.failed != 0 {
 		t.Fatalf("WrapperRosetta: %d/%d failed: %v", total.failed, total.total, sampleFailures(total))
@@ -83,10 +88,30 @@ func TestWrapperRosetta(t *testing.T) {
 	}
 }
 
+// logRosettaTotal logs a corpus total and its unsupported cases by reason.
+func logRosettaTotal(t *testing.T, label string, r rosettaResult) {
+	t.Helper()
+	t.Logf("%s: %d cases — %d passed, %d unsupported, %d failed",
+		label, r.total, r.passed, r.unsupported, r.failed)
+	reasons := make([]string, 0, len(r.reasons))
+	for reason := range r.reasons {
+		reasons = append(reasons, reason)
+	}
+	sort.Strings(reasons)
+	for _, reason := range reasons {
+		t.Logf("    skip %dx  %s", r.reasons[reason], reason)
+	}
+}
+
 func mergeResult(total *rosettaResult, r rosettaResult) {
 	total.total += r.total
 	total.passed += r.passed
 	total.failed += r.failed
 	total.unsupported += r.unsupported
 	total.failures = append(total.failures, r.failures...)
+	for reason, n := range r.reasons {
+		for i := 0; i < n; i++ {
+			total.tallyReason(reason)
+		}
+	}
 }

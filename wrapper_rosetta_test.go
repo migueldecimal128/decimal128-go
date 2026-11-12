@@ -13,9 +13,12 @@ import (
 // (a public method), and raised exceptions via Context.RaisedFlags — so the
 // operation under test only ever touches the public surface.
 //
-// Operations without a clean public-API form (compare, min/max with flags,
-// totalOrder, copy/class/canonical, scaleB's decimal-argument adapter) are
-// reported unsupported here; the white-box engine harness covers them.
+// Every op the core runner dispatches has a case here
+// (WrapperDispatchCoverageWorkOrder.md WC-1). Flag-free public forms are checked
+// by value only, as Swift's wrapper does. The one wrapper-only skip is decTest
+// scaleb with a second operand that is not an integer in [-12356, 12356]: the
+// core runs it through a test-side decimal-argument adapter, and the public
+// ScaleB takes an int.
 
 // decodeOperandWrapper decodes a corpus operand into a Decimal128 through the
 // public constructors (DPD/BID interchange for hex, ParseOrNaN for decimals).
@@ -364,15 +367,11 @@ func wrapFormat(c *rosettaCase, style Style) (outcome, string) {
 	return outFail, "got " + got + " want " + c.result
 }
 
-// wrapBinaryBool runs a two-operand boolean predicate (no flag tracking — a
-// case that expects flags is reported unsupported, since the quiet public form
-// cannot raise them).
+// wrapBinaryBool runs a flag-free two-operand predicate and checks the value
+// only.
 func wrapBinaryBool(c *rosettaCase, pred func(Decimal128, Decimal128) bool) (outcome, string) {
 	if len(c.operands) != 2 {
 		return outUnsupported, "bad operand count"
-	}
-	if c.expectedFlags != "" {
-		return outUnsupported, "quiet predicate cannot track flags"
 	}
 	got := "0"
 	if pred(decodeOperandWrapper(c.operands[0]), decodeOperandWrapper(c.operands[1])) {
@@ -525,13 +524,11 @@ func signalingPredicate(op string, ctx *Context, x, y Decimal128) bool {
 	}
 }
 
-// wrapDirectedRound runs the quiet directed round-to-integral (no flags).
+// wrapDirectedRound runs the quiet directed round-to-integral. The public form
+// is flag-free, so the value only is checked.
 func wrapDirectedRound(c *rosettaCase, r Rounding) (outcome, string) {
 	if len(c.operands) != 1 {
 		return outUnsupported, "bad operand count"
-	}
-	if c.expectedFlags != "" {
-		return outUnsupported, "quiet round cannot track flags"
 	}
 	got := r.RoundToIntegral(decodeOperandWrapper(c.operands[0]))
 	want := decodeOperandWrapper(c.result)
@@ -541,15 +538,11 @@ func wrapDirectedRound(c *rosettaCase, r Rounding) (outcome, string) {
 	return outFail, "got " + got.Text(StyleCoefficientExponent) + " want " + want.Text(StyleCoefficientExponent)
 }
 
-// wrapQuietUnary runs a non-computational unary op (abs, nextUp/nextDown) that
-// only moves bits or quiets a NaN. Because the public form is flag-free, a case
-// that expects flags is reported unsupported.
+// wrapQuietUnary runs a flag-free unary op (copy, abs, negate, nextUp/nextDown)
+// and checks the value only.
 func wrapQuietUnary(c *rosettaCase, op func(Decimal128) Decimal128) (outcome, string) {
 	if len(c.operands) != 1 {
 		return outUnsupported, "bad operand count"
-	}
-	if c.expectedFlags != "" {
-		return outUnsupported, "quiet op cannot track flags"
 	}
 	got := op(decodeOperandWrapper(c.operands[0]))
 	want := decodeOperandWrapper(c.result)
@@ -559,14 +552,11 @@ func wrapQuietUnary(c *rosettaCase, op func(Decimal128) Decimal128) (outcome, st
 	return outFail, "got " + got.Text(StyleCoefficientExponent) + " want " + want.Text(StyleCoefficientExponent)
 }
 
-// wrapQuietBinary runs a non-computational binary op (copySign) — bitwise
-// compare, no flags.
+// wrapQuietBinary runs a flag-free binary op (copySign) and checks the value
+// only.
 func wrapQuietBinary(c *rosettaCase, op func(Decimal128, Decimal128) Decimal128) (outcome, string) {
 	if len(c.operands) != 2 {
 		return outUnsupported, "bad operand count"
-	}
-	if c.expectedFlags != "" {
-		return outUnsupported, "quiet op cannot track flags"
 	}
 	got := op(decodeOperandWrapper(c.operands[0]), decodeOperandWrapper(c.operands[1]))
 	want := decodeOperandWrapper(c.result)
@@ -576,10 +566,10 @@ func wrapQuietBinary(c *rosettaCase, op func(Decimal128, Decimal128) Decimal128)
 	return outFail, "got " + got.Text(StyleCoefficientExponent) + " want " + want.Text(StyleCoefficientExponent)
 }
 
-// wrapMinMaxNumber runs a min/max "Number" (NaN-as-missing) op. The sNaN-versus-
-// number case diverges between 754-2019 minimumNumber and decNumber minNum, so it
-// is reported unsupported; otherwise the Intel cohort normalization in wrapCheck
-// reconciles the equal-value cohort selection.
+// wrapMinMaxNumber runs a min/max "Number" (NaN-as-missing) op. The dectest
+// lines where decNumber minNum differs from 754-2019 minimumNumber are in
+// dectestSkips; the Intel cohort normalization in wrapCheck reconciles the
+// equal-value cohort selection.
 func wrapMinMaxNumber(c *rosettaCase, op func(*Context, Decimal128, Decimal128) Decimal128) (outcome, string) {
 	if len(c.operands) != 2 {
 		return outUnsupported, "bad operand count"
@@ -590,22 +580,16 @@ func wrapMinMaxNumber(c *rosettaCase, op func(*Context, Decimal128, Decimal128) 
 	}
 	x := decodeOperandWrapper(c.operands[0])
 	y := decodeOperandWrapper(c.operands[1])
-	// dectest's bare min/max follow decNumber minNum; Intel's are 754-2019
-	// minimumNumber, reconciled by intelNormalizeWant in wrapCheck.
-	if c.src == srcDectest && ((x.IsSignalingNaN() && !y.IsNaN()) || (y.IsSignalingNaN() && !x.IsNaN())) {
-		return outUnsupported, "sNaN handling diverges: 754-2019 minimumNumber vs decNumber minNum"
-	}
 	ctx := NewContextWithRounding(rnd)
 	return wrapCheck(c, ctx, op(ctx, x, y))
 }
 
-// wrapScaleBIntel runs Intel's scalbn (plain-integer scale argument) through the
-// public Context.ScaleB. The dectest scaleb (bounded decimal-argument adapter)
-// has no public form, so non-Intel cases are reported unsupported.
-func wrapScaleBIntel(c *rosettaCase) (outcome, string) {
-	if c.src != srcIntel {
-		return outUnsupported, "scaleb decimal-argument adapter has no public form"
-	}
+// wrapScaleB runs scaleB through the public Context.ScaleB, whose scale is an
+// int. Intel's scalbn argument is a plain integer. decTest's is a decimal: the
+// core runner's adapter maps a NaN, infinite, non-integral or out-of-range
+// (|n| > 12356) argument to NaN, which has no public form, so only integer
+// arguments in range run here (Swift's wrapper does the same).
+func wrapScaleB(c *rosettaCase) (outcome, string) {
 	if len(c.operands) != 2 {
 		return outUnsupported, "bad operand count"
 	}
@@ -614,6 +598,9 @@ func wrapScaleBIntel(c *rosettaCase) (outcome, string) {
 		return outUnsupported, "rounding mode not representable"
 	}
 	n, err := strconv.Atoi(c.operands[1])
+	if c.src == srcDectest && (err != nil || n < -12356 || n > 12356) {
+		return outUnsupported, "scaleb decimal argument outside the public int form"
+	}
 	if err != nil {
 		return outUnsupported, "non-integer scalbn argument"
 	}
@@ -678,6 +665,167 @@ func wrapPredicate(c *rosettaCase, pred func(Decimal128) bool) (outcome, string)
 		return outPass, ""
 	}
 	return outFail, "got " + got + " want " + c.result
+}
+
+// wrapValueOnly runs a unary op whose dectest form signals where the public form
+// does not (abs, minus), comparing the value only, as the core runner does.
+func wrapValueOnly(c *rosettaCase, op func(Decimal128) Decimal128) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	got := op(decodeOperandWrapper(c.operands[0]))
+	want := decodeOperandWrapper(c.result)
+	if dpdEqual(got, want) {
+		return outPass, ""
+	}
+	return outFail, "got " + got.Text(StyleCoefficientExponent) + " want " + want.Text(StyleCoefficientExponent)
+}
+
+// wrapDectestFormat runs dectest toSci / toEng: the operand is parsed in the
+// case's context (rounding to 34 digits, raising flags), then rendered.
+func wrapDectestFormat(c *rosettaCase, style Style) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	rnd, ok := tokenToRounding(c.rounding)
+	if !ok {
+		return outUnsupported, "rounding mode not representable"
+	}
+	ctx := NewContextWithRounding(rnd)
+	got := ctx.ParseOrNaN(c.operands[0]).Text(style)
+	flags := wrapperFlagLetters(ctx.RaisedFlags())
+	if got == c.result && flags == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q", got, flags, c.result, c.expectedFlags)
+}
+
+// wrapApply handles dectest apply: a "#…" result tests the DPD encoder,
+// otherwise it is a decode → string round trip.
+func wrapApply(c *rosettaCase) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	val := decodeOperandWrapper(c.operands[0])
+	if strings.HasPrefix(c.result, "#") {
+		hi, lo := val.DPD128()
+		got := fmt.Sprintf("#%016X%016X", hi, lo)
+		if strings.EqualFold(got, c.result) {
+			return outPass, ""
+		}
+		return outFail, "encode got " + got + " want " + c.result
+	}
+	got := val.Text(StyleAutomatic)
+	if got == c.result {
+		return outPass, ""
+	}
+	return outFail, "decode got " + got + " want " + c.result
+}
+
+// decNumber class strings indexed by DecimalClass.
+var wrapperClassStrings = [...]string{
+	ClassSignalingNaN:      "sNaN",
+	ClassQuietNaN:          "NaN",
+	ClassNegativeInfinity:  "-Infinity",
+	ClassNegativeNormal:    "-Normal",
+	ClassNegativeSubnormal: "-Subnormal",
+	ClassNegativeZero:      "-Zero",
+	ClassPositiveZero:      "+Zero",
+	ClassPositiveSubnormal: "+Subnormal",
+	ClassPositiveNormal:    "+Normal",
+	ClassPositiveInfinity:  "+Infinity",
+}
+
+// wrapClass runs §5.7.2 class through DecimalClass: dectest gives decNumber's
+// class name, Intel the numeric class code.
+func wrapClass(c *rosettaCase) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	cls := decodeOperandWrapper(c.operands[0]).DecimalClass()
+	var got string
+	if c.src == srcIntel {
+		got = strconv.Itoa(int(cls))
+	} else {
+		got = wrapperClassStrings[cls]
+	}
+	if got == c.result && c.expectedFlags == "" {
+		return outPass, ""
+	}
+	return outFail, "got " + got + " want " + c.result
+}
+
+// wrapQuantExp runs Intel's quantexp through Context.QuantumExponent. The
+// non-finite sentinel is the platform int min; Intel records the 32-bit one.
+func wrapQuantExp(c *rosettaCase) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	rnd, ok := tokenToRounding(c.rounding)
+	if !ok {
+		return outUnsupported, "rounding mode not representable"
+	}
+	ctx := NewContextWithRounding(rnd)
+	got := ctx.QuantumExponent(decodeOperandWrapper(c.operands[0]))
+	if got == math.MinInt {
+		got = math.MinInt32
+	}
+	expected, err := strconv.Atoi(c.result)
+	if err != nil {
+		return outUnsupported, "non-integer quantexp result"
+	}
+	flags := wrapperFlagLetters(ctx.RaisedFlags())
+	if got == expected && flags == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %d flags=%q want %d flags=%q", got, flags, expected, c.expectedFlags)
+}
+
+// wrapToInt64 runs a directed convert-to-int64 op through Context.ToInt64 /
+// ToInt64Exact, the direction carried by the context's rounding. An expected
+// value that does not parse is Intel's invalid sentinel, math.MinInt64.
+func wrapToInt64(c *rosettaCase, dir Rounding, exact bool) (outcome, string) {
+	if len(c.operands) != 1 {
+		return outUnsupported, "bad operand count"
+	}
+	ctx := NewContextWithRounding(dir)
+	x := decodeOperandWrapper(c.operands[0])
+	var got int64
+	if exact {
+		got = ctx.ToInt64Exact(x)
+	} else {
+		got = ctx.ToInt64(x)
+	}
+	flags := wrapperFlagLetters(ctx.RaisedFlags())
+	expected, err := strconv.ParseInt(c.result, 10, 64)
+	if err != nil {
+		expected = math.MinInt64
+	}
+	if got == expected && flags == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %d flags=%q want %d flags=%q", got, flags, expected, c.expectedFlags)
+}
+
+// wrapCompareTotal runs comparetotal / comparetotmag through the public
+// TotalOrder forms. totalOrder never signals, so the expected flags are empty.
+func wrapCompareTotal(c *rosettaCase, op func(Decimal128, Decimal128) Comparison) (outcome, string) {
+	if len(c.operands) != 2 {
+		return outUnsupported, "bad operand count"
+	}
+	var got string
+	switch op(decodeOperandWrapper(c.operands[0]), decodeOperandWrapper(c.operands[1])) {
+	case CmpLess:
+		got = "-1"
+	case CmpGreater:
+		got = "1"
+	default:
+		got = "0"
+	}
+	if got == c.result && c.expectedFlags == "" {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s want %s flags=%q", got, c.result, c.expectedFlags)
 }
 
 // wrapToUInt64 runs a directed convert-to-uint64 op through the PUBLIC Context
@@ -829,6 +977,32 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapBinaryBool(c, Decimal128.SameQuantum)
 	case "d128_abs", "copyabs":
 		return wrapQuietUnary(c, Decimal128.Abs)
+	case "d128_negate", "copynegate":
+		return wrapQuietUnary(c, Decimal128.Neg)
+	case "d128_copy", "copy", "d128_canonical", "canonical":
+		return wrapQuietUnary(c, func(d Decimal128) Decimal128 { return d })
+	// dectest computational abs / minus: value only, as the core runner (their
+	// NaN-quieting / sNaN lines are in dectestSkips).
+	case "abs":
+		return wrapValueOnly(c, Decimal128.Abs)
+	case "minus":
+		return wrapValueOnly(c, Decimal128.Neg)
+	case "apply":
+		return wrapApply(c)
+	case "tosci":
+		return wrapDectestFormat(c, StyleAutomatic)
+	case "toeng":
+		return wrapDectestFormat(c, StyleEngineering)
+	case "d128_ieeeClass", "class":
+		return wrapClass(c)
+	case "d128_logB_ctxnull", "logb":
+		return wrapUnaryCtx(c, (*Context).Logb)
+	case "d128_quantexp":
+		return wrapQuantExp(c)
+	case "comparetotal":
+		return wrapCompareTotal(c, Decimal128.TotalOrder)
+	case "comparetotmag":
+		return wrapCompareTotal(c, Decimal128.TotalOrderByMagnitude)
 	case "nextplus":
 		return wrapQuietUnary(c, Decimal128.NextUp)
 	case "nextminus":
@@ -863,8 +1037,8 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapBinaryCtx(c, (*Context).MinimumMagnitudeNumber)
 	case "d128_maximumMagnitudeNumber_ctx":
 		return wrapBinaryCtx(c, (*Context).MaximumMagnitudeNumber)
-	case "scaleb":
-		return wrapScaleBIntel(c)
+	case "d128_scaleB_ctxnull", "scaleb":
+		return wrapScaleB(c)
 	case "d128_round_integral_nearest_even":
 		return wrapDirectedRound(c, TiesToEven)
 	case "d128_round_integral_nearest_away":
@@ -895,18 +1069,43 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapToUInt64(c, TowardNegative, true)
 	case "d128_to_uint64_xint":
 		return wrapToUInt64(c, TowardZero, true)
-	case "d128_compare_ctx":
+	case "d128_to_int64_rnint":
+		return wrapToInt64(c, TiesToEven, false)
+	case "d128_to_int64_rninta":
+		return wrapToInt64(c, TiesToAway, false)
+	case "d128_to_int64_ceil":
+		return wrapToInt64(c, TowardPositive, false)
+	case "d128_to_int64_floor":
+		return wrapToInt64(c, TowardNegative, false)
+	case "d128_to_int64_int":
+		return wrapToInt64(c, TowardZero, false)
+	case "d128_to_int64_xrnint":
+		return wrapToInt64(c, TiesToEven, true)
+	case "d128_to_int64_xrninta":
+		return wrapToInt64(c, TiesToAway, true)
+	case "d128_to_int64_xceil":
+		return wrapToInt64(c, TowardPositive, true)
+	case "d128_to_int64_xfloor":
+		return wrapToInt64(c, TowardNegative, true)
+	case "d128_to_int64_xint":
+		return wrapToInt64(c, TowardZero, true)
+	case "d128_compare_ctx", "compare":
 		return wrapComparePartial(c, (*Context).ComparePartial)
-	case "d128_compareSignaling_ctx":
+	case "d128_compareSignaling_ctx", "comparesig":
 		return wrapComparePartial(c, (*Context).ComparePartialSignaling)
 	// Intel-only conversions (RosettaCoveragePartitionWorkOrder.md Phase 1).
-	// from_uint64 has no public constructor, so it stays unsupported here.
 	case "from_int64":
 		n, err := strconv.ParseInt(c.operands[0], 10, 64)
 		if err != nil {
 			return outUnsupported, "non-integer from_int64 operand"
 		}
 		return wrapCheck(c, NewContext(), FromInt64(n))
+	case "from_uint64":
+		n, err := strconv.ParseUint(c.operands[0], 10, 64)
+		if err != nil {
+			return outUnsupported, "non-integer from_uint64 operand"
+		}
+		return wrapCheck(c, NewContext(), FromUInt64(n))
 	case "parse_ctx":
 		// Rounding parse: the context's direction, flags into the context.
 		rnd, ok := tokenToRounding(c.rounding)
@@ -948,6 +1147,8 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 // Context method and checks the Comparison and the flags. The corpus gives
 // -1 / 0 / 1, or for a NaN operand GDAS compare's NaN result ("that NaN"),
 // which the wrapper reports as CmpUnordered (Swift WrapperRosetta compareCmp).
+// dqCanonical gives the result as a DPD pattern: it is decoded and classified
+// (NaN unordered, zero equal, otherwise by sign).
 func wrapComparePartial(c *rosettaCase, op func(*Context, Decimal128, Decimal128) Comparison) (outcome, string) {
 	if len(c.operands) != 2 {
 		return outUnsupported, "bad operand count"
@@ -964,10 +1165,18 @@ func wrapComparePartial(c *rosettaCase, op func(*Context, Decimal128, Decimal128
 		want = CmpEqual
 	case c.result == "1":
 		want = CmpGreater
-	case strings.Contains(strings.ToUpper(c.result), "NAN"):
-		want = CmpUnordered
 	default:
-		return outUnsupported, "compare result form " + c.result
+		d := decodeOperandWrapper(c.result)
+		switch {
+		case d.IsNaN():
+			want = CmpUnordered
+		case d.IsZero():
+			want = CmpEqual
+		case d.Signbit():
+			want = CmpLess
+		default:
+			want = CmpGreater
+		}
 	}
 	ctx := NewContextWithRounding(rnd)
 	got := op(ctx, decodeOperandWrapper(c.operands[0]), decodeOperandWrapper(c.operands[1]))
@@ -999,6 +1208,7 @@ func runWrapperRosetta(cases []rosettaCase) rosettaResult {
 			}
 		case outUnsupported:
 			r.unsupported++
+			r.tallyReason(diag)
 		}
 	}
 	return r

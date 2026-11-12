@@ -13,6 +13,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -579,7 +580,7 @@ func fptestTrapUnwrapPublic(c *rosettaCase, observed, expected Decimal128, overf
 // dectestSkips are per-line dectest cases skipped (counted, not failed), with
 // reasons. The lines come from Swift's RosettaDectestSkips (the ones this
 // harness reaches; Go's scaleb decimal-argument adapter passes the scaleb lines
-// Swift skips, and the min/max sNaN lines are handled by checkMinMaxNumber).
+// Swift skips).
 // Matched by trimmed line text.
 var dectestSkips = map[string]bool{
 	// dqabs abs: dectest abs quiets a NaN and signals on sNaN (and reads "#" as a
@@ -596,6 +597,90 @@ var dectestSkips = map[string]bool{
 	"dqbas561 toSci \"qNaN\"            -> NaN Conversion_syntax":                      true,
 	"dqbas725 toSci 'NaN1234567890123456781234567890123456' -> NaN Conversion_syntax":  true,
 	"dqbas745 toSci 'sNaN1234567890123456787234561234567890' -> NaN Conversion_syntax": true,
+
+	// dqmax / dqmin / dqmxg / dqmng: decNumber min/max is 754-2008 minNum, which
+	// returns NaN for (sNaN, number); IEEE 754-2019 minimumNumber returns the number
+	// (still signalling invalid), as the library does.
+	"dqmax161 max  sNaN -Inf   ->  NaN  Invalid_operation":        true,
+	"dqmax162 max  sNaN -1000  ->  NaN  Invalid_operation":        true,
+	"dqmax163 max  sNaN -1     ->  NaN  Invalid_operation":        true,
+	"dqmax164 max  sNaN -0     ->  NaN  Invalid_operation":        true,
+	"dqmax165 max  sNaN  0     ->  NaN  Invalid_operation":        true,
+	"dqmax166 max  sNaN  1     ->  NaN  Invalid_operation":        true,
+	"dqmax167 max  sNaN  1000  ->  NaN  Invalid_operation":        true,
+	"dqmax171 max -Inf  sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmax172 max -1000 sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmax173 max -1    sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmax174 max -0    sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmax175 max  0    sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmax176 max  1    sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmax177 max  1000 sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmax178 max  Inf  sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmax191 max  sNaN99 -Inf    ->  NaN99 Invalid_operation":    true,
+	"dqmax192 max  sNaN98 -1      ->  NaN98 Invalid_operation":    true,
+	"dqmax196 max -Inf    sNaN92  ->  NaN92 Invalid_operation":    true,
+	"dqmax197 max  0      sNaN91  ->  NaN91 Invalid_operation":    true,
+	"dqmax198 max  Inf   -sNaN90  -> -NaN90 Invalid_operation":    true,
+	"dqmin161 min  sNaN -Inf   ->  NaN  Invalid_operation":        true,
+	"dqmin162 min  sNaN -1000  ->  NaN  Invalid_operation":        true,
+	"dqmin163 min  sNaN -1     ->  NaN  Invalid_operation":        true,
+	"dqmin164 min  sNaN -0     ->  NaN  Invalid_operation":        true,
+	"dqmin165 min -sNaN  0     -> -NaN  Invalid_operation":        true,
+	"dqmin166 min -sNaN  1     -> -NaN  Invalid_operation":        true,
+	"dqmin167 min  sNaN  1000  ->  NaN  Invalid_operation":        true,
+	"dqmin171 min -Inf  sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmin172 min -1000 sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmin173 min -1    sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmin174 min -0    sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmin175 min  0    sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmin176 min  1    sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmin177 min  1000 sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmin178 min  Inf  sNaN   ->  NaN  Invalid_operation":        true,
+	"dqmin191 min  sNaN99 -Inf    ->  NaN99 Invalid_operation":    true,
+	"dqmin192 min  sNaN98 -11     ->  NaN98 Invalid_operation":    true,
+	"dqmin196 min -Inf    sNaN92  ->  NaN92 Invalid_operation":    true,
+	"dqmin197 min  088    sNaN91  ->  NaN91 Invalid_operation":    true,
+	"dqmin198 min  Inf   -sNaN90  -> -NaN90 Invalid_operation":    true,
+	"dqmng161 minmag  sNaN -Inf   ->  NaN  Invalid_operation":     true,
+	"dqmng162 minmag  sNaN -1000  ->  NaN  Invalid_operation":     true,
+	"dqmng163 minmag  sNaN -1     ->  NaN  Invalid_operation":     true,
+	"dqmng164 minmag  sNaN -0     ->  NaN  Invalid_operation":     true,
+	"dqmng165 minmag -sNaN  0     -> -NaN  Invalid_operation":     true,
+	"dqmng166 minmag -sNaN  1     -> -NaN  Invalid_operation":     true,
+	"dqmng167 minmag  sNaN  1000  ->  NaN  Invalid_operation":     true,
+	"dqmng171 minmag -Inf  sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmng172 minmag -1000 sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmng173 minmag -1    sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmng174 minmag -0    sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmng175 minmag  0    sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmng176 minmag  1    sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmng177 minmag  1000 sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmng178 minmag  Inf  sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmng191 minmag  sNaN99 -Inf    ->  NaN99 Invalid_operation": true,
+	"dqmng192 minmag  sNaN98 -11     ->  NaN98 Invalid_operation": true,
+	"dqmng196 minmag -Inf    sNaN92  ->  NaN92 Invalid_operation": true,
+	"dqmng197 minmag  088    sNaN91  ->  NaN91 Invalid_operation": true,
+	"dqmng198 minmag  Inf   -sNaN90  -> -NaN90 Invalid_operation": true,
+	"dqmxg161 maxmag  sNaN -Inf   ->  NaN  Invalid_operation":     true,
+	"dqmxg162 maxmag  sNaN -1000  ->  NaN  Invalid_operation":     true,
+	"dqmxg163 maxmag  sNaN -1     ->  NaN  Invalid_operation":     true,
+	"dqmxg164 maxmag  sNaN -0     ->  NaN  Invalid_operation":     true,
+	"dqmxg165 maxmag  sNaN  0     ->  NaN  Invalid_operation":     true,
+	"dqmxg166 maxmag  sNaN  1     ->  NaN  Invalid_operation":     true,
+	"dqmxg167 maxmag  sNaN  1000  ->  NaN  Invalid_operation":     true,
+	"dqmxg171 maxmag -Inf  sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmxg172 maxmag -1000 sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmxg173 maxmag -1    sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmxg174 maxmag -0    sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmxg175 maxmag  0    sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmxg176 maxmag  1    sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmxg177 maxmag  1000 sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmxg178 maxmag  Inf  sNaN   ->  NaN  Invalid_operation":     true,
+	"dqmxg191 maxmag  sNaN99 -Inf    ->  NaN99 Invalid_operation": true,
+	"dqmxg192 maxmag  sNaN98 -1      ->  NaN98 Invalid_operation": true,
+	"dqmxg196 maxmag -Inf    sNaN92  ->  NaN92 Invalid_operation": true,
+	"dqmxg197 maxmag  0      sNaN91  ->  NaN91 Invalid_operation": true,
+	"dqmxg198 maxmag  Inf   -sNaN90  -> -NaN90 Invalid_operation": true,
 
 	// dqmns minus: dectest minus is 0 - x (quiets NaN, signals sNaN, keeps +0);
 	// IEEE negate flips the sign bit.
@@ -730,12 +815,11 @@ func scaleBFromDecimalArg(x, y d128, ctx *context) d128 {
 	return d128_scaleB_ctxnull(x, n, ctx)
 }
 
-// checkMinMaxNumber runs a decNumber min/max (the NaN-as-missing "Number"
-// variant) corpus case. decNumber implements 754-2008 minNum, which propagates
-// a signaling NaN as a quiet NaN; our 754-2019 minimumNumber instead treats a
-// signaling NaN as a missing operand and returns the number (still signalling
-// invalid). They agree on quiet NaN, so only the sNaN-versus-number cases
-// diverge — those are skipped as unsupported.
+// checkMinMaxNumber runs a min/max "Number" (NaN-as-missing) corpus case.
+// decNumber implements 754-2008 minNum, which propagates a signaling NaN as a
+// quiet NaN; our 754-2019 minimumNumber instead treats a signaling NaN as a
+// missing operand and returns the number (still signalling invalid). The dectest
+// lines where the two differ are in dectestSkips.
 func checkMinMaxNumber(c *rosettaCase, op func(x, y d128, ctx *context) d128) (outcome, string) {
 	if len(c.operands) != 2 {
 		return outUnsupported, "bad operand count"
@@ -745,11 +829,6 @@ func checkMinMaxNumber(c *rosettaCase, op func(x, y d128, ctx *context) d128) (o
 	}
 	x := decodeOperand(c.operands[0])
 	y := decodeOperand(c.operands[1])
-	// dectest's bare min/max follow decNumber minNum; Intel's are 754-2019
-	// minimumNumber, reconciled by intelNumber below.
-	if c.src == srcDectest && ((d128_isSNAN(x) && !d128_isNAN(y)) || (d128_isSNAN(y) && !d128_isNAN(x))) {
-		return outUnsupported, "sNaN handling diverges: 754-2019 minimumNumber vs decNumber minNum"
-	}
 	ctx := newContextRound(roundingFromToken(c.rounding))
 	z := op(x, y, ctx)
 	expected := decodeOperand(c.result)
@@ -772,12 +851,6 @@ func checkMinMaxNumber(c *rosettaCase, op func(x, y d128, ctx *context) d128) (o
 func checkCompareInt(c *rosettaCase, op func(x, y d128) int) (outcome, string) {
 	if len(c.operands) != 2 {
 		return outUnsupported, "bad operand count"
-	}
-	if c.operands[0] == "#" || c.operands[1] == "#" {
-		// Bare "#" is a conversion-syntax error injected by the test front-end
-		// (result NaN + invalidOperation). totalOrder never signals and runs on
-		// already-decoded operands, so this case is outside its domain.
-		return outUnsupported, "conversion-syntax operand outside totalOrder domain"
 	}
 	got := strconv.Itoa(op(decodeOperand(c.operands[0]), decodeOperand(c.operands[1])))
 	if got == c.result && c.expectedFlags == "" {
@@ -1169,6 +1242,15 @@ type rosettaResult struct {
 	failed      int
 	unsupported int
 	failures    []string
+	// reasons counts unsupported cases by reason.
+	reasons map[string]int
+}
+
+func (r *rosettaResult) tallyReason(reason string) {
+	if r.reasons == nil {
+		r.reasons = map[string]int{}
+	}
+	r.reasons[reason]++
 }
 
 const maxRecordedFailures = 50
@@ -1325,8 +1407,8 @@ func parseDectestRounding(line string) (string, bool) {
 	case "floor":
 		return "TOWARD_NEGATIVE", true
 	default:
-		// "up" and "half_down" are not IEEE-754 decimal modes; decimal128 can't
-		// represent them, so those cases are skipped (Unsupported).
+		// "up", "05up" and "half_down" are not IEEE 754 decimal modes;
+		// loadDectestFile drops the lines under such a directive.
 		return roundingUnsupported, true
 	}
 }
@@ -1418,7 +1500,14 @@ func loadDectestFile(path string) ([]rosettaCase, error) {
 			// Only decimal128 (precision 34) cases are in scope.
 			continue
 		}
-		if c, ok := parseDectestLine(line); ok {
+		// A rounding directive with no IEEE 754 mode (half_down, 05up, ...) has no
+		// mode to run the line in, and a bare "#" operand is decTest's null-operand
+		// test, not a value: Swift's loader drops both, so every port loads the same
+		// lines (WrapperDispatchCoverageWorkOrder.md WC-3, D-1).
+		if rounding == roundingUnsupported {
+			continue
+		}
+		if c, ok := parseDectestLine(line); ok && !slices.Contains(c.operands, "#") {
 			c.rounding = rounding
 			cases = append(cases, c)
 		}
@@ -1452,6 +1541,7 @@ func runRosetta(cases []rosettaCase) rosettaResult {
 			}
 		case outUnsupported:
 			r.unsupported++
+			r.tallyReason(diag)
 		}
 	}
 	return r

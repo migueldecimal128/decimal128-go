@@ -91,7 +91,7 @@ func TestRosettaDectest(t *testing.T) {
 		mergeResult(&total, r)
 		t.Logf("%s: %d cases — %d passed, %d unsupported, %d failed", name, r.total, r.passed, r.unsupported, r.failed)
 	}
-	t.Logf("dectest TOTAL: %d cases — %d passed, %d unsupported, %d failed", total.total, total.passed, total.unsupported, total.failed)
+	logRosettaTotal(t, "dectest TOTAL", total)
 	if total.failed != 0 {
 		t.Fatalf("dectest: %d/%d failed: %v", total.failed, total.total, sampleFailures(total))
 	}
@@ -100,9 +100,10 @@ func TestRosettaDectest(t *testing.T) {
 	}
 }
 
-// Core pass-count floors (RosettaCoveragePartitionWorkOrder.md Phase 4).
+// Core pass-count floors; dectest exact at WrapperDispatchCoverageWorkOrder.md
+// Phase 2.
 const (
-	dectestPassedFloor = 12515
+	dectestPassedFloor = 12573
 	fptestPassedFloor  = 24602
 	intelPassedFloor   = 24714
 )
@@ -120,7 +121,7 @@ func TestRosettaFptest(t *testing.T) {
 		mergeResult(&total, r)
 		t.Logf("%s: %d cases — %d passed, %d unsupported, %d failed", name, r.total, r.passed, r.unsupported, r.failed)
 	}
-	t.Logf("fptest TOTAL: %d cases — %d passed, %d unsupported, %d failed", total.total, total.passed, total.unsupported, total.failed)
+	logRosettaTotal(t, "fptest TOTAL", total)
 	if total.failed != 0 {
 		t.Fatalf("fptest: %d/%d failed: %v", total.failed, total.total, sampleFailures(total))
 	}
@@ -139,8 +140,7 @@ func TestRosettaIntel(t *testing.T) {
 		t.Fatalf("load readtest.in: %v", err)
 	}
 	r := runRosetta(cases)
-	t.Logf("intel readtest.in: %d cases — %d passed, %d unsupported, %d failed",
-		r.total, r.passed, r.unsupported, r.failed)
+	logRosettaTotal(t, "intel readtest.in", r)
 	if r.failed != 0 {
 		t.Fatalf("intel: %d/%d failed: %v", r.failed, r.total, sampleFailures(r))
 	}

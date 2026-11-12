@@ -26,6 +26,11 @@ func FromInt64(n int64) Decimal128 {
 	return Decimal128{d128_fromInt64(int(n))}
 }
 
+// FromUInt64 returns the Decimal128 value exactly equal to n.
+func FromUInt64(n uint64) Decimal128 {
+	return Decimal128{d128_fromUInt64(uint(n))}
+}
+
 // Parse parses a decimal string (e.g. "3.14", "-1E+10", "Infinity", "NaN"),
 // rounding ties-to-even. It returns an error if the text is not a valid
 // decimal128 string.
