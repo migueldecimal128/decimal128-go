@@ -1,5 +1,6 @@
 // IEEE 754-2019 §9.2 pow(x, y): x raised to a decimal power. Integer exponents
-// delegate to pown; the finite-nonzero transcendental core computes x^y =
+// in int32 delegate to pown; a larger integer y keeps x's sign iff y is odd
+// (powHugeIntegerY). The finite-nonzero transcendental core computes x^y =
 // exp10(y · log10(x)) entirely in the 48-digit D48 intermediate (a single final
 // round), with an integer exactness test for results that are exact decimals;
 // an exact result takes the GDAS preferred exponent ⌊y·Q(x)⌋, an inexact one
@@ -37,14 +38,7 @@ func d128_pow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 		if n > math.MinInt32 && n <= math.MaxInt32 {
 			return d128_pown_rnd_ctxnull(x, int(n), rounding, ctxnull)
 		}
-		// |y| too large for pown: only a magnitude-1 base stays finite.
-		if d128_isFNZ(x) && cmpMagFnzFnz(x, const_D128_POW_ONE) == 0 {
-			if d128_signFlag(x) && d128_isOddIntegral(y) {
-				return d128_fromInt64(-1)
-			}
-			return d128_fromInt64(1)
-		}
-		// else fall through: a huge integer y overflows/underflows in the matrix.
+		return powHugeIntegerY(x, y, rounding, ctxnull)
 	}
 
 	// NaN operands (y is not an exact integer here).
@@ -120,7 +114,43 @@ func powFnzFnz(x, y d128, rounding round, ctxnull *context) d128 {
 	}
 	// GDAS preferred exponent ⌊y·Q(x)⌋, taken by exact results only.
 	preferred := powPreferredQExp(x, y)
-	return powFromD48(x, y, preferred, rounding, ctxnull)
+	return powFromD48(x, y, preferred, rounding, ctxnull, false, false)
+}
+
+// --- huge integer y ---
+
+// powHugeIntegerY is pow(x, y) for an integer y outside pown's int32 window
+// (|y| >= 2^31): x's sign survives iff y is odd (IEEE 754-2019 §9.2.1); ±0 and
+// ±1 take pown's cohorts. A finite non-zero |x| != 1 goes through powFromD48
+// with the result's sign; the result is never an exact decimal128
+// (PowHugeIntegerExponentWorkOrder.md HY-3).
+func powHugeIntegerY(x, y d128, rounding round, ctxnull *context) d128 {
+	if d128_isNAN(x) {
+		return ctxNanOperand2_ctxnull(ctxnull, x, y)
+	}
+	neg := d128_signFlag(x) && d128_isOddIntegral(y)
+	yNeg := d128_signFlag(y)
+	if d128_isZER(x) {
+		if yNeg {
+			return ctxSignalDivByZero_ctxnull(ctxnull, neg) // ±∞, divideByZero
+		}
+		return d128_zero(neg, d128_qExp(x)*9999) // pownZER's cohort (clamped)
+	}
+	if d128_isINF(x) {
+		if yNeg {
+			return d128_zero(neg, 0)
+		}
+		return d128_infinity(neg)
+	}
+	// |x| == 1: pown's cohort, clamp(y·Q(x), −33, 0); |y| >= 2^31 and Q(x) <= 0.
+	if cmpMagFnzFnz(x, const_D128_POW_ONE) == 0 {
+		q := 0
+		if d128_qExp(x) < 0 && !yNeg {
+			q = -33
+		}
+		return d128_oneWithQExp(neg, q)
+	}
+	return powFromD48(x, y, 0, rounding, ctxnull, neg, true)
 }
 
 func powPreferredQExp(x, y d128) int {
@@ -146,16 +176,27 @@ func powPreferredQExp(x, y d128) int {
 // an absolute error |u|·1e−44 in u, a relative error ≈ 2.3·|u|·1e−44 of 10^u:
 // < 1000·|u| units. An ambiguous result goes to the exact rules (powExact, then
 // the tiny-argument rule); one they don't decide is rounded as is (the
-// documented 1-ulp gap).
-func powFromD48(x, y d128, preferred int, rounding round, ctxnull *context) d128 {
+// documented 1-ulp gap). `sign` is the result's sign (true only for a
+// negative base to an odd huge integer y). `integerY`: y is an integer with
+// |y| >= 2^31, so x^y is never an exact decimal128 -- no exact rules, and a D48
+// u that lands on an integer is still Inexact (PowHugeIntegerExponentWorkOrder.md
+// HY-3).
+func powFromD48(x, y d128, preferred int, rounding round, ctxnull *context, sign, integerY bool) d128 {
 	log10X48 := d48_logMagnitude(d48_fromD128(x, false), true)
 	u := d48_multiply(d48_fromD128(y, d128_signFlag(y)), log10X48)
+	if integerY {
+		if t, ok := exp10Trivial(sign, u, rounding, ctxnull); ok {
+			return d48_forceInexact(t, ctxnull)
+		}
+		s := exp10Scaled_d48(u)
+		return finalizeScaled(sign, s.z, s.n, rounding, ctxnull)
+	}
 	// An integer u in range: x^y = 10^u exactly, at the preferred exponent
 	// (pow(100, 0.5) = 10, not 1E+1). Non-integers read as math.MinInt64.
 	if l := d48_toLongOrMin(u); (l >= -6176) && (l <= 6144) {
-		return d48_exactWithPreferred(false, u128{1, 0}, int(l), preferred, rounding, ctxnull)
+		return d48_exactWithPreferred(sign, u128{1, 0}, int(l), preferred, rounding, ctxnull)
 	}
-	if t, ok := exp10Trivial(false, u, rounding, ctxnull); ok {
+	if t, ok := exp10Trivial(sign, u, rounding, ctxnull); ok {
 		return t
 	}
 	s := exp10Scaled_d48(u)
@@ -168,7 +209,7 @@ func powFromD48(x, y d128, preferred int, rounding round, ctxnull *context) d128
 			return d48_forceInexact(d48_onePlusTiny(!d48_signFlag(u), rounding, ctxnull), ctxnull)
 		}
 	}
-	return finalizeScaled(false, s.z, s.n, rounding, ctxnull)
+	return finalizeScaled(sign, s.z, s.n, rounding, ctxnull)
 }
 
 // powExact is x^y when it is exactly a decimal128 value

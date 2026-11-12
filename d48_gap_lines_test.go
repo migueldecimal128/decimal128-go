@@ -87,7 +87,9 @@ func TestD48GapLinesEveryRecordedD48AnswerMatches(t *testing.T) {
 	// transcendental_large_n.txt: 21 gap lines, the large-n route's near-1 family
 	// (PownLargeNWorkOrder.md LN-6). transcendental_rootn_sweep.txt: 54 gap lines, the
 	// general-n rootn route's near-1 family. transcendental_expm1.txt: 3 gap lines,
-	// expm1's third-order residual (LogP1ExpM1WorkOrder.md §3). 482 in all.
+	// expm1's third-order residual (LogP1ExpM1WorkOrder.md §3). transcendental_pow.txt:
+	// 16 gap lines, pow's huge-integer-y near-1 family
+	// (PowHugeIntegerExponentWorkOrder.md Phase 0). 498 in all.
 	expected := []struct {
 		file   string
 		counts [3]int
@@ -98,6 +100,7 @@ func TestD48GapLinesEveryRecordedD48AnswerMatches(t *testing.T) {
 		{"transcendental_large_n.txt", [3]int{21, 0, 0}},
 		{"transcendental_rootn_sweep.txt", [3]int{54, 0, 0}},
 		{"transcendental_expm1.txt", [3]int{3, 0, 0}},
+		{"transcendental_pow.txt", [3]int{16, 0, 0}},
 	}
 	total, diffs := 0, 0
 	for _, e := range expected {
@@ -161,8 +164,8 @@ func TestD48GapLinesEveryRecordedD48AnswerMatches(t *testing.T) {
 		total += counts[0] + counts[1] + counts[2]
 		diffs += fileDiffs
 	}
-	if total != 482 {
-		t.Errorf("%d recorded lines, want 482", total)
+	if total != 498 {
+		t.Errorf("%d recorded lines, want 498", total)
 	}
 	if diffs != 0 {
 		t.Errorf("%d lines where Go differs from the recorded D48 answer", diffs)

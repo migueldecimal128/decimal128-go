@@ -106,6 +106,7 @@ var rosettaCanonical = map[string]string{
 	"d128_nextDown_ctxnull":                "nextminus",
 	"d128_nextUp_ctxnull":                  "nextplus",
 	"d128_parse_ctx":                       "parse_ctx",
+	"d128_pow_ctx":                         "d128_pow_ctx",
 	"d128_quantexp":                        "d128_quantexp",
 	"d128_quantize_ctx":                    "quantize",
 	"d128_remainderNear_ctx":               "remaindernear",
