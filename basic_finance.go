@@ -58,7 +58,8 @@ func d128_amortizationSchedule_tte(principal, periodicRate d128, numPayments int
 	payment := d128_mortgagePayment_tte(principal, periodicRate, numPayments)
 	rows := make([]amortizationRowCore, 0, numPayments)
 	balance := principal
-	for p := 1; p <= numPayments; p++ {
+	p := 1
+	for p <= numPayments {
 		interest := d128_multiply_tte(balance, periodicRate)
 		principalPaid := d128_subtract_tte(payment, interest)
 		balance = d128_subtract_tte(balance, principalPaid)
@@ -66,6 +67,7 @@ func d128_amortizationSchedule_tte(principal, periodicRate d128, numPayments int
 			balance = const_FIN_ZERO
 		}
 		rows = append(rows, amortizationRowCore{p, payment, interest, principalPaid, balance})
+		p += 1
 	}
 	return rows
 }
@@ -116,9 +118,11 @@ func d128_cagr_tte(presentValue, futureValue d128, numPeriods int) d128 {
 // d128_npv_tte: Σ CF_t / (1+rate)^t. cashFlows[0] is the immediate (t=0) flow.
 func d128_npv_tte(rate d128, cashFlows []d128) d128 {
 	result := const_FIN_ZERO
-	for t := 0; t < len(cashFlows); t++ {
+	t := 0
+	for t < len(cashFlows) {
 		factor := d128_compound_tte(rate, t) // (1+rate)^t
 		result = d128_add_tte(result, d128_divide_tte(cashFlows[t], factor))
+		t += 1
 	}
 	return result
 }
@@ -129,12 +133,14 @@ func d128_npv_tte(rate d128, cashFlows []d128) d128 {
 func d128_irr_tte(cashFlows []d128, guess, tolerance d128, maxIter int) d128 {
 	verify("irr: need at least 2 cash flows", func() bool { return len(cashFlows) >= 2 })
 	rate := guess
-	for iter := 0; iter < maxIter; iter++ {
+	iter := 0
+	for iter < maxIter {
 		npvVal := const_FIN_ZERO
 		npvDeriv := const_FIN_ZERO
 		divisor := const_FIN_ONE
 		onePlusR := d128_add_tte(const_FIN_ONE, rate)
-		for t := 0; t < len(cashFlows); t++ {
+		t := 0
+		for t < len(cashFlows) {
 			cf := cashFlows[t]
 			npvVal = d128_add_tte(npvVal, d128_divide_tte(cf, divisor))
 			if t > 0 {
@@ -144,6 +150,7 @@ func d128_irr_tte(cashFlows []d128, guess, tolerance d128, maxIter int) d128 {
 				npvDeriv = d128_subtract_tte(npvDeriv, d128_divide_tte(cfT, denom))
 			}
 			divisor = d128_multiply_tte(divisor, onePlusR)
+			t += 1
 		}
 		if d128_isZER(npvDeriv) {
 			return const_D128_QNAN0
@@ -153,6 +160,7 @@ func d128_irr_tte(cashFlows []d128, guess, tolerance d128, maxIter int) d128 {
 		if d128_isLess(d128_abs(step), tolerance) {
 			return rate
 		}
+		iter += 1
 	}
 	return const_D128_QNAN0 // did not converge
 }
@@ -163,13 +171,15 @@ func d128_mirr_tte(cashFlows []d128, financeRate, reinvestRate d128) d128 {
 	n := len(cashFlows)
 	pvNeg := const_FIN_ZERO
 	fvPos := const_FIN_ZERO
-	for t := 0; t < n; t++ {
+	t := 0
+	for t < n {
 		cf := cashFlows[t]
 		if d128_isLess(cf, const_FIN_ZERO) {
 			pvNeg = d128_add_tte(pvNeg, d128_divide_tte(cf, d128_compound_tte(financeRate, t)))
 		} else if d128_isGreater(cf, const_FIN_ZERO) {
 			fvPos = d128_add_tte(fvPos, d128_multiply_tte(cf, d128_compound_tte(reinvestRate, n-1-t)))
 		}
+		t += 1
 	}
 	verify("mirr: no negative cash flows found", func() bool { return !d128_isZER(pvNeg) })
 	ratio := d128_divide_tte(fvPos, d128_negate(pvNeg))

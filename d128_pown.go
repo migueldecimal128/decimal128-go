@@ -180,7 +180,8 @@ func pown_d48Ladder(m d48, n uint64) d48 {
 		return m // the top-bit shift needs n >= 2
 	}
 	z := m
-	for bit := ladderStartBit(n); bit != 0; bit >>= 1 {
+	bit := ladderStartBit(n)
+	for bit != 0 {
 		z = d48_square(z)
 		if (n & bit) != 0 {
 			z = d48_multiply(z, m)
@@ -188,6 +189,7 @@ func pown_d48Ladder(m d48, n uint64) d48 {
 		if (d48_qExp(z) > const_POWN_QEXP_OVER) || (d48_qExp(z) < const_POWN_QEXP_UNDER) {
 			return z
 		}
+		bit >>= 1
 	}
 	return z
 }
@@ -239,8 +241,10 @@ func pown_d48Negative(m d48, absPow uint64, rounding round, ctxnull *context) d1
 func d48_log1pSeries(eps d48) d48 {
 	w := const_D48_LOG1P_WEIGHTS
 	acc := w[len(w)-1]
-	for k := len(w) - 2; k >= 0; k-- {
+	k := len(w) - 2
+	for k >= 0 {
 		acc = d48_fma(acc, eps, w[k])
+		k -= 1
 	}
 	return d48_multiply(acc, eps)
 }
@@ -291,12 +295,14 @@ func pown_positiveExactCoeff(cIn u128, n uint64) bool {
 		return true
 	}
 	p := u128{1, 0}
-	for i := uint64(0); i < n; i++ { // c >= 2: at most 113 rounds before p >= 10^34
+	i := uint64(0)
+	for i < n { // c >= 2: at most 113 rounds before p >= 10^34
 		t, ok := u128MulChecked(p, c)
 		if !ok || !isLt_pow10_34_bool_128(t.dw0, t.dw1) {
 			return false
 		}
 		p = t
+		i += 1
 	}
 	return true
 }
@@ -356,7 +362,7 @@ func pown_negativeExactCoeff(xSign bool, c u128, qExp, preferredBaseQExp int, m 
 			break
 		}
 		odd = q
-		q5++
+		q5 += 1
 	}
 	if odd != (u128{1, 0}) {
 		return d128{}, false // c' has a prime factor other than 2 and 5
@@ -372,8 +378,10 @@ func pown_negativeExactCoeff(xSign bool, c u128, qExp, preferredBaseQExp int, m 
 			return d128{}, false
 		}
 		k = a * int(m)
-		for i := 0; i < k; i++ {
+		i := 0
+		for i < k {
 			coeff = mul_128_128x128(coeff.dw0, coeff.dw1, 5, 0)
+			i += 1
 		}
 	} else if b > 0 {
 		if m > 112 || uint64(b)*m > 112 {

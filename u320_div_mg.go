@@ -36,8 +36,10 @@ func divRem_320_160_mg(x u320, y u192) quot320Rem160 {
 		d[1] = (ya[1] << shift) | (ya[0] >> rs)
 		d[2] = (ya[2] << shift) | (ya[1] >> rs)
 		u[0] = xa[0] << shift
-		for i := 1; i < 5; i++ {
+		i := 1
+		for i < 5 {
 			u[i] = (xa[i] << shift) | (xa[i-1] >> rs)
+			i += 1
 		}
 		u[5] = xa[4] >> rs
 	}
@@ -47,10 +49,12 @@ func divRem_320_160_mg(x u320, y u192) quot320Rem160 {
 		dd := d[0]
 		v := vReciprocal_64_64_mg(int64(dd))
 		var r uint64
-		for i := 5; i >= 0; i-- {
+		i := 5
+		for i >= 0 {
 			s := divRem_q64r64_128x64x64_v_mg(int64(r), int64(u[i]), int64(dd), v)
 			q[i] = uint64(s.quotDw0)
 			r = uint64(s.remDw0)
+			i -= 1
 		}
 		qq := assemble_320(&q)
 		return quot320Rem160{qq.dw0, qq.dw1, qq.dw2, qq.dw3, qq.dw4, int64(r >> shift), 0, 0}
@@ -61,7 +65,8 @@ func divRem_320_160_mg(x u320, y u192) quot320Rem160 {
 	d0 := d[n-2]
 	v := vReciprocal_64_128_mg(int64(d1), int64(d0))
 
-	for j := 6 - n; j >= 0; j-- { // quotient limbs q[0 .. 6-n]
+	j := 6 - n
+	for j >= 0 { // quotient limbs q[0 .. 6-n]
 		n2 := u[j+n]
 		n1 := u[j+n-1]
 		var qj uint64
@@ -69,14 +74,16 @@ func divRem_320_160_mg(x u320, y u192) quot320Rem160 {
 			// DIV3BY2's precondition fails; the quotient limb is 2^64 - 1.
 			qj = ^uint64(0)
 			var cy uint64
-			for i := 0; i < n; i++ {
+			i := 0
+			for i < n {
 				hi, lo := bits.Mul64(qj, d[i])
 				lo, o := bits.Add64(lo, cy, 0)
 				cy = hi + o
 				if u[j+i] < lo {
-					cy++
+					cy += 1
 				}
 				u[j+i] -= lo
+				i += 1
 			}
 			u[j+n] -= cy
 			verify("", func() bool { return u[j+n] == 0 })
@@ -87,14 +94,16 @@ func divRem_320_160_mg(x u320, y u192) quot320Rem160 {
 			r1 := uint64(s.remDw1)
 			// Subtract qj · d[0 .. n-3] (one limb when n == 3) below the estimate.
 			var cy uint64
-			for i := 0; i < n-2; i++ {
+			i := 0
+			for i < n-2 {
 				hi, lo := bits.Mul64(qj, d[i])
 				lo, o := bits.Add64(lo, cy, 0)
 				cy = hi + o
 				if u[j+i] < lo {
-					cy++
+					cy += 1
 				}
 				u[j+i] -= lo
+				i += 1
 			}
 			var b0, b1 uint64
 			r0, b0 = bits.Sub64(r0, cy, 0)
@@ -103,26 +112,31 @@ func divRem_320_160_mg(x u320, y u192) quot320Rem160 {
 			if b1 != 0 {
 				// qj was one too large: add the divisor back.
 				var c uint64
-				for i := 0; i < n-1; i++ {
+				i = 0
+				for i < n-1 {
 					u[j+i], c = bits.Add64(u[j+i], d[i], c)
+					i += 1
 				}
 				r1 = r1 + d1 + c
-				qj--
+				qj -= 1
 			}
 			u[j+n-1] = r1
 			u[j+n] = 0
 		}
 		q[j] = qj
+		j -= 1
 	}
 
 	// Remainder: u[0 .. n-1] >> shift.
 	var rem [3]uint64
-	for i := 0; i < n; i++ {
+	i := 0
+	for i < n {
 		w := u[i] >> shift
 		if (shift != 0) && (i+1 < n) {
 			w |= u[i+1] << (64 - shift)
 		}
 		rem[i] = w
+		i += 1
 	}
 	qq := assemble_320(&q)
 	return quot320Rem160{qq.dw0, qq.dw1, qq.dw2, qq.dw3, qq.dw4, int64(rem[0]), int64(rem[1]), int64(rem[2])}

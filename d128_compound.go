@@ -219,7 +219,7 @@ func compoundStripToU128(t d48) d48 {
 			break
 		}
 		c = qr.quot()
-		q++
+		q += 1
 	}
 	return d48_fromSignQExp_64x64x64(false, q, c.dw0, c.dw1, c.dw2)
 }

@@ -67,14 +67,14 @@ func toNonFiniteString(x d128) string {
 		i := int(signBit)
 		if snanBit == 1 {
 			writeByte(ascii, i, ascii_s)
-			i++
+			i += 1
 		}
 		writeByte(ascii, i, ascii_N)
-		i++
+		i += 1
 		writeByte(ascii, i, ascii_a)
-		i++
+		i += 1
 		writeByte(ascii, i, ascii_N)
-		i++
+		i += 1
 		u128ToASCII(digitLen, nanPayload, ascii, i)
 	})
 }
@@ -147,8 +147,10 @@ func toDecimalPointString(sign bool, qExp int, coeff u128, digitLen int) string 
 		if leadingZeroCount > 0 {
 			writeByte(ascii, signLen, ascii_0)
 			writeByte(ascii, signLen+1, ascii_dot)
-			for idx := signLen + 2; idx < signLen+leadingZeroCount+1; idx++ {
+			idx := signLen + 2
+			for idx < signLen+leadingZeroCount+1 {
 				writeByte(ascii, idx, ascii_0)
+				idx += 1
 			}
 			u128ToASCII(digitLen, coeff, ascii, signLen+leadingZeroCount+1)
 		} else {
@@ -157,7 +159,7 @@ func toDecimalPointString(sign bool, qExp int, coeff u128, digitLen int) string 
 			i := totalLen - 1
 			for i > iDot {
 				writeByte(ascii, i, readByte(ascii, i-1))
-				i--
+				i -= 1
 			}
 			writeByte(ascii, iDot, ascii_dot)
 		}
@@ -285,7 +287,7 @@ func toEngineeringString(sign bool, qExp, eExp int, coeff u128, digitLen int) st
 				j := 0
 				for j < leftOfRadixPointCount {
 					writeByte(ascii, signLen+j, readByte(ascii, signLen+j+1))
-					j++
+					j += 1
 				}
 				writeByte(ascii, signLen+leftOfRadixPointCount, ascii_dot)
 			}

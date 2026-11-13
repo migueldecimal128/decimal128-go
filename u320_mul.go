@@ -172,20 +172,24 @@ func mulTrunc_320(x u320, m *[5]uint64, mLen int) u320 {
 	xLen := limbLen_320(x)
 	verify("mulPow10_320 overflow", func() bool { return (xLen == 0) || (xLen+mLen <= 6) })
 	var r [5]uint64
-	for i := 0; i < xLen; i++ {
+	i := 0
+	for i < xLen {
 		var carry uint64
-		for j := 0; (j < mLen) && (i+j < 5); j++ {
+		j := 0
+		for (j < mLen) && (i+j < 5) {
 			hi, lo := bits.Mul64(a[i], m[j])
 			s1, o1 := bits.Add64(lo, r[i+j], 0)
 			s2, o2 := bits.Add64(s1, carry, 0)
 			r[i+j] = s2
 			carry = hi + o1 + o2
+			j += 1
 		}
 		if i+mLen < 5 {
 			r[i+mLen] = carry
 		} else {
 			verify("mulPow10_320 overflow", func() bool { return carry == 0 })
 		}
+		i += 1
 	}
 	return u320{int64(r[0]), int64(r[1]), int64(r[2]), int64(r[3]), int64(r[4])}
 }

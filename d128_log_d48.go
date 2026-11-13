@@ -14,12 +14,16 @@ func d48_fromD128(x d128, sign bool) d48 {
 // Shared by the ln/log10 and exp/exp10 kernels.
 func d48_padeEval(zArg d48, P, Q []d48) d48 {
 	pAcc := P[len(P)-1]
-	for i := len(P) - 2; i >= 0; i-- {
+	i := len(P) - 2
+	for i >= 0 {
 		pAcc = d48_fma(pAcc, zArg, P[i])
+		i -= 1
 	}
 	qAcc := Q[len(Q)-1]
-	for i := len(Q) - 2; i >= 0; i-- {
+	i = len(Q) - 2
+	for i >= 0 {
 		qAcc = d48_fma(qAcc, zArg, Q[i])
+		i -= 1
 	}
 	return d48_divide(pAcc, qAcc)
 }
@@ -35,7 +39,7 @@ func extractKMostSigDigitRounded(x d48) int {
 	qr := divPow10_checked_q320res(d48_u320(x), digitLen-1)
 	d := int(qr.quotDw0)
 	if (qr.residue == const_RESIDUE_HALF) || (qr.residue == const_RESIDUE_GT_HALF) {
-		d++ // ties away from zero
+		d += 1 // ties away from zero
 	}
 	return d
 }
@@ -50,7 +54,7 @@ func d48_logMagnitude(xd d48, isLog10 bool) d48 {
 	k := extractKMostSigDigitRounded(xd)
 	if k == 10 {
 		k = 1
-		eExp++
+		eExp += 1
 	}
 
 	divisor := d48Pack(false, eExp, int64(k), 0, 0)
@@ -62,7 +66,7 @@ func d48_logMagnitude(xd d48, isLog10 bool) d48 {
 	for d48_cmpMag(zArg, const_D48_Z_THRESHOLD) >= 0 {
 		cPrime = d48_sqrt(cPrime)
 		zArg = d48_subtract(cPrime, const_D48_ONE)
-		sqrtCount++
+		sqrtCount += 1
 	}
 
 	pWeights := padeLnPWeights

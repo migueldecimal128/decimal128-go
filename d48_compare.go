@@ -14,10 +14,10 @@ func d48_cmpMag(x, y d48) int {
 	if xZero || yZero {
 		r := 0
 		if !xZero {
-			r++
+			r += 1
 		}
 		if !yZero {
-			r--
+			r -= 1
 		}
 		return r
 	}

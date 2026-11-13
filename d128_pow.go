@@ -230,7 +230,7 @@ func powExact(x, y d128, preferred int, rounding round, ctxnull *context) (d128,
 	t2 := 0
 	for (t2 < k) && ((cy.dw0 & 1) == 0) {
 		cy = shrU128(cy, 1)
-		t2++
+		t2 += 1
 	}
 	t5 := 0
 	for t5 < k {
@@ -239,7 +239,7 @@ func powExact(x, y d128, preferred int, rounding round, ctxnull *context) (d128,
 			break
 		}
 		cy = q
-		t5++
+		t5 += 1
 	}
 	m := cy
 	a2 := k - t2
@@ -249,8 +249,10 @@ func powExact(x, y d128, preferred int, rounding round, ctxnull *context) (d128,
 		return d128{}, false
 	}
 	n := 1 << a2
-	for i := 0; i < a5; i++ {
+	i := 0
+	for i < a5 {
 		n *= 5
+		i += 1
 	}
 
 	// x = 2^A·5^B·w.
@@ -264,7 +266,7 @@ func powExact(x, y d128, preferred int, rounding round, ctxnull *context) (d128,
 			break
 		}
 		cx = q
-		p5++
+		p5 += 1
 	}
 	bigA := p2 + d128_qExp(x)
 	bigB := p5 + d128_qExp(x)
@@ -279,26 +281,32 @@ func powExact(x, y d128, preferred int, rounding round, ctxnull *context) (d128,
 			return d128{}, false
 		}
 		r := cx
-		for i := 0; i < a5; i++ {
+		i = 0
+		for i < a5 {
 			root, ok := iroot5(r)
 			if !ok {
 				return d128{}, false
 			}
 			r = root
+			i += 1
 		}
-		for i := 0; i < a2; i++ {
+		i = 0
+		for i < a2 {
 			sq := isqrt_128(uint64(r.dw0), uint64(r.dw1))
 			if mul_128_64x64(int64(sq), int64(sq)) != r {
 				return d128{}, false
 			}
 			r = u128{int64(sq), 0}
+			i += 1
 		}
-		for j := int64(0); j < m.dw0; j++ { // m <= 71
+		j := int64(0)
+		for j < m.dw0 { // m <= 71
 			t, ok := u128MulChecked(rm, r)
 			if !ok || !isLt_pow10_34_bool_128(t.dw0, t.dw1) {
 				return d128{}, false
 			}
 			rm = t
+			j += 1
 		}
 	}
 
@@ -331,8 +339,10 @@ func powExact(x, y d128, preferred int, rounding round, ctxnull *context) (d128,
 	if dd >= 0 {
 		f = shlU128(f, int(dd))
 	} else {
-		for i := 0; i < int(-dd); i++ {
+		i = 0
+		for i < int(-dd) {
 			f = mul_128_128x128(f.dw0, f.dw1, 5, 0)
+			i += 1
 		}
 	}
 	coeff, ok := u128MulChecked(rm, f)
@@ -406,7 +416,7 @@ func stripTens(cIn u128, qIn int) (u128, int) {
 			break
 		}
 		c = quot
-		q++
+		q += 1
 	}
 	return c, q
 }

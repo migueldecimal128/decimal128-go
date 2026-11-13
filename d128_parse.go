@@ -60,7 +60,7 @@ func d48_parse(s string) d48 {
 	sign := false
 	if (i < len(b)) && ((b[i] == ascii_plus) || (b[i] == ascii_minus)) {
 		sign = b[i] == ascii_minus
-		i++
+		i += 1
 	}
 	var coeff u320
 	sigDigits := 0
@@ -72,10 +72,10 @@ func d48_parse(s string) d48 {
 		if (ch >= ascii_0) && (ch <= ascii_9) {
 			anyDigit = true
 			if hasDot {
-				fracDigits++
+				fracDigits += 1
 			}
 			if !coeff.isZero() || (ch != ascii_0) {
-				sigDigits++
+				sigDigits += 1
 			}
 			if sigDigits > 48 {
 				impossible("D48 parse: more than 48 significant digits")
@@ -86,18 +86,18 @@ func d48_parse(s string) d48 {
 		} else {
 			break
 		}
-		i++
+		i += 1
 	}
 	if !anyDigit {
 		impossible("D48 parse error")
 	}
 	exp := 0
 	if (i < len(b)) && ((b[i] == 'e') || (b[i] == 'E')) {
-		i++
+		i += 1
 		expSign := false
 		if (i < len(b)) && ((b[i] == ascii_plus) || (b[i] == ascii_minus)) {
 			expSign = b[i] == ascii_minus
-			i++
+			i += 1
 		}
 		start := i
 		for (i < len(b)) && (b[i] >= ascii_0) && (b[i] <= ascii_9) {
@@ -105,7 +105,7 @@ func d48_parse(s string) d48 {
 			if exp > 1_000_000_000 {
 				impossible("D48 parse: exponent out of range")
 			}
-			i++
+			i += 1
 		}
 		if i == start {
 			impossible("D48 parse error")
@@ -133,7 +133,7 @@ func newTxt(s string) txt { return txt{b: []byte(s)} }
 func (t *txt) nextChar() byte {
 	if t.pos < len(t.b) {
 		ch := t.b[t.pos]
-		t.pos++
+		t.pos += 1
 		return ch
 	}
 	return 0
@@ -142,7 +142,7 @@ func (t *txt) nextChar() byte {
 func (t *txt) nextCharLowercase() byte {
 	if t.pos < len(t.b) {
 		ch := t.b[t.pos]
-		t.pos++
+		t.pos += 1
 		return ch | 0x20
 	}
 	return 0
@@ -197,7 +197,7 @@ func parseInfinityText(sign bool, chFirst byte, t *txt) d128ParseResult {
 		}
 		chPrev = ch
 		ch = t.nextCharLowercase()
-		i++
+		i += 1
 	}
 	if ch != 0 || (chPrev != ascii_f && chPrev != ascii_y) {
 		return parseFailure(psFailureParsingInfinity)
@@ -250,14 +250,14 @@ func parseNanText(sign bool, chFirst byte, t *txt) d128ParseResult {
 				remainingDigitCount = 1
 			} else {
 				accumulator = accumulator*10 + int64(d)
-				remainingDigitCount++
+				remainingDigitCount += 1
 			}
 		} else {
 			accumulator = 0
 			first19accumulator = 0
 			remainingDigitCount = 0
 		}
-		payloadDigitCount++
+		payloadDigitCount += 1
 		ch = t.nextChar()
 	}
 	if hasParen {
@@ -315,7 +315,7 @@ func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) fini
 					remainingDigitCount = 1
 				} else {
 					accumulator = accumulator*10 + int64(d)
-					remainingDigitCount++
+					remainingDigitCount += 1
 				}
 			} else if significantDigitCount == maxDigitLen+1 {
 				res = residueFromDecimalDigit(int(d))
@@ -323,7 +323,7 @@ func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) fini
 				res = residueMerge(res, residueFromDecimalDigit(int(d)))
 			}
 			if hasDot {
-				fractionalDigitCount++
+				fractionalDigitCount += 1
 			}
 		} else if ch == ascii_dot {
 			if hasDot {
@@ -366,7 +366,7 @@ func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) fini
 				hasExpDigit = true
 				eDigit := ch - ascii_0
 				if (expSignificantDigitCount | int64(eDigit)) != 0 {
-					expSignificantDigitCount++
+					expSignificantDigitCount += 1
 				}
 				exp = exp*10 + int(ch-ascii_0)
 			} else {

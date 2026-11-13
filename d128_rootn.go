@@ -81,18 +81,20 @@ func rootnFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 		shifts := bits.TrailingZeros64(nAbs)
 		steps := shifts
 		if n < 0 {
-			steps++
+			steps += 1
 		}
 		if steps >= 2 {
 			return rootnChain_d48(x, shifts, n < 0, rounding, ctxnull)
 		}
 		z := x
-		for i := 0; i < shifts; i++ {
+		i := 0
+		for i < shifts {
 			if i == shifts-1 {
 				z = d128_sqrt_rnd_ctxnull(z, rounding, ctxnull)
 			} else {
 				z = d128_sqrt_tte(z)
 			}
+			i += 1
 		}
 		if n < 0 {
 			z = d128_divide_rnd_ctxnull(const_D128_ROOTN_ONE, z, rounding, ctxnull)
@@ -174,7 +176,7 @@ func rootnExactGeneral(x d128, n int, cy u128, qy int, rounding round, ctxnull *
 					return d128{}, false
 				}
 				p = t
-				j++
+				j += 1
 			}
 			if j != n {
 				return d128{}, false
@@ -207,7 +209,7 @@ func rootnExactGeneral(x d128, n int, cy u128, qy int, rounding round, ctxnull *
 	q := d128_qExp(x)
 	preferred := q / n
 	if ((q % n) != 0) && ((q < 0) != (n < 0)) {
-		preferred-- // ⌊Q(x)/n⌋
+		preferred -= 1 // ⌊Q(x)/n⌋
 	}
 	return d48_exactWithPreferred(d128_signFlag(x), ysC, ysQ, preferred, rounding, ctxnull), true
 }
@@ -219,8 +221,10 @@ func rootnExactGeneral(x d128, n int, cy u128, qy int, rounding round, ctxnull *
 // 40 leaves wide slack.
 func rootnChain_d48(x d128, shifts int, invert bool, rounding round, ctxnull *context) d128 {
 	z := d48_fromD128(x, false)
-	for j := 0; j < shifts; j++ {
+	j := 0
+	for j < shifts {
 		z = d48_sqrt(z)
+		j += 1
 	}
 	if invert {
 		z = d48_divide(d48_fromInt32(1), z)
@@ -245,7 +249,7 @@ func twoFive(cIn u128) (a, b int, ok bool) {
 			break
 		}
 		c = q
-		b++
+		b += 1
 	}
 	return a, b, c == (u128{1, 0})
 }
@@ -279,12 +283,14 @@ func rootnExact(x d128, shifts int, invert bool, candidate d128, rounding round,
 	qPow := shlExp(ysQ, shifts)
 	if !invert {
 		p := ysC
-		for j := 0; j < shifts; j++ {
+		j := 0
+		for j < shifts {
 			t, ok := u128MulChecked(p, p)
 			if !ok {
 				return d128{}, false
 			}
 			p = t
+			j += 1
 		}
 		if (p != xsC) || (qPow != xsQ) {
 			return d128{}, false
@@ -305,8 +311,10 @@ func rootnExact(x d128, shifts int, invert bool, candidate d128, rounding round,
 		}
 	}
 	preferred := d128_qExp(x)
-	for j := 0; j < shifts; j++ {
+	j := 0
+	for j < shifts {
 		preferred >>= 1 // ⌊Q/2⌋ (arithmetic shift)
+		j += 1
 	}
 	if invert {
 		preferred = -preferred

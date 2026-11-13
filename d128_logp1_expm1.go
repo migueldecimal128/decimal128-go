@@ -184,7 +184,7 @@ func logP1ExactPower(t d48, base int) (int, bool) {
 			break
 		}
 		c = qr.quot()
-		q++
+		q += 1
 	}
 	if (c.dw2 | c.dw3 | c.dw4) != 0 {
 		return 0, false // c' >= 2^128: neither 1, 2^k (k <= 112) nor 5^k (k <= 34)
@@ -207,8 +207,10 @@ func logP1ExactPower(t d48, base int) (int, bool) {
 		return 0, false // c'·10^q has a factor 5; 2^k needs k >= −34
 	}
 	p := fromLoHi_128_64x64(1, 0) // t = 2^q = 5^−q · 10^q; 5^34 < 2^80
-	for i := 0; i < -q; i++ {
+	i := 0
+	for i < -q {
 		p = mul_128_128x128(p.dw0, p.dw1, 5, 0)
+		i += 1
 	}
 	return q, p.dw0 == c.dw0 && p.dw1 == c.dw1
 }
@@ -220,8 +222,10 @@ func logP1ExactPower(t d48, base int) (int, bool) {
 func d48_expm1Series(x d48) d48 {
 	w := const_D48_EXPM1_WEIGHTS
 	acc := w[len(w)-1]
-	for k := len(w) - 2; k >= 0; k-- {
+	k := len(w) - 2
+	for k >= 0 {
 		acc = d48_fma(acc, x, w[k])
+		k -= 1
 	}
 	return d48_multiply(acc, x)
 }
@@ -381,7 +385,7 @@ func secondOrder(x d128, isExpm1 bool, rounding round, ctxnull *context) (d128, 
 			break
 		}
 		cw = fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1)
-		q++
+		q += 1
 	}
 	if cw.dw1 != 0 || uint64(cw.dw0) >= 100_000_000 {
 		return d128{}, false
