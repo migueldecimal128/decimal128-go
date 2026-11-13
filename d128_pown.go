@@ -389,12 +389,12 @@ func pown_negativeExactCoeff(xSign bool, c u128, qExp, preferredBaseQExp int, m 
 
 // pownFNZ_negative_d48 is pown for n <= −2 (m = |n|): the exact rule, else
 // pown_d48Negative.
-func pownFNZ_negative_d48(x d128, m uint64, rounding round, ctxnull *context) d128 {
-	verify("", func() bool { return m >= 2 })
-	if exact, ok := pownNegativeExact(x, m, rounding, ctxnull); ok {
+func pownFNZ_negative_d48(x d128, n uint64, rounding round, ctxnull *context) d128 {
+	verify("", func() bool { return n >= 2 })
+	if exact, ok := pownNegativeExact(x, n, rounding, ctxnull); ok {
 		return exact
 	}
-	return pown_d48Negative(d48_fromD128(x, d128_signFlag(x)), m, rounding, ctxnull)
+	return pown_d48Negative(d48_fromD128(x, d128_signFlag(x)), n, rounding, ctxnull)
 }
 
 // --- exact builders ---

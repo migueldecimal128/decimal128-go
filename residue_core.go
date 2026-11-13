@@ -5,9 +5,9 @@
 
 package decimal128
 
-func residueMerge(left, right residue) residue {
-	verify("", func() bool { return (left|right)&^3 == 0 })
-	return (left | right>>1 | right&1) & 3
+func residueMerge(leftResidue, rightResidue residue) residue {
+	verify("", func() bool { return (leftResidue|rightResidue)&^3 == 0 })
+	return (leftResidue | rightResidue>>1 | rightResidue&1) & 3
 }
 
 func residueSubtractionInverse(res residue) residue {

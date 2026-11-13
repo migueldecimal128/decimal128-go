@@ -12,14 +12,14 @@ func d48_fromD128(x d128, sign bool) d48 {
 
 // d48_padeEval is P(z)/Q(z) by Horner's method with fused multiply-adds.
 // Shared by the ln/log10 and exp/exp10 kernels.
-func d48_padeEval(zArg d48, p, q []d48) d48 {
-	pAcc := p[len(p)-1]
-	for i := len(p) - 2; i >= 0; i-- {
-		pAcc = d48_fma(pAcc, zArg, p[i])
+func d48_padeEval(zArg d48, P, Q []d48) d48 {
+	pAcc := P[len(P)-1]
+	for i := len(P) - 2; i >= 0; i-- {
+		pAcc = d48_fma(pAcc, zArg, P[i])
 	}
-	qAcc := q[len(q)-1]
-	for i := len(q) - 2; i >= 0; i-- {
-		qAcc = d48_fma(qAcc, zArg, q[i])
+	qAcc := Q[len(Q)-1]
+	for i := len(Q) - 2; i >= 0; i-- {
+		qAcc = d48_fma(qAcc, zArg, Q[i])
 	}
 	return d48_divide(pAcc, qAcc)
 }

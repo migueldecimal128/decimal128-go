@@ -41,25 +41,25 @@ func sqrtFloorScaled(coeff u128, qExp, digitLen int) sqrtFloor {
 // isqrtFloor returns the unique s with s² <= R < (s+1)². Double-seeded integer
 // Newton (one unconditional step makes the iterate an overestimate), then a
 // bidirectional ±1 pin guarantees the exact floor.
-func isqrtFloor(R u256) u256 {
+func isqrtFloor(r u256) u256 {
 	one := u256{1, 0, 0, 0}
-	seed := u256FromU128(u128FromDouble(math.Sqrt(u256ToFloorDouble(R))))
+	seed := u256FromU128(u128FromDouble(math.Sqrt(u256ToFloorDouble(r))))
 	x := seed
 	if seed.less(one) {
 		x = one
 	}
-	x = shr1U(addU(x, divU(R, x))) // now x >= floor(√R)
+	x = shr1U(addU(x, divU(r, x))) // now x >= floor(√R)
 	for {
-		y := shr1U(addU(x, divU(R, x)))
+		y := shr1U(addU(x, divU(r, x)))
 		if !y.less(x) { // y >= x
 			break
 		}
 		x = y
 	}
-	for R.less(sqrU(x)) { // sqrU(x) > R
+	for r.less(sqrU(x)) { // sqrU(x) > R
 		x = subU(x, one)
 	}
-	for !R.less(sqrU(addU(x, one))) { // sqrU(x+1) <= R
+	for !r.less(sqrU(addU(x, one))) { // sqrU(x+1) <= R
 		x = addU(x, one)
 	}
 	return x

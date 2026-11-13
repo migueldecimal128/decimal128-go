@@ -54,9 +54,9 @@ func ulpBias(rounding round, isOdd bool, res residue) int64 {
 // forMagnitude maps a signed-space rounding direction into magnitude space: the
 // two directional rules (toward ±) swap on a negative sign; the three
 // sign-symmetric rules are unchanged. Branchless via a packed nybble map.
-func forMagnitude(rounding round, sign bool) round {
+func forMagnitude(roundingCode round, sign bool) round {
 	magnitudeMap := int64(0x0003421000043210)
-	index := (signBitOf(sign) << 3) | int(rounding)
+	index := (signBitOf(sign) << 3) | int(roundingCode)
 	shift := index << 2
 	result := int((magnitudeMap >> uint(shift)) & 0xF)
 	return round(result)

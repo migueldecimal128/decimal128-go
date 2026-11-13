@@ -12,9 +12,9 @@ type flags struct {
 
 func newFlags() *flags { return &flags{} }
 
-func (f *flags) set(e exception754)   { f.bits |= exc754Mask(e) }
-func (f *flags) clear(e exception754) { f.bits &^= exc754Mask(e) }
-func (f *flags) clearAll()            { f.bits = 0 }
+func (f *flags) set(exception exception754)   { f.bits |= exc754Mask(exception) }
+func (f *flags) clear(exception exception754) { f.bits &^= exc754Mask(exception) }
+func (f *flags) clearAll()                    { f.bits = 0 }
 func (f *flags) isSet(e exception754) bool {
 	return (f.bits & exc754Mask(e)) != 0
 }

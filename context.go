@@ -16,11 +16,11 @@ func newContext() *context             { return &context{round: const_ROUND_TIES
 func newContextRound(r round) *context { return &context{round: r, flags: newFlags()} }
 func ieee754Context() *context         { return newContext() }
 
-func (ctx *context) withRounding(r round) *context {
-	return &context{round: r, flags: ctx.flags}
+func (ctx *context) withRounding(newRounding round) *context {
+	return &context{round: newRounding, flags: ctx.flags}
 }
-func (ctx *context) withRoundingAndNewFlags(r round) *context {
-	return &context{round: r, flags: newFlags()}
+func (ctx *context) withRoundingAndNewFlags(newRounding round) *context {
+	return &context{round: newRounding, flags: newFlags()}
 }
 
 func (ctx *context) isSet(e exception754) bool { return ctx.flags.isSet(e) }
