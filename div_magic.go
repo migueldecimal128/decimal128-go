@@ -4,6 +4,9 @@
 
 package decimal128
 
+// Divides by 10 via a fixed-reciprocal multiply (the barrettStep pattern with a
+// hardcoded constant), returning quotient and the residue of the single discarded
+// digit.
 func div1e1_q128res_128_magic(xDw0, xDw1 int64) quot128Residue {
 	magic := u128FromU64(0xCCCC_CCCC_CCCC_CCCD, 0xCCCC_CCCC_CCCC_CCCC)
 	shift := 3

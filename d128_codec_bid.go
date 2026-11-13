@@ -123,6 +123,7 @@ func bid128Decode(bidHi, bidLo int64) d128 {
 	return decimalFNZ_64x64(sign, qExp, dw0Bits, dw1Bits)
 }
 
+// Decode a D128 from a 128-bit BID-encoded value.
 func d128_from_bid128(bid u128) d128 { return bid128Decode(bid.dw1, bid.dw0) }
 func d128_to_bid128(x d128) u128     { return bid128Encode(x) }
 
@@ -183,4 +184,7 @@ func bid64Decode(bid64 int64) d128 {
 	return decimalFNZ_64x64(sign, qExp, coeff, 0)
 }
 
+// Decode a D128 from a 64-bit BID-encoded decimal64 value. The bit pattern is taken
+// as an int64 (the analog of math.Float64bits), mirroring the int64 dwords of the
+// u128 seam of d128_from_bid128.
 func d128_from_bid64(bid64 int64) d128 { return bid64Decode(bid64) }

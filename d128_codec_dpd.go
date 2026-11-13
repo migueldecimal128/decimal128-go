@@ -277,6 +277,7 @@ func dpdEncodeDeclet(n int64) int64 {
 		(x << 1) | y
 }
 
+// Decode a D128 from a 128-bit DPD-encoded value.
 func d128_from_dpd128(dpd u128) d128 { return dpd128Decode(dpd.dw1, dpd.dw0) }
 func d128_to_dpd128(x d128) u128     { return dpd128Encode(x) }
 
@@ -340,4 +341,7 @@ func dpd64Decode(dpd64 int64) d128 {
 	return decimalFNZ_64x64(sign, qExp, coeff, 0)
 }
 
+// Decode a D128 from a 64-bit DPD-encoded decimal64 value. The bit pattern is taken
+// as an int64 (the analog of math.Float64bits), mirroring the seam of
+// d128_from_bid64.
 func d128_from_dpd64(dpd64 int64) d128 { return dpd64Decode(dpd64) }
