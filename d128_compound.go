@@ -54,6 +54,58 @@ func d128_compound_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) 
 	return d128_zero(false, 0) // n < 0 → +0
 }
 
+func compoundFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
+	// |n| > 2^31: pown's log route on ε = x itself, with the tiny rule; neither
+	// t = 1 + x nor round-to-odd (PownLargeNWorkOrder.md LN-4).
+	if absU64(n) > const_POWN_LARGE_N {
+		if d128_signFlag(x) {
+			cmp := cmpMagFnzFnz(x, const_D128_COMPOUND_ONE)
+			if cmp > 0 {
+				return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne) // x < -1
+			}
+			if cmp == 0 {
+				return compoundMinusOne(x, n, ctxnull)
+			}
+		}
+		eps := d48_fromD128(x, d128_signFlag(x))
+		return compoundZeroResult(x, n, pown_largeN(eps, n, false, true, rounding, ctxnull))
+	}
+	span := compoundOnePlusXSpan(x)
+	if span <= 34 {
+		// 1 + x is an exact D128: the add below never rounds.
+		t := d128_add_rnd_ctxnull(const_D128_COMPOUND_ONE, x, rounding, ctxnull)
+		if d128_signFlag(t) && !d128_isZER(t) {
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne) // x < -1
+		}
+		if n == 0 {
+			return d128_fromInt64(1)
+		}
+		if d128_isZER(t) {
+			return compoundMinusOne(x, n, ctxnull)
+		}
+		return compoundZeroResult(x, n, d128_pown_rnd_ctxnull(t, n, rounding, ctxnull))
+	}
+	// t = 1 + x in D48. Rounding to 48 digits never changes the sign or makes a
+	// non-zero sum zero, so the sign and zero tests below are exact.
+	t := d48_add(d48_fromInt32(1), d48_fromD128(x, d128_signFlag(x)))
+	if d48_signFlag(t) && !d48_isZero(t) {
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne) // x < -1
+	}
+	if n == 0 {
+		return d128_fromInt64(1)
+	}
+	if d48_isZero(t) {
+		return compoundMinusOne(x, n, ctxnull)
+	}
+	if n == 1 {
+		return d128_add_rnd_ctxnull(const_D128_COMPOUND_ONE, x, rounding, ctxnull) // one rounding already
+	}
+	if span > const_D48_DIGITS {
+		t = compoundRoundToOdd(x, t)
+	}
+	return compoundZeroResult(x, n, compoundPowerD48(t, span <= const_D48_DIGITS, n, rounding, ctxnull))
+}
+
 // compoundMinusOne is x = -1 exactly (n != 0): +∞ with divideByZero for n < 0,
 // else +0 with the preferred exponent ⌊n·min(0, Q(x))⌋.
 func compoundMinusOne(x d128, n int, ctxnull *context) d128 {
@@ -71,6 +123,32 @@ func compoundZeroResult(x d128, n int, result d128) d128 {
 		return d128_zero(false, qPreferred)
 	}
 	return result
+}
+
+// compoundPowerD48 is t^n (n not in {0, 1}) for t = 1 + x > 0 held in D48,
+// rounded once into decimal128. tExact: t is 1 + x exactly (else it is rounded
+// to odd and the result inexact).
+func compoundPowerD48(t d48, tExact bool, n int, rounding round, ctxnull *context) d128 {
+	// The exact rules need t exact and its stripped coefficient in a u128.
+	s := t
+	rulesApply := false
+	if tExact {
+		s = compoundStripToU128(t)
+		rulesApply = s.coeffDw2 == 0
+	}
+	sc := u128{s.coeffDw0, s.coeffDw1}
+	if n > 0 {
+		exact := rulesApply && pown_positiveExactCoeff(sc, uint64(n))
+		return pown_d48Positive(t, uint64(n), exact, rounding, ctxnull)
+	}
+	absPow := absU64(n)
+	if rulesApply {
+		// The preferred exponent is −absPow·Q(t), from t before stripping.
+		if exact, ok := pown_negativeExactCoeff(false, sc, d48_qExp(s), d48_qExp(t), absPow, rounding, ctxnull); ok {
+			return exact
+		}
+	}
+	return pown_d48Negative(t, absPow, rounding, ctxnull)
 }
 
 // absU64 is |n| as uint64 (exact for math.MinInt).
@@ -144,82 +222,4 @@ func compoundStripToU128(t d48) d48 {
 		q++
 	}
 	return d48_fromSignQExp_64x64x64(false, q, c.dw0, c.dw1, c.dw2)
-}
-
-// compoundPowerD48 is t^n (n not in {0, 1}) for t = 1 + x > 0 held in D48,
-// rounded once into decimal128. tExact: t is 1 + x exactly (else it is rounded
-// to odd and the result inexact).
-func compoundPowerD48(t d48, tExact bool, n int, rounding round, ctxnull *context) d128 {
-	// The exact rules need t exact and its stripped coefficient in a u128.
-	s := t
-	rulesApply := false
-	if tExact {
-		s = compoundStripToU128(t)
-		rulesApply = s.coeffDw2 == 0
-	}
-	sc := u128{s.coeffDw0, s.coeffDw1}
-	if n > 0 {
-		exact := rulesApply && pown_positiveExactCoeff(sc, uint64(n))
-		return pown_d48Positive(t, uint64(n), exact, rounding, ctxnull)
-	}
-	absPow := absU64(n)
-	if rulesApply {
-		// The preferred exponent is −absPow·Q(t), from t before stripping.
-		if exact, ok := pown_negativeExactCoeff(false, sc, d48_qExp(s), d48_qExp(t), absPow, rounding, ctxnull); ok {
-			return exact
-		}
-	}
-	return pown_d48Negative(t, absPow, rounding, ctxnull)
-}
-
-func compoundFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
-	// |n| > 2^31: pown's log route on ε = x itself, with the tiny rule; neither
-	// t = 1 + x nor round-to-odd (PownLargeNWorkOrder.md LN-4).
-	if absU64(n) > const_POWN_LARGE_N {
-		if d128_signFlag(x) {
-			cmp := cmpMagFnzFnz(x, const_D128_COMPOUND_ONE)
-			if cmp > 0 {
-				return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne) // x < -1
-			}
-			if cmp == 0 {
-				return compoundMinusOne(x, n, ctxnull)
-			}
-		}
-		eps := d48_fromD128(x, d128_signFlag(x))
-		return compoundZeroResult(x, n, pown_largeN(eps, n, false, true, rounding, ctxnull))
-	}
-	span := compoundOnePlusXSpan(x)
-	if span <= 34 {
-		// 1 + x is an exact D128: the add below never rounds.
-		t := d128_add_rnd_ctxnull(const_D128_COMPOUND_ONE, x, rounding, ctxnull)
-		if d128_signFlag(t) && !d128_isZER(t) {
-			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne) // x < -1
-		}
-		if n == 0 {
-			return d128_fromInt64(1)
-		}
-		if d128_isZER(t) {
-			return compoundMinusOne(x, n, ctxnull)
-		}
-		return compoundZeroResult(x, n, d128_pown_rnd_ctxnull(t, n, rounding, ctxnull))
-	}
-	// t = 1 + x in D48. Rounding to 48 digits never changes the sign or makes a
-	// non-zero sum zero, so the sign and zero tests below are exact.
-	t := d48_add(d48_fromInt32(1), d48_fromD128(x, d128_signFlag(x)))
-	if d48_signFlag(t) && !d48_isZero(t) {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne) // x < -1
-	}
-	if n == 0 {
-		return d128_fromInt64(1)
-	}
-	if d48_isZero(t) {
-		return compoundMinusOne(x, n, ctxnull)
-	}
-	if n == 1 {
-		return d128_add_rnd_ctxnull(const_D128_COMPOUND_ONE, x, rounding, ctxnull) // one rounding already
-	}
-	if span > const_D48_DIGITS {
-		t = compoundRoundToOdd(x, t)
-	}
-	return compoundZeroResult(x, n, compoundPowerD48(t, span <= const_D48_DIGITS, n, rounding, ctxnull))
 }

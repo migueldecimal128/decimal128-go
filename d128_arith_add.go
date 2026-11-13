@@ -6,6 +6,12 @@
 
 package decimal128
 
+func d128_add_tte(x, y d128) d128            { return d128_add_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil) }
+func d128_add_rnd(x, y d128, rnd round) d128 { return d128_add_rnd_ctxnull(x, y, rnd, nil) }
+func d128_add_ctx(x, y d128, ctx *context) d128 {
+	return d128_add_rnd_ctxnull(x, y, ctx.round, ctx)
+}
+
 // Fast path: same sign and exponent, coefficient sum fits. Everything else
 // tail-calls the (cold) d128_add_slow_rnd_ctxnull, so this body stays tiny and
 // inlines (through the _tte/_rnd/_ctx wrappers) into the + operator.
@@ -68,12 +74,6 @@ func d128_add_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 		return preferMinimumQExp_exact(x, d128_qExp(y))
 	}
 	return addFnzFnz_rnd_ctxnull(x, y, rounding, ctxnull)
-}
-
-func d128_add_tte(x, y d128) d128            { return d128_add_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil) }
-func d128_add_rnd(x, y d128, rnd round) d128 { return d128_add_rnd_ctxnull(x, y, rnd, nil) }
-func d128_add_ctx(x, y d128, ctx *context) d128 {
-	return d128_add_rnd_ctxnull(x, y, ctx.round, ctx)
 }
 
 func addFnzFnz_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {

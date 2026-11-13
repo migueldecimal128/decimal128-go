@@ -44,6 +44,83 @@ func comparePartialSignaling754(x, y d128) comparison754 {
 	return compareNonFinite(x, y)
 }
 
+// --- Int boundary (quiet) ---
+
+func d128_comparePartial(x, y d128) int          { return comparePartialQuiet754(x, y) }
+func d128_comparePartialSignaling(x, y d128) int { return comparePartialSignaling754(x, y) }
+
+// --- quiet Boolean predicates (11) ---
+
+func d128_isEqual(x, y d128) bool    { return comparePartialQuiet754(x, y) == const_CMP754_EQ }
+func d128_isNotEqual(x, y d128) bool { return comparePartialQuiet754(x, y) != const_CMP754_EQ }
+func d128_isLess(x, y d128) bool     { return comparePartialQuiet754(x, y) == const_CMP754_LT }
+
+func d128_isLessEqual(x, y d128) bool {
+	r := comparePartialQuiet754(x, y)
+	return r == const_CMP754_LT || r == const_CMP754_EQ
+}
+func d128_isGreater(x, y d128) bool { return comparePartialQuiet754(x, y) == const_CMP754_GT }
+
+func d128_isGreaterEqual(x, y d128) bool {
+	r := comparePartialQuiet754(x, y)
+	return r == const_CMP754_GT || r == const_CMP754_EQ
+}
+func d128_isUnordered(x, y d128) bool  { return comparePartialQuiet754(x, y) == const_CMP754_UNORDERED }
+func d128_isOrdered(x, y d128) bool    { return comparePartialQuiet754(x, y) != const_CMP754_UNORDERED }
+func d128_isNotGreater(x, y d128) bool { return comparePartialQuiet754(x, y) != const_CMP754_GT }
+func d128_isNotLess(x, y d128) bool    { return comparePartialQuiet754(x, y) != const_CMP754_LT }
+func d128_isGreaterUnordered(x, y d128) bool {
+	r := comparePartialQuiet754(x, y)
+	return r == const_CMP754_GT || r == const_CMP754_UNORDERED
+}
+func d128_isLessUnordered(x, y d128) bool {
+	r := comparePartialQuiet754(x, y)
+	return r == const_CMP754_LT || r == const_CMP754_UNORDERED
+}
+
+// --- signaling Boolean predicates (11) — quiet-path no-op, same values ---
+
+func d128_isEqualSignaling(x, y d128) bool {
+	return comparePartialSignaling754(x, y) == const_CMP754_EQ
+}
+func d128_isNotEqualSignaling(x, y d128) bool {
+	return comparePartialSignaling754(x, y) != const_CMP754_EQ
+}
+func d128_isLessSignaling(x, y d128) bool { return comparePartialSignaling754(x, y) == const_CMP754_LT }
+
+func d128_isLessEqualSignaling(x, y d128) bool {
+	r := comparePartialSignaling754(x, y)
+	return r == const_CMP754_LT || r == const_CMP754_EQ
+}
+func d128_isGreaterSignaling(x, y d128) bool {
+	return comparePartialSignaling754(x, y) == const_CMP754_GT
+}
+
+func d128_isGreaterEqualSignaling(x, y d128) bool {
+	r := comparePartialSignaling754(x, y)
+	return r == const_CMP754_GT || r == const_CMP754_EQ
+}
+func d128_isUnorderedSignaling(x, y d128) bool {
+	return comparePartialSignaling754(x, y) == const_CMP754_UNORDERED
+}
+func d128_isOrderedSignaling(x, y d128) bool {
+	return comparePartialSignaling754(x, y) != const_CMP754_UNORDERED
+}
+func d128_isNotGreaterSignaling(x, y d128) bool {
+	return comparePartialSignaling754(x, y) != const_CMP754_GT
+}
+func d128_isNotLessSignaling(x, y d128) bool {
+	return comparePartialSignaling754(x, y) != const_CMP754_LT
+}
+func d128_isGreaterUnorderedSignaling(x, y d128) bool {
+	r := comparePartialSignaling754(x, y)
+	return r == const_CMP754_GT || r == const_CMP754_UNORDERED
+}
+func d128_isLessUnorderedSignaling(x, y d128) bool {
+	r := comparePartialSignaling754(x, y)
+	return r == const_CMP754_LT || r == const_CMP754_UNORDERED
+}
+
 func compareFinFin(x, y d128) comparison754 {
 	verify("", func() bool { return bothFinite(x, y) })
 	if d128_isZER(x) {
@@ -103,79 +180,6 @@ func compareNonFinite(x, y d128) comparison754 {
 	return const_CMP754_LT
 }
 
-// --- Int boundary (quiet) ---
-
-func d128_comparePartial(x, y d128) int          { return comparePartialQuiet754(x, y) }
-func d128_comparePartialSignaling(x, y d128) int { return comparePartialSignaling754(x, y) }
-
-// --- quiet Boolean predicates (11) ---
-
-func d128_isEqual(x, y d128) bool      { return comparePartialQuiet754(x, y) == const_CMP754_EQ }
-func d128_isNotEqual(x, y d128) bool   { return comparePartialQuiet754(x, y) != const_CMP754_EQ }
-func d128_isLess(x, y d128) bool       { return comparePartialQuiet754(x, y) == const_CMP754_LT }
-func d128_isGreater(x, y d128) bool    { return comparePartialQuiet754(x, y) == const_CMP754_GT }
-func d128_isUnordered(x, y d128) bool  { return comparePartialQuiet754(x, y) == const_CMP754_UNORDERED }
-func d128_isOrdered(x, y d128) bool    { return comparePartialQuiet754(x, y) != const_CMP754_UNORDERED }
-func d128_isNotGreater(x, y d128) bool { return comparePartialQuiet754(x, y) != const_CMP754_GT }
-func d128_isNotLess(x, y d128) bool    { return comparePartialQuiet754(x, y) != const_CMP754_LT }
-func d128_isLessEqual(x, y d128) bool {
-	r := comparePartialQuiet754(x, y)
-	return r == const_CMP754_LT || r == const_CMP754_EQ
-}
-func d128_isGreaterEqual(x, y d128) bool {
-	r := comparePartialQuiet754(x, y)
-	return r == const_CMP754_GT || r == const_CMP754_EQ
-}
-func d128_isGreaterUnordered(x, y d128) bool {
-	r := comparePartialQuiet754(x, y)
-	return r == const_CMP754_GT || r == const_CMP754_UNORDERED
-}
-func d128_isLessUnordered(x, y d128) bool {
-	r := comparePartialQuiet754(x, y)
-	return r == const_CMP754_LT || r == const_CMP754_UNORDERED
-}
-
-// --- signaling Boolean predicates (11) — quiet-path no-op, same values ---
-
-func d128_isEqualSignaling(x, y d128) bool {
-	return comparePartialSignaling754(x, y) == const_CMP754_EQ
-}
-func d128_isNotEqualSignaling(x, y d128) bool {
-	return comparePartialSignaling754(x, y) != const_CMP754_EQ
-}
-func d128_isLessSignaling(x, y d128) bool { return comparePartialSignaling754(x, y) == const_CMP754_LT }
-func d128_isGreaterSignaling(x, y d128) bool {
-	return comparePartialSignaling754(x, y) == const_CMP754_GT
-}
-func d128_isUnorderedSignaling(x, y d128) bool {
-	return comparePartialSignaling754(x, y) == const_CMP754_UNORDERED
-}
-func d128_isOrderedSignaling(x, y d128) bool {
-	return comparePartialSignaling754(x, y) != const_CMP754_UNORDERED
-}
-func d128_isNotGreaterSignaling(x, y d128) bool {
-	return comparePartialSignaling754(x, y) != const_CMP754_GT
-}
-func d128_isNotLessSignaling(x, y d128) bool {
-	return comparePartialSignaling754(x, y) != const_CMP754_LT
-}
-func d128_isLessEqualSignaling(x, y d128) bool {
-	r := comparePartialSignaling754(x, y)
-	return r == const_CMP754_LT || r == const_CMP754_EQ
-}
-func d128_isGreaterEqualSignaling(x, y d128) bool {
-	r := comparePartialSignaling754(x, y)
-	return r == const_CMP754_GT || r == const_CMP754_EQ
-}
-func d128_isGreaterUnorderedSignaling(x, y d128) bool {
-	r := comparePartialSignaling754(x, y)
-	return r == const_CMP754_GT || r == const_CMP754_UNORDERED
-}
-func d128_isLessUnorderedSignaling(x, y d128) bool {
-	r := comparePartialSignaling754(x, y)
-	return r == const_CMP754_LT || r == const_CMP754_UNORDERED
-}
-
 // --- context-aware cores ---
 
 func comparePartialQuiet754_ctx(x, y d128, ctx *context) comparison754 {
@@ -224,8 +228,18 @@ func d128_isNotEqual_ctx(x, y d128, ctx *context) bool {
 func d128_isLess_ctx(x, y d128, ctx *context) bool {
 	return comparePartialQuiet754_ctx(x, y, ctx) == const_CMP754_LT
 }
+
+func d128_isLessEqual_ctx(x, y d128, ctx *context) bool {
+	r := comparePartialQuiet754_ctx(x, y, ctx)
+	return r == const_CMP754_LT || r == const_CMP754_EQ
+}
 func d128_isGreater_ctx(x, y d128, ctx *context) bool {
 	return comparePartialQuiet754_ctx(x, y, ctx) == const_CMP754_GT
+}
+
+func d128_isGreaterEqual_ctx(x, y d128, ctx *context) bool {
+	r := comparePartialQuiet754_ctx(x, y, ctx)
+	return r == const_CMP754_GT || r == const_CMP754_EQ
 }
 func d128_isUnordered_ctx(x, y d128, ctx *context) bool {
 	return comparePartialQuiet754_ctx(x, y, ctx) == const_CMP754_UNORDERED
@@ -238,14 +252,6 @@ func d128_isNotGreater_ctx(x, y d128, ctx *context) bool {
 }
 func d128_isNotLess_ctx(x, y d128, ctx *context) bool {
 	return comparePartialQuiet754_ctx(x, y, ctx) != const_CMP754_LT
-}
-func d128_isLessEqual_ctx(x, y d128, ctx *context) bool {
-	r := comparePartialQuiet754_ctx(x, y, ctx)
-	return r == const_CMP754_LT || r == const_CMP754_EQ
-}
-func d128_isGreaterEqual_ctx(x, y d128, ctx *context) bool {
-	r := comparePartialQuiet754_ctx(x, y, ctx)
-	return r == const_CMP754_GT || r == const_CMP754_EQ
 }
 func d128_isGreaterUnordered_ctx(x, y d128, ctx *context) bool {
 	r := comparePartialQuiet754_ctx(x, y, ctx)
@@ -267,8 +273,18 @@ func d128_isNotEqualSignaling_ctx(x, y d128, ctx *context) bool {
 func d128_isLessSignaling_ctx(x, y d128, ctx *context) bool {
 	return comparePartialSignaling754_ctx(x, y, ctx) == const_CMP754_LT
 }
+
+func d128_isLessEqualSignaling_ctx(x, y d128, ctx *context) bool {
+	r := comparePartialSignaling754_ctx(x, y, ctx)
+	return r == const_CMP754_LT || r == const_CMP754_EQ
+}
 func d128_isGreaterSignaling_ctx(x, y d128, ctx *context) bool {
 	return comparePartialSignaling754_ctx(x, y, ctx) == const_CMP754_GT
+}
+
+func d128_isGreaterEqualSignaling_ctx(x, y d128, ctx *context) bool {
+	r := comparePartialSignaling754_ctx(x, y, ctx)
+	return r == const_CMP754_GT || r == const_CMP754_EQ
 }
 func d128_isUnorderedSignaling_ctx(x, y d128, ctx *context) bool {
 	return comparePartialSignaling754_ctx(x, y, ctx) == const_CMP754_UNORDERED
@@ -281,14 +297,6 @@ func d128_isNotGreaterSignaling_ctx(x, y d128, ctx *context) bool {
 }
 func d128_isNotLessSignaling_ctx(x, y d128, ctx *context) bool {
 	return comparePartialSignaling754_ctx(x, y, ctx) != const_CMP754_LT
-}
-func d128_isLessEqualSignaling_ctx(x, y d128, ctx *context) bool {
-	r := comparePartialSignaling754_ctx(x, y, ctx)
-	return r == const_CMP754_LT || r == const_CMP754_EQ
-}
-func d128_isGreaterEqualSignaling_ctx(x, y d128, ctx *context) bool {
-	r := comparePartialSignaling754_ctx(x, y, ctx)
-	return r == const_CMP754_GT || r == const_CMP754_EQ
 }
 func d128_isGreaterUnorderedSignaling_ctx(x, y d128, ctx *context) bool {
 	r := comparePartialSignaling754_ctx(x, y, ctx)

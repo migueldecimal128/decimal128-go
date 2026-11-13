@@ -51,6 +51,10 @@ func residueFromDecimalDigit(digit int) residue {
 	return (const_DIGIT_MAP >> (digit << 1)) & 3
 }
 
+func residueFromRemainderPow10_64(remainder int64, pow10 int) residue {
+	return residueFromRemainderDivisor_64(remainder, pow10_128_dw0(pow10))
+}
+
 func residueFromRemainderDivisor_64(remainder, divisor int64) residue {
 	if ushr_64_64(remainder, 63) == 0 {
 		if remainder == 0 {
@@ -73,10 +77,6 @@ func residueFromRemainderDivisor_64(remainder, divisor int64) residue {
 }
 
 // The _pow10 forms look up the 10^pow10 divisor in the pow10 tables.
-
-func residueFromRemainderPow10_64(remainder int64, pow10 int) residue {
-	return residueFromRemainderDivisor_64(remainder, pow10_128_dw0(pow10))
-}
 
 func residueFromRemainderPow10_128(remDw0, remDw1 int64, pow10 int) residue {
 	verify("", func() bool { return pow10 >= 0 && pow10 <= 38 })

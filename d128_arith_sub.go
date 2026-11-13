@@ -6,6 +6,14 @@
 
 package decimal128
 
+func d128_subtract_tte(x, y d128) d128 {
+	return d128_subtract_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
+}
+func d128_subtract_rnd(x, y d128, rnd round) d128 { return d128_subtract_rnd_ctxnull(x, y, rnd, nil) }
+func d128_subtract_ctx(x, y d128, ctx *context) d128 {
+	return d128_subtract_rnd_ctxnull(x, y, ctx.round, ctx)
+}
+
 // Fast path: same exponent. Opposite signs -> magnitude add; same signs ->
 // magnitude subtract. A zero magnitude-subtract result falls through to the
 // (cold) d128_subtract_slow_rnd_ctxnull, as does any non-fast case, so this
@@ -46,14 +54,6 @@ func d128_subtract_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context)
 		return d128_add_rnd_ctxnull(x, yNeg, rounding, ctxnull)
 	}
 	return addFnzFnz_rnd_ctxnull(x, yNeg, rounding, ctxnull)
-}
-
-func d128_subtract_tte(x, y d128) d128 {
-	return d128_subtract_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
-}
-func d128_subtract_rnd(x, y d128, rnd round) d128 { return d128_subtract_rnd_ctxnull(x, y, rnd, nil) }
-func d128_subtract_ctx(x, y d128, ctx *context) d128 {
-	return d128_subtract_rnd_ctxnull(x, y, ctx.round, ctx)
 }
 
 func subMagUnalignedFnzFnz_rnd_ctxnull(zSign bool, m, s d128, rounding round, ctxnull *context) d128 {

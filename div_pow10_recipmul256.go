@@ -76,6 +76,13 @@ func mul512_256x256(a0, a1, a2, a3, m0, m1, m2, m3 uint64) (pLo, pHi u256) {
 	return pLo, pHi
 }
 
+// Accessors for the interleaved reciprocal table: for index k the four dwords
+// of M ascend at const_RMP10_256_M[(k<<2)+0..3] (PrimitiveLayer.md D50).
+func rmp10_256_dw0(k int) int64 { return const_RMP10_256_M[k<<2] }
+func rmp10_256_dw1(k int) int64 { return const_RMP10_256_M[(k<<2)|1] }
+func rmp10_256_dw2(k int) int64 { return const_RMP10_256_M[(k<<2)|2] }
+func rmp10_256_dw3(k int) int64 { return const_RMP10_256_M[(k<<2)|3] }
+
 // lowBitsNonZero_256 is true iff any of the low n bits (0 <= n < 256) of the
 // 256-bit value (d3:d2:d1:d0) are set.
 func lowBitsNonZero_256(d0, d1, d2, d3 int64, n int) bool {
@@ -103,13 +110,6 @@ func lowBitsNonZero_256(d0, d1, d2, d3 int64, n int) bool {
 	}
 	return u0|u1|u2 != 0 || u3&((uint64(1)<<(n-192))-1) != 0
 }
-
-// Accessors for the interleaved reciprocal table: for index k the four dwords
-// of M ascend at const_RMP10_256_M[(k<<2)+0..3] (PrimitiveLayer.md D50).
-func rmp10_256_dw0(k int) int64 { return const_RMP10_256_M[k<<2] }
-func rmp10_256_dw1(k int) int64 { return const_RMP10_256_M[(k<<2)|1] }
-func rmp10_256_dw2(k int) int64 { return const_RMP10_256_M[(k<<2)|2] }
-func rmp10_256_dw3(k int) int64 { return const_RMP10_256_M[(k<<2)|3] }
 
 func divPow10_q128res_256_recipmul(x u256, pow10 int) quot128Residue {
 	demand("recipmul256: pow10 outside [1, 77]", pow10 > 0 && pow10 <= 77)

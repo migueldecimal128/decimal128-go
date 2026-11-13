@@ -24,6 +24,24 @@ func d128_logB_ctxnull(x d128, ctxnull *context) d128 {
 	return ctxNanOperand1_ctxnull(ctxnull, x)
 }
 
+// d128_scaleB_ctxnull returns x × 10^pow10Delta, rounded as needed within ctx.
+// Infinities pass through unchanged; sNaNs signal invalid_operation.
+func d128_scaleB_ctxnull(x d128, pow10Delta int, ctxnull *context) d128 {
+	if d128_isFIN(x) {
+		pow10DeltaCapped := max(min(pow10Delta, 100_000), -100_000)
+		qNew := d128_qExp(x) + pow10DeltaCapped
+		rounding := const_ROUND_TIES_TO_EVEN
+		if ctxnull != nil {
+			rounding = ctxnull.round
+		}
+		return finalize_128_ctxnull(d128_signFlag(x), qNew, d128_u128(x), const_RESIDUE_EXACT, rounding, ctxnull)
+	}
+	if d128_isINF(x) {
+		return x
+	}
+	return ctxNanOperand1_ctxnull(ctxnull, x)
+}
+
 // d128_isSameQuantum reports whether x and other share the same quantum (the
 // same encoded exponent qExp), per IEEE 754-2019 §5.7.3 — regardless of value.
 // It is quiet: two infinities share a quantum; a NaN shares one only with
@@ -47,22 +65,4 @@ func d128_quantumInt_ctxnull(x d128, ctxnull *context) int {
 	}
 	_ = ctxSignalInvalidOperation_ctxnull(ctxnull, causeQuantumOfNonFinite)
 	return math.MinInt
-}
-
-// d128_scaleB_ctxnull returns x × 10^pow10Delta, rounded as needed within ctx.
-// Infinities pass through unchanged; sNaNs signal invalid_operation.
-func d128_scaleB_ctxnull(x d128, pow10Delta int, ctxnull *context) d128 {
-	if d128_isFIN(x) {
-		pow10DeltaCapped := max(min(pow10Delta, 100_000), -100_000)
-		qNew := d128_qExp(x) + pow10DeltaCapped
-		rounding := const_ROUND_TIES_TO_EVEN
-		if ctxnull != nil {
-			rounding = ctxnull.round
-		}
-		return finalize_128_ctxnull(d128_signFlag(x), qNew, d128_u128(x), const_RESIDUE_EXACT, rounding, ctxnull)
-	}
-	if d128_isINF(x) {
-		return x
-	}
-	return ctxNanOperand1_ctxnull(ctxnull, x)
 }

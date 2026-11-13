@@ -145,48 +145,6 @@ func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 // 10^-38; past about 10^12 it exceeds an ulp.
 const const_POWN_LARGE_N uint64 = 1 << 31
 
-// d48_log1pSeries is log1p(ε) for |ε| < 10^-5: ε·Σ (−1)^(k+1)·ε^(k−1)/k, Horner
-// in D48. Ten terms reach 48 digits relative to ε however small ε is; the
-// general d48_logMagnitude is only absolutely accurate near 1.
-func d48_log1pSeries(eps d48) d48 {
-	w := const_D48_LOG1P_WEIGHTS
-	acc := w[len(w)-1]
-	for k := len(w) - 2; k >= 0; k-- {
-		acc = d48_fma(acc, eps, w[k])
-	}
-	return d48_multiply(acc, eps)
-}
-
-// pown_largeN is ±(1 + ε)^n for |n| > 2^31, rounded once: ε = |x| − 1 (pown) or
-// x (compound), exact in D48. |ε| >= 10^-5 certainly overflows or fully
-// underflows; below it z = n·log1p(ε)/ln10 has absolute error about 10^-43 for
-// any finite result, so 10^z keeps about 8 guard digits whatever n is. No exact
-// rule applies (x^n is exact here only for |x| ∈ {1, 10}, handled before), so a
-// result too close to a rounding boundary is rounded as is: the documented 1-ulp
-// gap, which here includes bases a few ulps from 1 in every mode
-// (PownLargeNWorkOrder.md LN-6). tinyRule (compound only, whose ε can be far
-// below 10^-34): |z| < 10^-35 makes 10^z 1 ± tiny, decided by z's sign.
-func pown_largeN(eps d48, n int, resultSign, tinyRule bool, rounding round, ctxnull *context) d128 {
-	verify("", func() bool { return (absU64(n) > const_POWN_LARGE_N) && !d48_isZero(eps) })
-	// |n·ln(1 + ε)| > 2·10^4: the magnitude exceeds 1 iff ε and n share a sign (LN-3).
-	if d48_sciExp(eps) >= -5 {
-		if d48_signFlag(eps) == (n < 0) {
-			return finalizeOverflow_ctxnull(resultSign, rounding, ctxnull)
-		}
-		return finalizeUnderflowFullySwamped(resultSign, rounding, ctxnull)
-	}
-	z := d48_divide(d48_multiply(d48_log1pSeries(eps), d48_fromInt32(n)), const_D48_LN10)
-	if tinyRule && (d48_sciExp(z) < const_TINY_SCI_EXP) {
-		return d48_forceInexact(d48_onePlusTiny(!d48_signFlag(z), rounding, ctxnull), ctxnull)
-	}
-	// z on an integer is a D48 accident (the true z is irrational): still Inexact.
-	if t, ok := exp10Trivial(resultSign, z, rounding, ctxnull); ok {
-		return d48_forceInexact(t, ctxnull)
-	}
-	s := exp10Scaled_d48(z)
-	return finalizeScaled(resultSign, s.z, s.n, rounding, ctxnull)
-}
-
 // Quantum-exponent guard band on the running D48 ladder value. D48 is a bare
 // finite carrier -- it has no infinity -- so the ladder guards qExp instead of
 // relying on saturation. A D48 coefficient is at most 48 digits, so a value
@@ -273,6 +231,48 @@ func pown_d48Negative(m d48, absPow uint64, rounding round, ctxnull *context) d1
 	}
 	r := finalizeD48_ctxnull(d48_divide(d48_fromInt32(1), z), rounding, ctxnull)
 	return d48_forceInexact(r, ctxnull)
+}
+
+// d48_log1pSeries is log1p(ε) for |ε| < 10^-5: ε·Σ (−1)^(k+1)·ε^(k−1)/k, Horner
+// in D48. Ten terms reach 48 digits relative to ε however small ε is; the
+// general d48_logMagnitude is only absolutely accurate near 1.
+func d48_log1pSeries(eps d48) d48 {
+	w := const_D48_LOG1P_WEIGHTS
+	acc := w[len(w)-1]
+	for k := len(w) - 2; k >= 0; k-- {
+		acc = d48_fma(acc, eps, w[k])
+	}
+	return d48_multiply(acc, eps)
+}
+
+// pown_largeN is ±(1 + ε)^n for |n| > 2^31, rounded once: ε = |x| − 1 (pown) or
+// x (compound), exact in D48. |ε| >= 10^-5 certainly overflows or fully
+// underflows; below it z = n·log1p(ε)/ln10 has absolute error about 10^-43 for
+// any finite result, so 10^z keeps about 8 guard digits whatever n is. No exact
+// rule applies (x^n is exact here only for |x| ∈ {1, 10}, handled before), so a
+// result too close to a rounding boundary is rounded as is: the documented 1-ulp
+// gap, which here includes bases a few ulps from 1 in every mode
+// (PownLargeNWorkOrder.md LN-6). tinyRule (compound only, whose ε can be far
+// below 10^-34): |z| < 10^-35 makes 10^z 1 ± tiny, decided by z's sign.
+func pown_largeN(eps d48, n int, resultSign, tinyRule bool, rounding round, ctxnull *context) d128 {
+	verify("", func() bool { return (absU64(n) > const_POWN_LARGE_N) && !d48_isZero(eps) })
+	// |n·ln(1 + ε)| > 2·10^4: the magnitude exceeds 1 iff ε and n share a sign (LN-3).
+	if d48_sciExp(eps) >= -5 {
+		if d48_signFlag(eps) == (n < 0) {
+			return finalizeOverflow_ctxnull(resultSign, rounding, ctxnull)
+		}
+		return finalizeUnderflowFullySwamped(resultSign, rounding, ctxnull)
+	}
+	z := d48_divide(d48_multiply(d48_log1pSeries(eps), d48_fromInt32(n)), const_D48_LN10)
+	if tinyRule && (d48_sciExp(z) < const_TINY_SCI_EXP) {
+		return d48_forceInexact(d48_onePlusTiny(!d48_signFlag(z), rounding, ctxnull), ctxnull)
+	}
+	// z on an integer is a D48 accident (the true z is irrational): still Inexact.
+	if t, ok := exp10Trivial(resultSign, z, rounding, ctxnull); ok {
+		return d48_forceInexact(t, ctxnull)
+	}
+	s := exp10Scaled_d48(z)
+	return finalizeScaled(resultSign, s.z, s.n, rounding, ctxnull)
 }
 
 // pownPositiveExact is true if x^n (n >= 2) has at most 34 significant digits,

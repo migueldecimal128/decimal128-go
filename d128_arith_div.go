@@ -14,6 +14,13 @@ func d128_divide_ctx(x, y d128, ctx *context) d128 {
 	return d128_divide_rnd_ctxnull(x, y, ctx.round, ctx)
 }
 
+// divideInteger never rounds: trunc(x/y) is exact (or NaN/Inf).
+
+func d128_divideInteger(x, y d128) d128 { return d128_divideInteger_ctxnull(x, y, nil) }
+func d128_divideInteger_ctx(x, y d128, ctx *context) d128 {
+	return d128_divideInteger_ctxnull(x, y, ctx)
+}
+
 func d128_divide_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	resultSign := d128_signFlag(x) != d128_signFlag(y)
 	if bothFinite(x, y) {
@@ -39,63 +46,6 @@ func d128_divide_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 		return d128_zero(resultSign, -6176)
 	}
 	return d128_infinity(resultSign)
-}
-
-// divideInteger never rounds: trunc(x/y) is exact (or NaN/Inf).
-
-func d128_divideInteger(x, y d128) d128 { return d128_divideInteger_ctxnull(x, y, nil) }
-func d128_divideInteger_ctx(x, y d128, ctx *context) d128 {
-	return d128_divideInteger_ctxnull(x, y, ctx)
-}
-
-func d128_divideInteger_ctxnull(x, y d128, ctxnull *context) d128 {
-	if bothFinite(x, y) {
-		if d128_isNotZER(x) && d128_isNotZER(y) {
-			return divIntFnzFnz_rnd_ctx(x, y, ctxnull)
-		}
-		resultSign := d128_signFlag(x) != d128_signFlag(y)
-		if d128_isZER(x) && d128_isZER(y) {
-			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivZeroByZero)
-		}
-		if d128_isZER(x) {
-			return d128_zero(resultSign, 0)
-		}
-		return ctxSignalDivByZero_ctxnull(ctxnull, resultSign)
-	}
-	if d128_isNAN(x) || d128_isNAN(y) {
-		return ctxNanOperand2_ctxnull(ctxnull, x, y)
-	}
-	resultSign := d128_signFlag(x) != d128_signFlag(y)
-	verify("", func() bool { return d128_isINF(x) || d128_isINF(y) })
-	if d128_isINF(x) && d128_isINF(y) {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivInfByInf)
-	}
-	if d128_isINF(x) {
-		return d128_infinity(resultSign)
-	}
-	return d128_zero(resultSign, 0)
-}
-
-func divIntFnzFnz_rnd_ctx(x, y d128, ctxnull *context) d128 {
-	q1 := d128_divide_rnd_ctxnull(x, y, const_ROUND_TOWARD_ZERO, nil) // quiet
-	verify("", func() bool { return d128_isFIN(q1) })
-	q2 := d128_roundToIntegralTowardZeroSignalInexact_ctxnull(q1, nil)
-	verify("", func() bool { return d128_isFIN(q2) })
-	q2Q := d128_qExp(q2)
-	verify("", func() bool { return q2Q >= 0 })
-	if q2Q == 0 {
-		return q2
-	}
-	if d128_isZER(q2) {
-		return d128_zero(d128_signFlag(q2), 0)
-	}
-	zQ := q2Q
-	headroom := 34 - d128_digitLen(q2)
-	if headroom < zQ {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivIntOverflowsCoefficient)
-	}
-	scaled := mulPow10_128_128(q2.ubdLo64, d128_hi49(q2), zQ)
-	return decimalFNZ_128(d128_signFlag(q2), 0, scaled.dw0, scaled.dw1)
 }
 
 // Remainder never rounds: |r| < |y| (trunc) or |r| <= |y|/2 (near), exact or NaN.
@@ -146,6 +96,137 @@ func d128_remainderNear_ctxnull(x, y d128, ctxnull *context) d128 {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeInfNumeratorInRemainderOp)
 	}
 	return x
+}
+
+func d128_divideInteger_ctxnull(x, y d128, ctxnull *context) d128 {
+	if bothFinite(x, y) {
+		if d128_isNotZER(x) && d128_isNotZER(y) {
+			return divIntFnzFnz_rnd_ctx(x, y, ctxnull)
+		}
+		resultSign := d128_signFlag(x) != d128_signFlag(y)
+		if d128_isZER(x) && d128_isZER(y) {
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivZeroByZero)
+		}
+		if d128_isZER(x) {
+			return d128_zero(resultSign, 0)
+		}
+		return ctxSignalDivByZero_ctxnull(ctxnull, resultSign)
+	}
+	if d128_isNAN(x) || d128_isNAN(y) {
+		return ctxNanOperand2_ctxnull(ctxnull, x, y)
+	}
+	resultSign := d128_signFlag(x) != d128_signFlag(y)
+	verify("", func() bool { return d128_isINF(x) || d128_isINF(y) })
+	if d128_isINF(x) && d128_isINF(y) {
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivInfByInf)
+	}
+	if d128_isINF(x) {
+		return d128_infinity(resultSign)
+	}
+	return d128_zero(resultSign, 0)
+}
+
+func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *context) d128 {
+	// Power-of-ten divisor fast path (PT). When y is a power of ten,
+	// x / y = Cx * 10^(qExp(x) - qExp(y) - m) is exact and coefficient-preserving
+	// (m = digitLen(y) - 1), so skip the dividend scale + 256/128 divide and reuse
+	// the exact trailing-zero strip + finalize. "Divisor coefficient is a power of ten"
+	// is cohort-invariant, so one dword compare detects every representation of y.
+	m := d128_digitLen(y) - 1
+	yCoeff := d128_u128(y)
+	qPreferred := d128_qExp(x) - d128_qExp(y)
+	if yCoeff.dw0 == pow10_128_dw0(m) && yCoeff.dw1 == pow10_128_dw1(m) {
+		return divPow10Divisor_rnd_ctx(x, resultSign, qPreferred, m, rounding, ctxnull)
+	}
+
+	// CD-width divisor (digitLen(y) <= 4, so m <= 3). Two sub-paths:
+	//   (a) integer-exact: xCoeff / yCoeff has remainder 0, so qI already sits at the preferred
+	//       exponent as the canonical cohort member -- return it directly, no scale and
+	//       no trailing-zero strip. This is the ET band: one 128/64 divide.
+	//   (b) inexact: the scaled dividend is exactly 34 + digitLen(y) <= 38 digits, so it
+	//       fits 128 bits, and the divisor fits 64 bits -- the whole correctly-rounded
+	//       result is a single 128/64 on the scaled numerator. This is the WD/XD
+	//       scaled-numerator path (below) narrowed to 128-bit width; it stays 128 bits
+	//       throughout rather than widening the dividend to 256 for a full-width divide.
+	if m <= 3 {
+		xCoeff := d128_u128(x)
+		qint := divRem_q128r64_128x64(xCoeff.dw0, xCoeff.dw1, yCoeff.dw0)
+		if qint.remDw0 == 0 && !isZero_bool_128(qint.quotDw0, qint.quotDw1) {
+			return finalize_128_ctxnull(resultSign, qPreferred,
+				fromLoHi_128_64x64(qint.quotDw0, qint.quotDw1), const_RESIDUE_EXACT, rounding, ctxnull)
+		}
+		digitLenDeltaCD := d128_digitLen(x) - (m + 1)
+		numeratorScaleCD := 34 - digitLenDeltaCD
+		verify("", func() bool { return numeratorScaleCD > 0 })
+		scaledNumCD := mulPow10_128_128(x.ubdLo64, d128_hi49(x), numeratorScaleCD)
+		qr := divRem_q128r64_128x64(scaledNumCD.dw0, scaledNumCD.dw1, yCoeff.dw0)
+		residueCD := residueFromRemainderDivisor_64(qr.remDw0, yCoeff.dw0)
+		qZcd := qPreferred - numeratorScaleCD
+		coefficientCD := fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1)
+		if residueCD == const_RESIDUE_EXACT && qZcd < qPreferred {
+			ss := strip_s128sc_128(coefficientCD.dw0, coefficientCD.dw1, qPreferred-qZcd)
+			coefficientCD = u128{ss.strippedDw0, ss.strippedDw1}
+			qZcd += int(ss.stripCount)
+		}
+		return finalize_128_ctxnull(resultSign, qZcd, coefficientCD, residueCD, rounding, ctxnull)
+	}
+
+	digitLenDelta := d128_digitLen(x) - (m + 1)
+	numeratorScale := 34 - digitLenDelta
+	verify("", func() bool { return numeratorScale > 0 })
+
+	scaledNumerator := mulPow10_256_128(x.ubdLo64, d128_hi49(x), numeratorScale)
+	qr := u256DivResidue_128(scaledNumerator, yCoeff)
+	coefficient := fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1)
+	res := qr.residue
+
+	qZ := qPreferred - numeratorScale
+
+	if res == const_RESIDUE_EXACT && qZ < qPreferred {
+		ss := strip_s128sc_128(coefficient.dw0, coefficient.dw1, qPreferred-qZ)
+		coefficient = u128{ss.strippedDw0, ss.strippedDw1}
+		qZ += int(ss.stripCount)
+	}
+	return finalize_128_ctxnull(resultSign, qZ, coefficient, res, rounding, ctxnull)
+}
+
+// PT fast path: divide by a power of ten (value 10^(m + qExp(y))).
+// The result is exact and keeps the dividend's coefficient: Cx * 10^(qPreferred - m),
+// where qPreferred = qExp(x) - qExp(y). As in the general exact case the natural
+// exponent sits m below the preferred exponent, so strip up to m trailing zeros from
+// Cx back toward it (no-op when Cx has none), then let finalize apply the usual
+// range/clamp/subnormal handling. Never rounds.
+func divPow10Divisor_rnd_ctx(x d128, resultSign bool, qPreferred, m int, rounding round, ctxnull *context) d128 {
+	qZ := qPreferred - m
+	coefficient := d128_u128(x)
+	if m > 0 {
+		ss := strip_s128sc_128(coefficient.dw0, coefficient.dw1, m)
+		coefficient = u128{ss.strippedDw0, ss.strippedDw1}
+		qZ += int(ss.stripCount)
+	}
+	return finalize_128_ctxnull(resultSign, qZ, coefficient, const_RESIDUE_EXACT, rounding, ctxnull)
+}
+
+func divIntFnzFnz_rnd_ctx(x, y d128, ctxnull *context) d128 {
+	q1 := d128_divide_rnd_ctxnull(x, y, const_ROUND_TOWARD_ZERO, nil) // quiet
+	verify("", func() bool { return d128_isFIN(q1) })
+	q2 := d128_roundToIntegralTowardZeroSignalInexact_ctxnull(q1, nil)
+	verify("", func() bool { return d128_isFIN(q2) })
+	q2Q := d128_qExp(q2)
+	verify("", func() bool { return q2Q >= 0 })
+	if q2Q == 0 {
+		return q2
+	}
+	if d128_isZER(q2) {
+		return d128_zero(d128_signFlag(q2), 0)
+	}
+	zQ := q2Q
+	headroom := 34 - d128_digitLen(q2)
+	if headroom < zQ {
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivIntOverflowsCoefficient)
+	}
+	scaled := mulPow10_128_128(q2.ubdLo64, d128_hi49(q2), zQ)
+	return decimalFNZ_128(d128_signFlag(q2), 0, scaled.dw0, scaled.dw1)
 }
 
 // RemainderExactWorkOrder.md §2. Both remainders are exact for every finite
@@ -278,85 +359,4 @@ func remainderNearFnzFnz(x, y d128) d128 {
 		return decimalFNZ_128(!d128_signFlag(x), e, hr.dw0, hr.dw1)
 	}
 	return remResult(d128_signFlag(x), e, r)
-}
-
-// PT fast path: divide by a power of ten (value 10^(m + qExp(y))).
-// The result is exact and keeps the dividend's coefficient: Cx * 10^(qPreferred - m),
-// where qPreferred = qExp(x) - qExp(y). As in the general exact case the natural
-// exponent sits m below the preferred exponent, so strip up to m trailing zeros from
-// Cx back toward it (no-op when Cx has none), then let finalize apply the usual
-// range/clamp/subnormal handling. Never rounds.
-func divPow10Divisor_rnd_ctx(x d128, resultSign bool, qPreferred, m int, rounding round, ctxnull *context) d128 {
-	qZ := qPreferred - m
-	coefficient := d128_u128(x)
-	if m > 0 {
-		ss := strip_s128sc_128(coefficient.dw0, coefficient.dw1, m)
-		coefficient = u128{ss.strippedDw0, ss.strippedDw1}
-		qZ += int(ss.stripCount)
-	}
-	return finalize_128_ctxnull(resultSign, qZ, coefficient, const_RESIDUE_EXACT, rounding, ctxnull)
-}
-
-func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *context) d128 {
-	// Power-of-ten divisor fast path (PT). When y is a power of ten,
-	// x / y = Cx * 10^(qExp(x) - qExp(y) - m) is exact and coefficient-preserving
-	// (m = digitLen(y) - 1), so skip the dividend scale + 256/128 divide and reuse
-	// the exact trailing-zero strip + finalize. "Divisor coefficient is a power of ten"
-	// is cohort-invariant, so one dword compare detects every representation of y.
-	m := d128_digitLen(y) - 1
-	yCoeff := d128_u128(y)
-	qPreferred := d128_qExp(x) - d128_qExp(y)
-	if yCoeff.dw0 == pow10_128_dw0(m) && yCoeff.dw1 == pow10_128_dw1(m) {
-		return divPow10Divisor_rnd_ctx(x, resultSign, qPreferred, m, rounding, ctxnull)
-	}
-
-	// CD-width divisor (digitLen(y) <= 4, so m <= 3). Two sub-paths:
-	//   (a) integer-exact: xCoeff / yCoeff has remainder 0, so qI already sits at the preferred
-	//       exponent as the canonical cohort member -- return it directly, no scale and
-	//       no trailing-zero strip. This is the ET band: one 128/64 divide.
-	//   (b) inexact: the scaled dividend is exactly 34 + digitLen(y) <= 38 digits, so it
-	//       fits 128 bits, and the divisor fits 64 bits -- the whole correctly-rounded
-	//       result is a single 128/64 on the scaled numerator. This is the WD/XD
-	//       scaled-numerator path (below) narrowed to 128-bit width; it stays 128 bits
-	//       throughout rather than widening the dividend to 256 for a full-width divide.
-	if m <= 3 {
-		xCoeff := d128_u128(x)
-		qint := divRem_q128r64_128x64(xCoeff.dw0, xCoeff.dw1, yCoeff.dw0)
-		if qint.remDw0 == 0 && !isZero_bool_128(qint.quotDw0, qint.quotDw1) {
-			return finalize_128_ctxnull(resultSign, qPreferred,
-				fromLoHi_128_64x64(qint.quotDw0, qint.quotDw1), const_RESIDUE_EXACT, rounding, ctxnull)
-		}
-		digitLenDeltaCD := d128_digitLen(x) - (m + 1)
-		numeratorScaleCD := 34 - digitLenDeltaCD
-		verify("", func() bool { return numeratorScaleCD > 0 })
-		scaledNumCD := mulPow10_128_128(x.ubdLo64, d128_hi49(x), numeratorScaleCD)
-		qr := divRem_q128r64_128x64(scaledNumCD.dw0, scaledNumCD.dw1, yCoeff.dw0)
-		residueCD := residueFromRemainderDivisor_64(qr.remDw0, yCoeff.dw0)
-		qZcd := qPreferred - numeratorScaleCD
-		coefficientCD := fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1)
-		if residueCD == const_RESIDUE_EXACT && qZcd < qPreferred {
-			ss := strip_s128sc_128(coefficientCD.dw0, coefficientCD.dw1, qPreferred-qZcd)
-			coefficientCD = u128{ss.strippedDw0, ss.strippedDw1}
-			qZcd += int(ss.stripCount)
-		}
-		return finalize_128_ctxnull(resultSign, qZcd, coefficientCD, residueCD, rounding, ctxnull)
-	}
-
-	digitLenDelta := d128_digitLen(x) - (m + 1)
-	numeratorScale := 34 - digitLenDelta
-	verify("", func() bool { return numeratorScale > 0 })
-
-	scaledNumerator := mulPow10_256_128(x.ubdLo64, d128_hi49(x), numeratorScale)
-	qr := u256DivResidue_128(scaledNumerator, yCoeff)
-	coefficient := fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1)
-	res := qr.residue
-
-	qZ := qPreferred - numeratorScale
-
-	if res == const_RESIDUE_EXACT && qZ < qPreferred {
-		ss := strip_s128sc_128(coefficient.dw0, coefficient.dw1, qPreferred-qZ)
-		coefficient = u128{ss.strippedDw0, ss.strippedDw1}
-		qZ += int(ss.stripCount)
-	}
-	return finalize_128_ctxnull(resultSign, qZ, coefficient, res, rounding, ctxnull)
 }

@@ -6,6 +6,14 @@
 
 package decimal128
 
+func d128_multiply_tte(x, y d128) d128 {
+	return d128_multiply_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
+}
+func d128_multiply_rnd(x, y d128, rnd round) d128 { return d128_multiply_rnd_ctxnull(x, y, rnd, nil) }
+func d128_multiply_ctx(x, y d128, ctx *context) d128 {
+	return d128_multiply_rnd_ctxnull(x, y, ctx.round, ctx)
+}
+
 // Fast path: both coefficients fit in 64 bits (compact product), exponent sum in
 // range, and the 64×64 product fits in 112 bits (canonical significand) -> return
 // directly, no rounding, no flags. Everything else tail-calls the cold slow entry.
@@ -64,12 +72,12 @@ func d128_multiply_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context)
 	return d128_infinity(prodSignFlag)
 }
 
-func d128_multiply_tte(x, y d128) d128 {
-	return d128_multiply_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
+func d128_square_tte(x d128) d128 {
+	return d128_square_rnd_ctxnull(x, const_ROUND_TIES_TO_EVEN, nil)
 }
-func d128_multiply_rnd(x, y d128, rnd round) d128 { return d128_multiply_rnd_ctxnull(x, y, rnd, nil) }
-func d128_multiply_ctx(x, y d128, ctx *context) d128 {
-	return d128_multiply_rnd_ctxnull(x, y, ctx.round, ctx)
+func d128_square_rnd(x d128, rnd round) d128 { return d128_square_rnd_ctxnull(x, rnd, nil) }
+func d128_square_ctx(x d128, ctx *context) d128 {
+	return d128_square_rnd_ctxnull(x, ctx.round, ctx)
 }
 
 // Square: x*x. The fast entry carries an x²-specialized compact guard (single
@@ -88,12 +96,4 @@ func d128_square_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 		}
 	}
 	return d128_multiply_slow_rnd_ctxnull(x, x, rounding, ctxnull)
-}
-
-func d128_square_tte(x d128) d128 {
-	return d128_square_rnd_ctxnull(x, const_ROUND_TIES_TO_EVEN, nil)
-}
-func d128_square_rnd(x d128, rnd round) d128 { return d128_square_rnd_ctxnull(x, rnd, nil) }
-func d128_square_ctx(x d128, ctx *context) d128 {
-	return d128_square_rnd_ctxnull(x, ctx.round, ctx)
 }

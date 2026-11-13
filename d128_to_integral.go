@@ -9,54 +9,6 @@ import "math"
 
 const minInt64 int64 = -1 << 63
 
-// --- roundToIntegral core ---
-
-func roundToIntegral128_ctxnull(x d128, rounding round, ctxnull *context, suppressInexact bool) d128 {
-	if d128_isNAN(x) {
-		return ctxNanOperand1_ctxnull(ctxnull, x)
-	}
-	if !d128_isFIN(x) || d128_qExp(x) >= 0 {
-		return x
-	}
-	xSign := d128_signFlag(x)
-	if d128_isZER(x) {
-		return d128_zero(xSign, 0)
-	}
-	xDigitLen := d128_digitLen(x)
-	fracDigitLen := -d128_qExp(x)
-
-	// Case A: all digits fractional (|x| < 1) → 0 or ±1.
-	if fracDigitLen >= xDigitLen {
-		var res residue
-		if fracDigitLen > xDigitLen {
-			res = const_RESIDUE_LT_HALF
-		} else {
-			xU128 := d128_u128(x)
-			res = residueFromDecadeWithDigitLen_128(xU128.dw0, xU128.dw1, xDigitLen)
-			verify("", func() bool { return res != const_RESIDUE_EXACT })
-		}
-		var z d128
-		if needsRoundUp(rounding, xSign, false, res) {
-			z = decimalFNZ_64x64(xSign, 0, 1, 0)
-		} else {
-			z = d128_zero(xSign, 0)
-		}
-		if !suppressInexact && ctxnull != nil {
-			return ctxSignalInexact_ctxnull(ctxnull, z)
-		}
-		return z
-	}
-
-	// Case B: mixed integral/fractional — scale to qExp 0, finalize rounds.
-	qr := div_128_pow10_q128res(d128_u128(x), fracDigitLen)
-	coeff := fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1)
-	var ctxForFinalize *context
-	if !suppressInexact {
-		ctxForFinalize = ctxnull
-	}
-	return finalize_128_ctxnull(xSign, 0, coeff, qr.residue, rounding, ctxForFinalize)
-}
-
 // --- roundToIntegral{Rule} (value form; no inexact signal) ---
 
 func d128_roundToIntegral(x d128) d128 {
@@ -119,6 +71,52 @@ func d128_roundToIntegralSignalInexact(x d128, ctx *context) d128 {
 	return roundToIntegral128_ctxnull(x, ctx.round, ctx, false)
 }
 
+func roundToIntegral128_ctxnull(x d128, rounding round, ctxnull *context, suppressInexact bool) d128 {
+	if d128_isNAN(x) {
+		return ctxNanOperand1_ctxnull(ctxnull, x)
+	}
+	if !d128_isFIN(x) || d128_qExp(x) >= 0 {
+		return x
+	}
+	xSign := d128_signFlag(x)
+	if d128_isZER(x) {
+		return d128_zero(xSign, 0)
+	}
+	xDigitLen := d128_digitLen(x)
+	fracDigitLen := -d128_qExp(x)
+
+	// Case A: all digits fractional (|x| < 1) → 0 or ±1.
+	if fracDigitLen >= xDigitLen {
+		var res residue
+		if fracDigitLen > xDigitLen {
+			res = const_RESIDUE_LT_HALF
+		} else {
+			xU128 := d128_u128(x)
+			res = residueFromDecadeWithDigitLen_128(xU128.dw0, xU128.dw1, xDigitLen)
+			verify("", func() bool { return res != const_RESIDUE_EXACT })
+		}
+		var z d128
+		if needsRoundUp(rounding, xSign, false, res) {
+			z = decimalFNZ_64x64(xSign, 0, 1, 0)
+		} else {
+			z = d128_zero(xSign, 0)
+		}
+		if !suppressInexact && ctxnull != nil {
+			return ctxSignalInexact_ctxnull(ctxnull, z)
+		}
+		return z
+	}
+
+	// Case B: mixed integral/fractional — scale to qExp 0, finalize rounds.
+	qr := div_128_pow10_q128res(d128_u128(x), fracDigitLen)
+	coeff := fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1)
+	var ctxForFinalize *context
+	if !suppressInexact {
+		ctxForFinalize = ctxnull
+	}
+	return finalize_128_ctxnull(xSign, 0, coeff, qr.residue, rounding, ctxForFinalize)
+}
+
 // --- convertToInteger64 ---
 
 func d128_toInt64TiesToEven_ctxnull(x d128, ctxnull *context) int64 {
@@ -151,34 +149,6 @@ func d128_toInt64TowardPositiveSignalInexact_ctxnull(x d128, ctxnull *context) i
 }
 func d128_toInt64TowardNegativeSignalInexact_ctxnull(x d128, ctxnull *context) int64 {
 	return d128ConvertToInt64_ctxnull(x, const_ROUND_TOWARD_NEGATIVE, false, ctxnull)
-}
-
-// --- range predicates ---
-
-// d128_fitsInt64 reports whether x is finite and lies in the closed real
-// interval [Int64.min, Int64.max]. When true, converting x to int64 cannot
-// overflow under any rounding direction (there is no rounding parameter).
-// NaN and infinity return false.
-func d128_fitsInt64(x d128) bool {
-	if !d128_isFinite(x) {
-		return false
-	}
-	lo := d128_fromInt64(math.MinInt64)
-	hi := d128_fromInt64(math.MaxInt64)
-	return d128_isLessEqual(lo, x) && d128_isLessEqual(x, hi)
-}
-
-// d128_fitsUInt64 reports whether x is finite, non-negative, and at most
-// UInt64.max. When true, converting x to uint64 cannot overflow under any
-// rounding direction. Negative zero is accepted; any negative nonzero value
-// is rejected. NaN and infinity return false.
-func d128_fitsUInt64(x d128) bool {
-	if !d128_isFinite(x) {
-		return false
-	}
-	nonNegative := d128_isZER(x) || !d128_isNegative(x)
-	hi := d128_fromUInt64(math.MaxUint64)
-	return nonNegative && d128_isLessEqual(x, hi)
 }
 
 func d128ConvertToInt64_ctxnull(x d128, rounding round, suppressInexact bool, ctxnull *context) int64 {
@@ -255,6 +225,34 @@ func d128ConvertToInt64_ctxnull(x d128, rounding round, suppressInexact bool, ct
 	}
 	ctxSignalInvalidOperation_ctxnull(ctxnull, causeConvertNonFiniteToInteger)
 	return minInt64
+}
+
+// --- range predicates ---
+
+// d128_fitsInt64 reports whether x is finite and lies in the closed real
+// interval [Int64.min, Int64.max]. When true, converting x to int64 cannot
+// overflow under any rounding direction (there is no rounding parameter).
+// NaN and infinity return false.
+func d128_fitsInt64(x d128) bool {
+	if !d128_isFinite(x) {
+		return false
+	}
+	lo := d128_fromInt64(math.MinInt64)
+	hi := d128_fromInt64(math.MaxInt64)
+	return d128_isLessEqual(lo, x) && d128_isLessEqual(x, hi)
+}
+
+// d128_fitsUInt64 reports whether x is finite, non-negative, and at most
+// UInt64.max. When true, converting x to uint64 cannot overflow under any
+// rounding direction. Negative zero is accepted; any negative nonzero value
+// is rejected. NaN and infinity return false.
+func d128_fitsUInt64(x d128) bool {
+	if !d128_isFinite(x) {
+		return false
+	}
+	nonNegative := d128_isZER(x) || !d128_isNegative(x)
+	hi := d128_fromUInt64(math.MaxUint64)
+	return nonNegative && d128_isLessEqual(x, hi)
 }
 
 // --- convertToUnsignedInteger64 ---

@@ -74,6 +74,40 @@ func d128_pow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	return powFnzFnz(x, y, rounding, ctxnull)
 }
 
+// powHugeIntegerY is pow(x, y) for an integer y outside pown's int32 window
+// (|y| >= 2^31): x's sign survives iff y is odd (IEEE 754-2019 §9.2.1); ±0 and
+// ±1 take pown's cohorts. A finite non-zero |x| != 1 goes through powFromD48
+// with the result's sign; the result is never an exact decimal128
+// (PowHugeIntegerExponentWorkOrder.md HY-3).
+func powHugeIntegerY(x, y d128, rounding round, ctxnull *context) d128 {
+	if d128_isNAN(x) {
+		return ctxNanOperand2_ctxnull(ctxnull, x, y)
+	}
+	neg := d128_signFlag(x) && d128_isOddIntegral(y)
+	yNeg := d128_signFlag(y)
+	if d128_isZER(x) {
+		if yNeg {
+			return ctxSignalDivByZero_ctxnull(ctxnull, neg) // ±∞, divideByZero
+		}
+		return d128_zero(neg, d128_qExp(x)*9999) // pownZER's cohort (clamped)
+	}
+	if d128_isINF(x) {
+		if yNeg {
+			return d128_zero(neg, 0)
+		}
+		return d128_infinity(neg)
+	}
+	// |x| == 1: pown's cohort, clamp(y·Q(x), −33, 0); |y| >= 2^31 and Q(x) <= 0.
+	if cmpMagFnzFnz(x, const_D128_POW_ONE) == 0 {
+		q := 0
+		if d128_qExp(x) < 0 && !yNeg {
+			q = -33
+		}
+		return d128_oneWithQExp(neg, q)
+	}
+	return powFromD48(x, y, 0, rounding, ctxnull, neg, true)
+}
+
 // --- special classes (non-integer y) ---
 
 // powZerFnz: pow(±0, y), y finite non-integer. Sign is always positive.
@@ -118,40 +152,6 @@ func powFnzFnz(x, y d128, rounding round, ctxnull *context) d128 {
 }
 
 // --- huge integer y ---
-
-// powHugeIntegerY is pow(x, y) for an integer y outside pown's int32 window
-// (|y| >= 2^31): x's sign survives iff y is odd (IEEE 754-2019 §9.2.1); ±0 and
-// ±1 take pown's cohorts. A finite non-zero |x| != 1 goes through powFromD48
-// with the result's sign; the result is never an exact decimal128
-// (PowHugeIntegerExponentWorkOrder.md HY-3).
-func powHugeIntegerY(x, y d128, rounding round, ctxnull *context) d128 {
-	if d128_isNAN(x) {
-		return ctxNanOperand2_ctxnull(ctxnull, x, y)
-	}
-	neg := d128_signFlag(x) && d128_isOddIntegral(y)
-	yNeg := d128_signFlag(y)
-	if d128_isZER(x) {
-		if yNeg {
-			return ctxSignalDivByZero_ctxnull(ctxnull, neg) // ±∞, divideByZero
-		}
-		return d128_zero(neg, d128_qExp(x)*9999) // pownZER's cohort (clamped)
-	}
-	if d128_isINF(x) {
-		if yNeg {
-			return d128_zero(neg, 0)
-		}
-		return d128_infinity(neg)
-	}
-	// |x| == 1: pown's cohort, clamp(y·Q(x), −33, 0); |y| >= 2^31 and Q(x) <= 0.
-	if cmpMagFnzFnz(x, const_D128_POW_ONE) == 0 {
-		q := 0
-		if d128_qExp(x) < 0 && !yNeg {
-			q = -33
-		}
-		return d128_oneWithQExp(neg, q)
-	}
-	return powFromD48(x, y, 0, rounding, ctxnull, neg, true)
-}
 
 func powPreferredQExp(x, y d128) int {
 	qX := d128_qExp(x)

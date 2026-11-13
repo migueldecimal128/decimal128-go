@@ -59,16 +59,6 @@ func ctxSignalDivByZero_ctxnull(ctxnull *context, sign bool) d128 {
 	return const_D128_POS_INFINITY
 }
 
-func signalDivByZero_quiet(resultSign bool) d128 {
-	if resultSign {
-		return const_D128_NEG_INFINITY
-	}
-	return const_D128_POS_INFINITY
-}
-
-func signalInexactOverflow_quiet(dec d128) d128  { return dec }
-func signalInexactUnderflow_quiet(dec d128) d128 { return dec }
-
 // ctxSignalInvalidOperation_ctxnull sets the invalid-operation flag and returns a quiet
 // NaN (the default result). The cause is diagnostic and currently unused.
 func ctxSignalInvalidOperation_ctxnull(ctxnull *context, cause invalidCause) d128 {
@@ -127,3 +117,14 @@ func ctxNanOperand1_ctxnull(ctxnull *context, x d128) d128 {
 	}
 	return ctxSignalSNanOperandFound_ctxnull(ctxnull, x)
 }
+
+func signalDivByZero_quiet(resultSign bool) d128 {
+	if resultSign {
+		return const_D128_NEG_INFINITY
+	}
+	return const_D128_POS_INFINITY
+}
+
+func signalInexactOverflow_quiet(dec d128) d128 { return dec }
+
+func signalInexactUnderflow_quiet(dec d128) d128 { return dec }
