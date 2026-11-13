@@ -45,14 +45,13 @@ func d48_finalize_320(sign bool, qExp int, coeff u320, res residue) d48 {
 	// Fast paths for the common drops (Swift Phase 5): products of two 48-digit
 	// values have 95-96 digits; divide quotients 49.
 	var qr quot320Residue
-	switch qDelta {
-	case 48:
+	if qDelta == 48 {
 		qr = divPow10_q320res_320_recipmul_48(coeff)
-	case 47:
+	} else if qDelta == 47 {
 		qr = divPow10_q320res_320_recipmul_47(coeff)
-	case 1:
+	} else if qDelta == 1 {
 		qr = divPow10_q320res_320_recipmul_1(coeff)
-	default:
+	} else {
 		qr = divPow10_q320res(coeff, qDelta)
 	}
 	totalResidue := residueMerge(qr.residue, res)

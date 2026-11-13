@@ -307,12 +307,11 @@ func expM1Kernel(s scaled, isExp10m1 bool, xd d48, rounding round, ctxnull *cont
 func exp10M1Integer(x d128, rounding round, ctxnull *context) d128 {
 	neg := d128_signFlag(x)
 	var k int64
-	switch {
-	case d128_sciExp(x) >= 10 && neg:
+	if d128_sciExp(x) >= 10 && neg {
 		k = -1_000_000_000
-	case d128_sciExp(x) >= 10:
+	} else if d128_sciExp(x) >= 10 {
 		k = 1_000_000_000
-	default:
+	} else {
 		k = d48_toLongOrMin(d48_fromD128(x, neg))
 	}
 	if k > 6145 {

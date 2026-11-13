@@ -28,16 +28,15 @@ const (
 
 // residueName is the debug spelling of a residue value.
 func residueName(r residue) string {
-	switch r {
-	case 0:
+	if r == 0 {
 		return "EXACT"
-	case 1:
+	} else if r == 1 {
 		return "LT_HALF"
-	case 2:
+	} else if r == 2 {
 		return "HALF"
-	case 3:
+	} else if r == 3 {
 		return "GT_HALF"
-	default:
+	} else {
 		return "<<< INVALID RESIDUE >>>"
 	}
 }

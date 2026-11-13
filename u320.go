@@ -129,16 +129,15 @@ func limbLen_320(x u320) int {
 // limbsDown_320 is the five limbs of x moved down by q whole limbs (zero-filled).
 func limbsDown_320(x u320, q int) (uint64, uint64, uint64, uint64, uint64) {
 	x0, x1, x2, x3, x4 := uint64(x.dw0), uint64(x.dw1), uint64(x.dw2), uint64(x.dw3), uint64(x.dw4)
-	switch q {
-	case 0:
+	if q == 0 {
 		return x0, x1, x2, x3, x4
-	case 1:
+	} else if q == 1 {
 		return x1, x2, x3, x4, 0
-	case 2:
+	} else if q == 2 {
 		return x2, x3, x4, 0, 0
-	case 3:
+	} else if q == 3 {
 		return x3, x4, 0, 0, 0
-	default:
+	} else {
 		return x4, 0, 0, 0, 0
 	}
 }
@@ -146,16 +145,15 @@ func limbsDown_320(x u320, q int) (uint64, uint64, uint64, uint64, uint64) {
 // limbsUp_320 is the five limbs of x moved up by q whole limbs (zero-filled).
 func limbsUp_320(x u320, q int) (uint64, uint64, uint64, uint64, uint64) {
 	x0, x1, x2, x3, x4 := uint64(x.dw0), uint64(x.dw1), uint64(x.dw2), uint64(x.dw3), uint64(x.dw4)
-	switch q {
-	case 0:
+	if q == 0 {
 		return x0, x1, x2, x3, x4
-	case 1:
+	} else if q == 1 {
 		return 0, x0, x1, x2, x3
-	case 2:
+	} else if q == 2 {
 		return 0, 0, x0, x1, x2
-	case 3:
+	} else if q == 3 {
 		return 0, 0, 0, x0, x1
-	default:
+	} else {
 		return 0, 0, 0, 0, x0
 	}
 }
