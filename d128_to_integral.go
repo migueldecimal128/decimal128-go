@@ -223,7 +223,7 @@ func d128ConvertToInt64_ctxnull(x d128, rounding round, suppressInexact bool, ct
 			}
 		}
 	}
-	ctxSignalInvalidOperation_ctxnull(ctxnull, causeConvertNonFiniteToInteger)
+	ctxSignalInvalidOperation_ctxnull(ctxnull, causeConvertNonFiniteToInteger, const_D128_QNAN0)
 	return minInt64
 }
 
@@ -275,7 +275,7 @@ func d128ConvertToUInt64_ctxnull(x d128, rounding round, suppressInexact bool, c
 	// raised, and inexact is NEVER raised on this path (IEEE mutual exclusion).
 	t := d128_roundToIntegral_rnd(x, rounding)
 	if !d128_fitsUInt64(t) {
-		ctxSignalInvalidOperation_ctxnull(ctxnull, causeConvertNonFiniteToInteger)
+		ctxSignalInvalidOperation_ctxnull(ctxnull, causeConvertNonFiniteToInteger, const_D128_QNAN0)
 		return 0
 	}
 	// In range. For the Exact variants, signal inexact iff a fraction was

@@ -197,7 +197,7 @@ func addNonFinite_rnd_ctxnull(x, y d128, ctxnull *context) d128 {
 	if d128_signFlag(x) == d128_signFlag(y) {
 		return x
 	}
-	return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMagnitudeSubtractionOfInfinities)
+	return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMagnitudeSubtractionOfInfinities, const_D128_QNAN0)
 }
 
 func preferMinimumQExp_exact(x d128, otherExp int) d128 {

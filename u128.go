@@ -11,12 +11,6 @@ type u128 struct {
 	dw1 int64
 }
 
-// fromLoHi_128_64x64 builds a u128 from its low and high dwords (signed-dword
-// uniform-API spelling).
-func fromLoHi_128_64x64(dw0, dw1 int64) u128 {
-	return u128{dw0: dw0, dw1: dw1}
-}
-
 // u128FromU64 builds a u128 from unsigned low/high halves (primitive-interior
 // spelling, §3.4).
 func u128FromU64(dw0, dw1 uint64) u128 {

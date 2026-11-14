@@ -67,7 +67,7 @@ func d128_multiply_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context)
 	}
 	verify("", func() bool { return d128_isINF(x) || d128_isINF(y) })
 	if (d128_isINF(x) && d128_isZER(y)) || (d128_isINF(y) && d128_isZER(x)) {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMulZeroByInfinity)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMulZeroByInfinity, const_D128_QNAN0)
 	}
 	return d128_infinity(prodSignFlag)
 }

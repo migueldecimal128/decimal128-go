@@ -43,7 +43,7 @@ func d128_compound_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) 
 	verify("", func() bool { return d128_isINF(x) })
 	if d128_signFlag(x) {
 		// -∞ is below -1 → invalid (even for n == 0).
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne, const_D128_QNAN0)
 	}
 	if n > 0 {
 		return const_D128_POS_INFINITY // (1 + ∞)^(n>0) = +∞
@@ -61,7 +61,7 @@ func compoundFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 		if d128_signFlag(x) {
 			cmp := cmpMagFnzFnz(x, const_D128_COMPOUND_ONE)
 			if cmp > 0 {
-				return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne) // x < -1
+				return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne, const_D128_QNAN0) // x < -1
 			}
 			if cmp == 0 {
 				return compoundMinusOne(x, n, ctxnull)
@@ -75,7 +75,7 @@ func compoundFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 		// 1 + x is an exact D128: the add below never rounds.
 		t := d128_add_rnd_ctxnull(const_D128_COMPOUND_ONE, x, rounding, ctxnull)
 		if d128_signFlag(t) && !d128_isZER(t) {
-			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne) // x < -1
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne, const_D128_QNAN0) // x < -1
 		}
 		if n == 0 {
 			return d128_fromInt64(1)
@@ -89,7 +89,7 @@ func compoundFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 	// non-zero sum zero, so the sign and zero tests below are exact.
 	t := d48_add(d48_fromInt32(1), d48_fromD128(x, d128_signFlag(x)))
 	if d48_signFlag(t) && !d48_isZero(t) {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne) // x < -1
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne, const_D128_QNAN0) // x < -1
 	}
 	if n == 0 {
 		return d128_fromInt64(1)

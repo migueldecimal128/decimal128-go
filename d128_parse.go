@@ -9,8 +9,8 @@ type d128ParseResult struct {
 	value  d128
 }
 
-func parseSuccess(value d128) d128ParseResult { return d128ParseResult{psSuccess, value} }
-func parseFailure(status parseStatus) d128ParseResult {
+func d128ParseResultSuccess(value d128) d128ParseResult { return d128ParseResult{psSuccess, value} }
+func d128ParseResultFailure(status parseStatus) d128ParseResult {
 	return d128ParseResult{status, const_D128_QNAN0}
 }
 
@@ -22,7 +22,7 @@ type finiteParseResult struct {
 	residue residue
 }
 
-func finiteFailure(status parseStatus) finiteParseResult {
+func finiteParseResultFailure(status parseStatus) finiteParseResult {
 	return finiteParseResult{status, false, 0, u128{0, 0}, const_RESIDUE_EXACT}
 }
 
@@ -35,7 +35,7 @@ func d128_parse_ctxnull(s string, ctxnull *context) (d128, bool) {
 		return r.value, true
 	}
 	verify("", func() bool { return d128_isNAN(r.value) })
-	ctxSignalInvalidOperation_ctxnull(ctxnull, causeParseMalformed)
+	ctxSignalInvalidOperation_ctxnull(ctxnull, causeParseMalformed, const_D128_QNAN0)
 	return const_D128_QNAN0, false
 }
 
@@ -163,9 +163,9 @@ func parseDec34_ctxnull(t *txt, ctxnull *context) d128ParseResult {
 				rounding = ctxnull.round
 			}
 			value := finalize_128_ctxnull(r.sign, r.qExp, r.coeff, r.residue, rounding, ctxnull)
-			return parseSuccess(value)
+			return d128ParseResultSuccess(value)
 		}
-		return parseFailure(r.status)
+		return d128ParseResultFailure(r.status)
 	}
 	chLower := ch | 0x20
 	if chLower == ascii_i {
@@ -175,9 +175,9 @@ func parseDec34_ctxnull(t *txt, ctxnull *context) d128ParseResult {
 		return parseNanText(sign, ch, t)
 	}
 	if chFirst == 0 {
-		return parseFailure(psEmptyString)
+		return d128ParseResultFailure(psEmptyString)
 	}
-	return parseFailure(psInvalidFormat)
+	return d128ParseResultFailure(psInvalidFormat)
 }
 
 var infinityBytes = int64(ascii_i) | (int64(ascii_n) << 8) | (int64(ascii_f) << 16) | (int64(ascii_i) << 24) |
@@ -193,16 +193,16 @@ func parseInfinityText(sign bool, chFirst byte, t *txt) d128ParseResult {
 			if ch == 0 {
 				break
 			}
-			return parseFailure(psFailureParsingInfinity)
+			return d128ParseResultFailure(psFailureParsingInfinity)
 		}
 		chPrev = ch
 		ch = t.nextCharLowercase()
 		i += 1
 	}
 	if ch != 0 || (chPrev != ascii_f && chPrev != ascii_y) {
-		return parseFailure(psFailureParsingInfinity)
+		return d128ParseResultFailure(psFailureParsingInfinity)
 	}
-	return parseSuccess(d128_infinity(sign))
+	return d128ParseResultSuccess(d128_infinity(sign))
 }
 
 // Parse "NaN", "qNaN" or "sNaN" (case-insensitive) with an optional decimal
@@ -226,7 +226,7 @@ func parseNanText(sign bool, chFirst byte, t *txt) d128ParseResult {
 		ch = t.nextCharLowercase()
 	}
 	if ch != ascii_n || t.nextCharLowercase() != ascii_a || t.nextCharLowercase() != ascii_n {
-		return parseFailure(psFailureParsingNan)
+		return d128ParseResultFailure(psFailureParsingNan)
 	}
 	var accumulator int64 = 0
 	var first19accumulator int64 = 0
@@ -263,11 +263,11 @@ func parseNanText(sign bool, chFirst byte, t *txt) d128ParseResult {
 	if hasParen {
 		// at least one digit, and the ')' must be the last character of the input
 		if payloadDigitCount == 0 || ch != ascii_rParen || t.nextChar() != 0 {
-			return parseFailure(psFailureParsingNan)
+			return d128ParseResultFailure(psFailureParsingNan)
 		}
 	} else if ch != 0 {
 		// unchanged: a bare payload runs to end of input
-		return parseFailure(psFailureParsingNan)
+		return d128ParseResultFailure(psFailureParsingNan)
 	}
 	payload := u128{0, 0}
 	if first19accumulator == 0 {
@@ -277,7 +277,7 @@ func parseNanText(sign bool, chFirst byte, t *txt) d128ParseResult {
 		payload = mulPow10_128_128(first19accumulator, 0, remainingDigitCount)
 		payload = add_128_128x128(payload.dw0, payload.dw1, accumulator, 0)
 	}
-	return parseSuccess(d128_nan_64x64(sign, hasS, payload.dw0, payload.dw1))
+	return d128ParseResultSuccess(d128_nan_64x64(sign, hasS, payload.dw0, payload.dw1))
 }
 
 func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) finiteParseResult {
@@ -327,15 +327,15 @@ func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) fini
 			}
 		} else if ch == ascii_dot {
 			if hasDot {
-				return finiteFailure(psDoubleDot)
+				return finiteParseResultFailure(psDoubleDot)
 			}
 			if chPrev == ascii_underbar {
-				return finiteFailure(psInvalidUnderscoreLocation)
+				return finiteParseResultFailure(psInvalidUnderscoreLocation)
 			}
 			hasDot = true
 		} else if ch == ascii_underbar {
 			if chPrev < ascii_0 || chPrev > ascii_9 {
-				return finiteFailure(psInvalidUnderscoreLocation)
+				return finiteParseResultFailure(psInvalidUnderscoreLocation)
 			}
 		} else {
 			impossible("cannot be here")
@@ -344,14 +344,14 @@ func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) fini
 		ch = t.nextChar()
 	}
 	if !hasCoefficientDigit {
-		return finiteFailure(psNoCoefficientDigit)
+		return finiteParseResultFailure(psNoCoefficientDigit)
 	}
 	if chPrev == ascii_underbar {
-		return finiteFailure(psInvalidUnderscoreLocation)
+		return finiteParseResultFailure(psInvalidUnderscoreLocation)
 	}
 	if (ch | 0x20) == ascii_e {
 		if chPrev == ascii_underbar {
-			return finiteFailure(psInvalidUnderscoreLocation)
+			return finiteParseResultFailure(psInvalidUnderscoreLocation)
 		}
 		chPrev = ch
 		ch = t.nextChar()
@@ -371,24 +371,24 @@ func parseFiniteValueText(sign bool, chFirst byte, t *txt, maxDigitLen int) fini
 				exp = exp*10 + int(ch-ascii_0)
 			} else {
 				if chPrev < ascii_0 || chPrev > ascii_9 {
-					return finiteFailure(psInvalidUnderscoreLocation)
+					return finiteParseResultFailure(psInvalidUnderscoreLocation)
 				}
 			}
 			chPrev = ch
 			ch = t.nextChar()
 		}
 		if chPrev == ascii_underbar {
-			return finiteFailure(psInvalidUnderscoreLocation)
+			return finiteParseResultFailure(psInvalidUnderscoreLocation)
 		}
 		if !hasExpDigit {
-			return finiteFailure(psNoExponentDigit)
+			return finiteParseResultFailure(psNoExponentDigit)
 		}
 		if expSignificantDigitCount > 4 {
 			exp = 9999
 		}
 	}
 	if ch != 0 {
-		return finiteFailure(psUnexpectedChar)
+		return finiteParseResultFailure(psUnexpectedChar)
 	}
 
 	signedExp := exp

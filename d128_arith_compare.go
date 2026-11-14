@@ -6,22 +6,6 @@
 
 package decimal128
 
-// Comparison754 tri-state codes (the wrapper/core boundary value). Comparison754
-// is an int alias so .rawValue is identity.
-type comparison754 = int
-
-const (
-	const_CMP754_LT        comparison754 = 0
-	const_CMP754_EQ        comparison754 = 1
-	const_CMP754_GT        comparison754 = 2
-	const_CMP754_UNORDERED comparison754 = 3
-)
-
-func comparison754FromSignum(signum int) comparison754 {
-	verify("", func() bool { return signum >= -1 && signum <= 1 })
-	return signum + 1
-}
-
 // --- tri-state cores ---
 
 func comparePartialQuiet754(x, y d128) comparison754 {
@@ -39,7 +23,8 @@ func comparePartialSignaling754(x, y d128) comparison754 {
 		return compareFinFin(x, y)
 	}
 	if d128_isNAN(x) || d128_isNAN(y) {
-		return const_CMP754_UNORDERED // signal is a no-op on the quiet path
+		signalInvalidCompare_quiet()
+		return const_CMP754_UNORDERED
 	}
 	return compareNonFinite(x, y)
 }
@@ -48,6 +33,56 @@ func comparePartialSignaling754(x, y d128) comparison754 {
 
 func d128_comparePartial(x, y d128) int          { return comparePartialQuiet754(x, y) }
 func d128_comparePartialSignaling(x, y d128) int { return comparePartialSignaling754(x, y) }
+
+func cmpMagFnzFnz(x, y d128) int {
+	verify("", func() bool { return d128_isFNZ(x) && d128_isFNZ(y) })
+	qDelta := d128_qExp(x) - d128_qExp(y)
+	if qDelta >= 34 {
+		return 1
+	}
+	if qDelta <= -34 {
+		return -1
+	}
+	xCoeff := d128_u128(x)
+	yCoeff := d128_u128(y)
+	xBitLen := bitLen_int_128(xCoeff.dw0, xCoeff.dw1)
+	yBitLen := bitLen_int_128(yCoeff.dw0, yCoeff.dw1)
+	xDigitLen := digitLen_int_128_withBitLen(xCoeff.dw0, xCoeff.dw1, xBitLen)
+	yDigitLen := digitLen_int_128_withBitLen(yCoeff.dw0, yCoeff.dw1, yBitLen)
+	cmpBExp := compareBExpMagnitudeFnzFnz(d128_qExp(x), xBitLen, xDigitLen, d128_qExp(y), yBitLen, yDigitLen)
+	if cmpBExp != 0 {
+		return cmpBExp
+	}
+	xAligned := xCoeff
+	yAligned := yCoeff
+	qDelta = d128_qExp(x) - d128_qExp(y)
+	if qDelta > 0 {
+		xAligned = mulPow10_128_128(xAligned.dw0, xAligned.dw1, qDelta)
+	} else if qDelta < 0 {
+		yAligned = mulPow10_128_128(yAligned.dw0, yAligned.dw1, -qDelta)
+	}
+	return cmp_int_128x128(xAligned.dw0, xAligned.dw1, yAligned.dw0, yAligned.dw1)
+}
+
+func compareBExpMagnitudeFnzFnz(xQExp, xBitLen, xDigitLen, yQExp, yBitLen, yDigitLen int) int {
+	xE := eExpFnz(xQExp, xDigitLen)
+	yE := eExpFnz(yQExp, yDigitLen)
+	if xE != yE {
+		return ((xE - yE) >> 63) | 1 // -1 or 1
+	}
+	if calcBExpMin(xBitLen, xQExp) > calcBExpMax(yBitLen, yQExp) {
+		return 1
+	}
+	if calcBExpMax(xBitLen, xQExp) < calcBExpMin(yBitLen, yQExp) {
+		return -1
+	}
+	return 0
+}
+
+func eExpFnz(qExp, digitLen int) int {
+	verify("", func() bool { return digitLen > 0 })
+	return qExp + digitLen - 1
+}
 
 // --- quiet Boolean predicates (11) ---
 
@@ -188,7 +223,7 @@ func comparePartialQuiet754_ctx(x, y d128, ctx *context) comparison754 {
 	}
 	if d128_isNAN(x) || d128_isNAN(y) {
 		if d128_isSNAN(x) || d128_isSNAN(y) {
-			ctxSignalInvalidOperation_ctxnull(ctx, causeSnanOperand)
+			ctxSignalInvalidOperation_ctxnull(ctx, causeSnanOperand, const_D128_QNAN0)
 		}
 		return const_CMP754_UNORDERED
 	}
@@ -204,7 +239,7 @@ func comparePartialSignaling754_ctx(x, y d128, ctx *context) comparison754 {
 		if d128_isSNAN(x) || d128_isSNAN(y) {
 			cause = causeSnanOperand
 		}
-		ctxSignalInvalidOperation_ctxnull(ctx, cause)
+		ctxSignalInvalidOperation_ctxnull(ctx, cause, const_D128_QNAN0)
 		return const_CMP754_UNORDERED
 	}
 	return compareNonFinite(x, y)

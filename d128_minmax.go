@@ -72,9 +72,15 @@ func minMaxNaN(x, y d128, op int) d128 {
 	if (op & numMask) != 0 {
 		// numeric variant: NaN treated as a missing operand.
 		if !d128_isNAN(x) {
+			if d128_isSNAN(y) {
+				signalInvalidCompare_quiet()
+			}
 			return x
 		}
 		if !d128_isNAN(y) {
+			if d128_isSNAN(x) {
+				signalInvalidCompare_quiet()
+			}
 			return y
 		}
 		// both NaN: fall through to propagation

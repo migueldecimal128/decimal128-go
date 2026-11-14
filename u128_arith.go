@@ -95,6 +95,12 @@ func isZero_bool_128(xDw0, xDw1 int64) bool {
 	return (xDw0 | xDw1) == 0
 }
 
+// fromLoHi_128_64x64 builds a u128 from its low and high dwords (signed-dword
+// uniform-API spelling).
+func fromLoHi_128_64x64(dw0, dw1 int64) u128 {
+	return u128{dw0: dw0, dw1: dw1}
+}
+
 // mul_128_64x64 is the full-width 64×64→128 product (PrimitiveLayer.md §4.2).
 func mul_128_64x64(x, y int64) u128 {
 	hi, lo := bits.Mul64(uint64(x), uint64(y))

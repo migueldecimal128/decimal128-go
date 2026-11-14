@@ -144,7 +144,7 @@ func powFnzInf(x, y d128) d128 {
 func powFnzFnz(x, y d128, rounding round, ctxnull *context) d128 {
 	// Negative base with non-integer exponent → invalid.
 	if d128_signFlag(x) {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causePowerOfNegBaseNonIntegerExponent)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causePowerOfNegBaseNonIntegerExponent, const_D128_QNAN0)
 	}
 	// GDAS preferred exponent ⌊y·Q(x)⌋, taken by exact results only.
 	preferred := powPreferredQExp(x, y)
@@ -401,21 +401,6 @@ func u128TrailingZeros(c u128) int {
 // u128GtSmall is c > v for a one-word v.
 func u128GtSmall(c u128, v uint64) bool {
 	return (c.dw1 != 0) || (uint64(c.dw0) > v)
-}
-
-// stripTens is (c, q) with c free of trailing zeros: the same value c·10^q.
-func stripTens(cIn u128, qIn int) (u128, int) {
-	c := cIn
-	q := qIn
-	for !isZero_bool_128(c.dw0, c.dw1) {
-		quot, r := u128DivRemSmall(c, 10)
-		if r != 0 {
-			break
-		}
-		c = quot
-		q += 1
-	}
-	return c, q
 }
 
 // --- integrality predicates ---

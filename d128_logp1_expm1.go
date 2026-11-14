@@ -101,7 +101,7 @@ func logP1Dispatch(x d128, base int, rounding round, ctxnull *context) d128 {
 				return ctxSignalDivByZero_ctxnull(ctxnull, true)
 			}
 			if cmp > 0 {
-				return ctxSignalInvalidOperation_ctxnull(ctxnull, causeLogOfNegNumber)
+				return ctxSignalInvalidOperation_ctxnull(ctxnull, causeLogOfNegNumber, const_D128_QNAN0)
 			}
 		}
 		return logP1FNZ(x, base, rounding, ctxnull)
@@ -111,7 +111,7 @@ func logP1Dispatch(x d128, base int, rounding round, ctxnull *context) d128 {
 	}
 	verify("", func() bool { return d128_isINF(x) })
 	if d128_signFlag(x) {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeLogOfNegNumber)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeLogOfNegNumber, const_D128_QNAN0)
 	}
 	return const_D128_POS_INFINITY
 }

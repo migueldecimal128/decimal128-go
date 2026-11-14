@@ -33,6 +33,10 @@ func (x u256) bitLen() int {
 	return 64 - bits.LeadingZeros64(uint64(x.dw0))
 }
 
+func (x u256) digitLen() int {
+	return digitLen_int_256(x.dw0, x.dw1, x.dw2, x.dw3)
+}
+
 // u256FromHiLo composes a u256 from its high and low 128-bit halves.
 func u256FromHiLo(hi, lo u128) u256 {
 	return u256{dw0: lo.dw0, dw1: lo.dw1, dw2: hi.dw0, dw3: hi.dw1}

@@ -24,7 +24,7 @@ func d128_rootn_ctx(x d128, n int, ctx *context) d128 {
 
 func d128_rootn_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d128 {
 	if n == 0 {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeRootnBadArgs)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeRootnBadArgs, const_D128_QNAN0)
 	}
 	xSign := d128_signFlag(x)
 	nIsOdd := (n & 1) != 0
@@ -41,7 +41,7 @@ func d128_rootn_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d12
 		}
 		// Finite non-zero.
 		if xSign && !nIsOdd {
-			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeRootnBadArgs) // even root of a negative
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeRootnBadArgs, const_D128_QNAN0) // even root of a negative
 		}
 		return rootnFNZ(x, n, rounding, ctxnull)
 	}
@@ -57,7 +57,7 @@ func d128_rootn_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d12
 		return const_D128_NEG_INFINITY // -∞, odd n
 	}
 	if xSign {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeRootnBadArgs) // -∞, even n
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeRootnBadArgs, const_D128_QNAN0) // -∞, even n
 	}
 	if n < 0 {
 		return d128_zero(false, 0)
@@ -237,6 +237,21 @@ func rootnChain_d48(x d128, shifts int, invert bool, rounding round, ctxnull *co
 		}
 	}
 	return d48_forceInexact(finalizeD48_ctxnull(z, rounding, ctxnull), ctxnull)
+}
+
+// stripTens is (c, q) with c free of trailing zeros: the same value c·10^q.
+func stripTens(cIn u128, qIn int) (u128, int) {
+	c := cIn
+	q := qIn
+	for !isZero_bool_128(c.dw0, c.dw1) {
+		quot, r := u128DivRemSmall(c, 10)
+		if r != 0 {
+			break
+		}
+		c = quot
+		q += 1
+	}
+	return c, q
 }
 
 // twoFive is c = 2^a · 5^b exactly, or ok = false.

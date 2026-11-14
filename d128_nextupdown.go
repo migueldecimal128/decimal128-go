@@ -12,6 +12,15 @@
 
 package decimal128
 
+func maxFiniteMagnitude(sign bool) d128 {
+	c := sub_128_128x128(pow10_128_dw0(34), pow10_128_dw1(34), 1, 0)
+	return decimalFNZ_128(sign, 6111, c.dw0, c.dw1)
+}
+
+func minFiniteMagnitude(sign bool) d128 {
+	return decimalFNZ_64x64(sign, -6176, 1, 0)
+}
+
 // d128_nextUp_ctxnull returns the smallest representable value greater than x.
 //   - finite: walks one ulp toward +∞.
 //   - +∞ → +∞; -∞ → the most-negative finite.
@@ -60,7 +69,10 @@ func nextUpOrDown_ctxnull(x d128, isUp bool, ctxnull *context) d128 {
 	if d128_isQNAN(x) {
 		return x
 	}
-	return ctxSignalSNanOperandFound_ctxnull(ctxnull, x)
+	if ctxnull != nil {
+		return ctxSignalSNanOperandFound_ctxnull(ctxnull, x)
+	}
+	return signalSNanOperandFound_quiet(x)
 }
 
 // nextFnzAwayFromZero walks one ulp away from zero (increases magnitude).

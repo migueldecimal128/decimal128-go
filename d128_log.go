@@ -40,7 +40,7 @@ func logDispatch(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 			return ctxSignalDivByZero_ctxnull(ctxnull, true)
 		}
 		if d128_signFlag(x) {
-			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeLogOfNegNumber)
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeLogOfNegNumber, const_D128_QNAN0)
 		}
 		if isLog10 && isExactPowerOf10(x) {
 			// log10(10^n) = n exactly — no rounding, no inexact flag.
@@ -53,7 +53,7 @@ func logDispatch(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 	}
 	verify("", func() bool { return d128_isINF(x) })
 	if d128_signFlag(x) {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeLogOfNegNumber)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeLogOfNegNumber, const_D128_QNAN0)
 	}
 	return const_D128_POS_INFINITY // log(+∞) = +∞
 }

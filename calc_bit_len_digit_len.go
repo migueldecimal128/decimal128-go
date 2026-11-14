@@ -95,7 +95,3 @@ func (x u256) less(y u256) bool {
 	}
 	return cmp_int_128x128(x.dw0, x.dw1, y.dw0, y.dw1) < 0
 }
-
-func (x u256) digitLen() int {
-	return digitLen_int_256(x.dw0, x.dw1, x.dw2, x.dw3)
-}

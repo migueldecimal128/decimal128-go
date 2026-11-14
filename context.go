@@ -14,7 +14,9 @@ type context struct {
 
 func newContext() *context             { return &context{round: const_ROUND_TIES_TO_EVEN, flags: newFlags()} }
 func newContextRound(r round) *context { return &context{round: r, flags: newFlags()} }
-func ieee754Context() *context         { return newContext() }
+
+// IEEE 754 default context. Equivalent to `Context()`.
+func ieee754() *context { return &context{round: const_ROUND_TIES_TO_EVEN, flags: &flags{}} }
 
 func (ctx *context) withRounding(newRounding round) *context {
 	return &context{round: newRounding, flags: ctx.flags}
@@ -23,11 +25,11 @@ func (ctx *context) withRoundingAndNewFlags(newRounding round) *context {
 	return &context{round: newRounding, flags: newFlags()}
 }
 
-func (ctx *context) isSet(e exception754) bool { return ctx.flags.isSet(e) }
-func (ctx *context) isOverflow() bool          { return ctx.isSet(const_OVERFLOW) }
-func (ctx *context) isUnderflow() bool         { return ctx.isSet(const_UNDERFLOW) }
-func (ctx *context) exceptionLetters() string  { return ctx.flags.exceptionLetters() }
-func (ctx *context) exceptionFlagsInt() int    { return int(ctx.flags.raw()) }
+func (ctx *context) isSet(exception exception754) bool { return ctx.flags.isSet(exception) }
+func (ctx *context) isOverflow() bool                  { return ctx.isSet(const_OVERFLOW) }
+func (ctx *context) isUnderflow() bool                 { return ctx.isSet(const_UNDERFLOW) }
+func (ctx *context) exceptionLetters() string          { return ctx.flags.exceptionLetters() }
+func (ctx *context) exceptionFlagsInt() int            { return int(ctx.flags.raw()) }
 
 func isRoundTowardNegative(ctx *context) bool { return ctx.round == const_ROUND_TOWARD_NEGATIVE }
 func isRoundTowardNegative_quiet() bool       { return false }
@@ -59,19 +61,7 @@ func ctxSignalDivByZero_ctxnull(ctxnull *context, sign bool) d128 {
 	return const_D128_POS_INFINITY
 }
 
-// ctxSignalInvalidOperation_ctxnull sets the invalid-operation flag and returns a quiet
-// NaN (the default result). The cause is diagnostic and currently unused.
-func ctxSignalInvalidOperation_ctxnull(ctxnull *context, cause invalidCause) d128 {
-	_ = cause
-	if ctxnull != nil {
-		ctxnull.flags.set(const_INVALID_OPERATION)
-	}
-	return const_D128_QNAN0
-}
-
-// ctxSignalInvalidOperationResult is ctxSignalInvalidOperation_ctxnull with an explicit
-// result (Swift's defaulted result parameter).
-func ctxSignalInvalidOperationResult(ctxnull *context, cause invalidCause, result d128) d128 {
+func ctxSignalInvalidOperation_ctxnull(ctxnull *context, cause invalidCause, result d128) d128 {
 	_ = cause
 	if ctxnull != nil {
 		ctxnull.flags.set(const_INVALID_OPERATION)
@@ -128,3 +118,11 @@ func signalDivByZero_quiet(resultSign bool) d128 {
 func signalInexactOverflow_quiet(dec d128) d128 { return dec }
 
 func signalInexactUnderflow_quiet(dec d128) d128 { return dec }
+
+func signalInvalidCompare_quiet() {}
+
+func signalSNanOperandFound_quiet(theNaN d128) d128 {
+	verify("", func() bool { return d128_isNAN(theNaN) })
+	quieted := d128_quieted(theNaN)
+	return quieted
+}

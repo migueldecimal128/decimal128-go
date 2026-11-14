@@ -32,18 +32,18 @@ func fmaSlow_rnd_ctxnull(x, y, a d128, prodHi, prodLo u128, rounding round, ctxn
 	}
 	if d128_isINF(a) {
 		if (d128_isZER(x) && d128_isINF(y)) || (d128_isINF(x) && d128_isZER(y)) {
-			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMulZeroByInfinity)
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMulZeroByInfinity, const_D128_QNAN0)
 		}
 		if d128_isINF(x) || d128_isINF(y) {
 			prodSign := d128_signFlag(x) != d128_signFlag(y)
 			if prodSign != d128_signFlag(a) {
-				return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMagnitudeSubtractionOfInfinities)
+				return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMagnitudeSubtractionOfInfinities, const_D128_QNAN0)
 			}
 		}
 		return a
 	}
 	if (d128_isZER(x) && d128_isINF(y)) || (d128_isINF(x) && d128_isZER(y)) {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMulZeroByInfinity)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMulZeroByInfinity, const_D128_QNAN0)
 	}
 	if d128_isZER(x) || d128_isZER(y) {
 		return fmaZeroProd_ctxnull(x, y, a, rounding, ctxnull)
@@ -90,12 +90,12 @@ func fmaNanOperand_ctxnull(x, y, a d128, ctxnull *context) d128 {
 	}
 	quieted := d128_quieted(pickedNaN)
 	if hasSNAN {
-		return ctxSignalInvalidOperationResult(ctxnull, causeSnanOperand, quieted)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeSnanOperand, quieted)
 	}
 	aIsTheOnlyNaN := !d128_isNAN(x) && !d128_isNAN(y) && d128_isNAN(a)
 	if aIsTheOnlyNaN {
 		if (d128_isZER(x) && d128_isINF(y)) || (d128_isINF(x) && d128_isZER(y)) {
-			return ctxSignalInvalidOperationResult(ctxnull, causeMulZeroByInfinity, quieted)
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMulZeroByInfinity, quieted)
 		}
 	}
 	return quieted

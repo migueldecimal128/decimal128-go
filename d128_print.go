@@ -93,10 +93,10 @@ func toFiniteString(sign bool, qExp int, coeff u128, formatStyle int) string {
 			return toDecimalPointString(sign, qExp, coeff, digitLen)
 		}
 		if formatStyle == const_FORMAT_ENGINEERING {
-			return toEngineeringString(sign, qExp, eExp, coeff, digitLen)
+			return toEngineeringString(sign, eExp, coeff, digitLen)
 		}
 	}
-	return toExponentialString(sign, qExp, eExp, coeff, digitLen)
+	return toExponentialString(sign, eExp, coeff, digitLen)
 }
 
 const const_MIN_PLAIN_EXPONENT = -6
@@ -166,7 +166,7 @@ func toDecimalPointString(sign bool, qExp int, coeff u128, digitLen int) string 
 	})
 }
 
-func toExponentialString(sign bool, qExp, eExp int, coeff u128, digitLen int) string {
+func toExponentialString(sign bool, eExp int, coeff u128, digitLen int) string {
 	eExpMask := eExp >> 31
 	eExpAbs := (eExp ^ eExpMask) - eExpMask
 	signLen := 0
@@ -201,7 +201,7 @@ func toExponentialString(sign bool, qExp, eExp int, coeff u128, digitLen int) st
 	})
 }
 
-func toEngineeringString(sign bool, qExp, eExp int, coeff u128, digitLen int) string {
+func toEngineeringString(sign bool, eExp int, coeff u128, digitLen int) string {
 	signLen := 0
 	if sign {
 		signLen = 1

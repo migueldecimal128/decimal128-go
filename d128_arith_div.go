@@ -28,7 +28,7 @@ func d128_divide_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 			return divFnzFnz_rnd_ctx(x, y, resultSign, rounding, ctxnull)
 		}
 		if d128_isZER(x) && d128_isZER(y) {
-			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivZeroByZero)
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivZeroByZero, const_D128_QNAN0)
 		}
 		if d128_isZER(x) {
 			return d128_zero(resultSign, d128_qExp(x)-d128_qExp(y))
@@ -40,7 +40,7 @@ func d128_divide_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	}
 	verify("", func() bool { return d128_isINF(x) || d128_isINF(y) })
 	if d128_isINF(x) && d128_isINF(y) {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivInfByInf)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivInfByInf, const_D128_QNAN0)
 	}
 	if d128_isINF(y) {
 		return d128_zero(resultSign, -6176)
@@ -63,13 +63,13 @@ func d128_remainderTrunc_ctxnull(x, y d128, ctxnull *context) d128 {
 		if d128_isZER(x) && d128_isNotZER(y) {
 			return d128_zero(d128_signFlag(x), min(d128_qExp(x), d128_qExp(y)))
 		}
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivByZeroInRemainderOp)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivByZeroInRemainderOp, const_D128_QNAN0)
 	}
 	if d128_isNAN(x) || d128_isNAN(y) {
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
 	if d128_isINF(x) {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeInfNumeratorInRemainderOp)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeInfNumeratorInRemainderOp, const_D128_QNAN0)
 	}
 	return x
 }
@@ -87,13 +87,13 @@ func d128_remainderNear_ctxnull(x, y d128, ctxnull *context) d128 {
 		if d128_isZER(x) && d128_isNotZER(y) {
 			return d128_zero(d128_signFlag(x), min(d128_qExp(x), d128_qExp(y)))
 		}
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivByZeroInRemainderOp)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivByZeroInRemainderOp, const_D128_QNAN0)
 	}
 	if d128_isNAN(x) || d128_isNAN(y) {
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}
 	if d128_isINF(x) {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeInfNumeratorInRemainderOp)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeInfNumeratorInRemainderOp, const_D128_QNAN0)
 	}
 	return x
 }
@@ -105,7 +105,7 @@ func d128_divideInteger_ctxnull(x, y d128, ctxnull *context) d128 {
 		}
 		resultSign := d128_signFlag(x) != d128_signFlag(y)
 		if d128_isZER(x) && d128_isZER(y) {
-			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivZeroByZero)
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivZeroByZero, const_D128_QNAN0)
 		}
 		if d128_isZER(x) {
 			return d128_zero(resultSign, 0)
@@ -118,7 +118,7 @@ func d128_divideInteger_ctxnull(x, y d128, ctxnull *context) d128 {
 	resultSign := d128_signFlag(x) != d128_signFlag(y)
 	verify("", func() bool { return d128_isINF(x) || d128_isINF(y) })
 	if d128_isINF(x) && d128_isINF(y) {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivInfByInf)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivInfByInf, const_D128_QNAN0)
 	}
 	if d128_isINF(x) {
 		return d128_infinity(resultSign)
@@ -223,7 +223,7 @@ func divIntFnzFnz_rnd_ctx(x, y d128, ctxnull *context) d128 {
 	zQ := q2Q
 	headroom := 34 - d128_digitLen(q2)
 	if headroom < zQ {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivIntOverflowsCoefficient)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivIntOverflowsCoefficient, const_D128_QNAN0)
 	}
 	scaled := mulPow10_128_128(q2.ubdLo64, d128_hi49(q2), zQ)
 	return decimalFNZ_128(d128_signFlag(q2), 0, scaled.dw0, scaled.dw1)

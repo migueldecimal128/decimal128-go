@@ -52,12 +52,6 @@ func d128_bitLen(x d128) int { return bitLen_int_128(x.ubdLo64, d128_hi49(x)) }
 
 func d128_digitLen(x d128) int { return digitLen_int_128(x.ubdLo64, d128_hi49(x)) }
 
-func d128_sciExpWithDigitLen(x d128, digitLen int) int {
-	bitLen := bitLen_int_128(x.ubdLo64, d128_hi49(x))
-	digitLen = digitLen_int_128_withBitLen(x.ubdLo64, d128_hi49(x), bitLen)
-	return d128_qExp(x) + digitLen + (-bitLen >> 63)
-}
-
 func d128_sciExp(x d128) int {
 	digitLen := d128_digitLen(x)
 	return d128_qExp(x) + digitLen + (-digitLen >> 63)
@@ -92,11 +86,11 @@ func d128_isSNAN(x d128) bool { return ushr_64_64(x.ubdHi64, 58) == 31 }
 func d128_isNotSNAN(x d128) bool { return ushr_64_64(x.ubdHi64, 58) != 31 }
 
 func d128_isSubnormal(x d128) bool {
-	return d128_isFNZ(x) && d128_sciExpWithDigitLen(x, d128_digitLen(x)) < -6143
+	return d128_isFNZ(x) && d128_sciExp(x) < -6143
 }
 
 func d128_isNormal(x d128) bool {
-	return d128_isFNZ(x) && d128_sciExpWithDigitLen(x, d128_digitLen(x)) >= -6143
+	return d128_isFNZ(x) && d128_sciExp(x) >= -6143
 }
 
 func d128_isCanonical(x d128) bool { return true }

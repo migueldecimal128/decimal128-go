@@ -17,7 +17,7 @@ func d128_sqrt_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 			return d128_zero(d128_signFlag(x), d128_qExp(x)>>1)
 		}
 		if d128_signFlag(x) {
-			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeSquareRootOfNegFiniteNonZero)
+			return ctxSignalInvalidOperation_ctxnull(ctxnull, causeSquareRootOfNegFiniteNonZero, const_D128_QNAN0)
 		}
 		return sqrtMagnitudeFnz_ctxnull(x, rounding, ctxnull)
 	}
@@ -26,7 +26,7 @@ func d128_sqrt_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 	}
 	verify("", func() bool { return d128_isINF(x) })
 	if d128_signFlag(x) {
-		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeSquareRootOfNegInfinity)
+		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeSquareRootOfNegInfinity, const_D128_QNAN0)
 	}
 	return const_D128_POS_INFINITY
 }
