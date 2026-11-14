@@ -358,22 +358,19 @@ func iroot5(v u128) (u128, bool) {
 	if !isLt_pow10_34_bool_128(v.dw0, v.dw1) {
 		return u128{}, false
 	}
-	pow5 := func(r int64) u128 { // r < 2^23: r^5 < 2^115
-		r2 := r * r
-		r4 := mul_128_64x64(r2, r2)
-		return mul_128_128x128(r4.dw0, r4.dw1, r, 0)
-	}
 	var lo, hi int64 = 0, 7_000_000
 	for lo < hi {
 		mid := (lo + hi + 1) >> 1
-		p := pow5(mid)
+		m4 := mul_128_64x64(mid*mid, mid*mid) // mid < 2^23: mid^5 < 2^115
+		p := mul_128_128x128(m4.dw0, m4.dw1, mid, 0)
 		if cmp_int_128x128(p.dw0, p.dw1, v.dw0, v.dw1) <= 0 {
 			lo = mid
 		} else {
 			hi = mid - 1
 		}
 	}
-	if pow5(lo) == v {
+	l4 := mul_128_64x64(lo*lo, lo*lo)
+	if mul_128_128x128(l4.dw0, l4.dw1, lo, 0) == v {
 		return u128{lo, 0}, true
 	}
 	return u128{}, false
