@@ -244,7 +244,7 @@ func stripTens(cIn u128, qIn int) (u128, int) {
 	c := cIn
 	q := qIn
 	for !isZero_bool_128(c.dw0, c.dw1) {
-		quot, r := u128DivRemSmall(c, 10)
+		quot, r := divSmall(c, 10)
 		if r != 0 {
 			break
 		}
@@ -256,10 +256,10 @@ func stripTens(cIn u128, qIn int) (u128, int) {
 
 // twoFive is c = 2^a · 5^b exactly, or ok = false.
 func twoFive(cIn u128) (a, b int, ok bool) {
-	a = u128TrailingZeros(cIn)
+	a = ctz128(cIn)
 	c := shrU128(cIn, a)
 	for {
-		q, r := u128DivRemSmall(c, 5)
+		q, r := divSmall(c, 5)
 		if r != 0 {
 			break
 		}
@@ -267,19 +267,6 @@ func twoFive(cIn u128) (a, b int, ok bool) {
 		b += 1
 	}
 	return a, b, c == (u128{1, 0})
-}
-
-// shlExp is v·2^s for the exponent arithmetic of rootnExact, |v| < 2^14 and
-// 0 <= s <= 63: exact while it fits, else ±2^50, which matches no exponent the
-// test compares against (|q| < 2^14, k <= 231) (G-9; Swift computes q << s).
-func shlExp(v, s int) int {
-	if (v == 0) || (s <= 31) {
-		return v << s
-	}
-	if v < 0 {
-		return -(1 << 50)
-	}
-	return 1 << 50
 }
 
 // rootnExact: if y = candidate is exactly x^(±1/2^shifts), return it at the
@@ -295,7 +282,13 @@ func rootnExact(x d128, shifts int, invert bool, candidate d128, rounding round,
 	}
 	ysC, ysQ := stripTens(d128_u128(candidate), d128_qExp(candidate))
 	xsC, xsQ := stripTens(d128_u128(x), d128_qExp(x))
-	qPow := shlExp(ysQ, shifts)
+	// ys.q · 2^shifts, shifts <= 63 (|n| <= 2^63). An exact root has |ys.q · 2^shifts|
+	// within a few thousand, so a product that doesn't fit int is not exact: `<<` would
+	// drop its high bits silently, hence the round-trip check.
+	qPow := ysQ << shifts
+	if (qPow >> shifts) != ysQ {
+		return d128{}, false
+	}
 	if !invert {
 		p := ysC
 		j := 0
@@ -312,7 +305,14 @@ func rootnExact(x d128, shifts int, invert bool, candidate d128, rounding round,
 		}
 	} else {
 		// y^(2^s) · x = P·c_x · 10^(qPow + q_x) must equal 1.
-		k := -(qPow + xsQ)
+		qSum := qPow + xsQ
+		if ((xsQ > 0) && (qSum < qPow)) || ((xsQ < 0) && (qSum > qPow)) {
+			return d128{}, false
+		}
+		if qSum == math.MinInt {
+			return d128{}, false
+		}
+		k := -qSum
 		if (k < 0) || (k > 231) {
 			return d128{}, false
 		}
@@ -321,7 +321,15 @@ func rootnExact(x d128, shifts int, invert bool, candidate d128, rounding round,
 		if !okY || !okX {
 			return d128{}, false
 		}
-		if (shlExp(fyA, shifts)+fxA != k) || (shlExp(fyB, shifts)+fxB != k) {
+		// fy.a, fy.b <= 113 (cy < 2^113): past k <= 231 once shifted, unless they are 0.
+		ya := fyA << shifts
+		yb := fyB << shifts
+		if ((ya >> shifts) != fyA) || ((yb >> shifts) != fyB) {
+			return d128{}, false
+		}
+		a := ya + fxA // fx.a, fx.b >= 0: a sum below its first term overflowed
+		b := yb + fxB
+		if (a < ya) || (b < yb) || (a != k) || (b != k) {
 			return d128{}, false
 		}
 	}

@@ -17,7 +17,20 @@ func div_256_128_q128r128_mg(x u256, y u128) quot128Rem128 {
 	d0 := uint64(d.dw0)
 	v := vReciprocal_64_128_mg(int64(d1), int64(d0))
 
-	u0, u1, u2, u3, u4 := normalizeDividend(x, shift)
+	// Normalize the dividend into limbs u0..u4.
+	x0, x1 := uint64(x.dw0), uint64(x.dw1)
+	x2, x3 := uint64(x.dw2), uint64(x.dw3)
+	var u0, u1, u2, u3, u4 uint64
+	if shift == 0 {
+		u0, u1, u2, u3, u4 = x0, x1, x2, x3, 0
+	} else {
+		rs := 64 - shift
+		u0 = x0 << shift
+		u1 = (x1 << shift) | (x0 >> rs)
+		u2 = (x2 << shift) | (x1 >> rs)
+		u3 = (x3 << shift) | (x2 >> rs)
+		u4 = x3 >> rs
+	}
 	verify("quotient exceeds 128 bits", func() bool { return u4 == 0 })
 
 	remHi, remLo := u3, u2 // top 128 bits; < d (qh == 0)
@@ -30,8 +43,14 @@ func div_256_128_q128r128_mg(x u256, y u128) quot128Rem128 {
 	qLo := uint64(s2.quotDw0)
 	remHi, remLo = uint64(s2.remDw1), uint64(s2.remDw0)
 
-	remLo, remHi = denormalizeRemainder(remLo, remHi, shift)
-	return quot128Rem128{int64(qLo), int64(qHi), int64(remLo), int64(remHi)}
+	var remainderLo, remainderHi uint64
+	if shift == 0 {
+		remainderLo, remainderHi = remLo, remHi
+	} else {
+		remainderLo = (remLo >> shift) | (remHi << (64 - shift))
+		remainderHi = remHi >> shift
+	}
+	return quot128Rem128{int64(qLo), int64(qHi), int64(remainderLo), int64(remainderHi)}
 }
 
 // div_256_128_q256r128_mg: x > 2^128, y > 2^64, full quotient (sqrt).
@@ -46,7 +65,20 @@ func div_256_128_q256r128_mg(x u256, y u128) quot256Rem128 {
 	d0 := uint64(d.dw0)
 	v := vReciprocal_64_128_mg(int64(d1), int64(d0))
 
-	u0, u1, u2, u3, u4 := normalizeDividend(x, shift)
+	// Normalize the dividend into limbs u0..u4.
+	x0, x1 := uint64(x.dw0), uint64(x.dw1)
+	x2, x3 := uint64(x.dw2), uint64(x.dw3)
+	var u0, u1, u2, u3, u4 uint64
+	if shift == 0 {
+		u0, u1, u2, u3, u4 = x0, x1, x2, x3, 0
+	} else {
+		rs := 64 - shift
+		u0 = x0 << shift
+		u1 = (x1 << shift) | (x0 >> rs)
+		u2 = (x2 << shift) | (x1 >> rs)
+		u3 = (x3 << shift) | (x2 >> rs)
+		u4 = x3 >> rs
+	}
 
 	remHi, remLo := u4, u3
 	var qh uint64 = 0
@@ -66,6 +98,12 @@ func div_256_128_q256r128_mg(x u256, y u128) quot256Rem128 {
 	q0 := uint64(s0.quotDw0)
 	remHi, remLo = uint64(s0.remDw1), uint64(s0.remDw0)
 
-	remLo, remHi = denormalizeRemainder(remLo, remHi, shift)
-	return quot256Rem128{int64(q0), int64(q1), int64(q2), int64(qh), int64(remLo), int64(remHi)}
+	var remainderLo, remainderHi uint64
+	if shift == 0 {
+		remainderLo, remainderHi = remLo, remHi
+	} else {
+		remainderLo = (remLo >> shift) | (remHi << (64 - shift))
+		remainderHi = remHi >> shift
+	}
+	return quot256Rem128{int64(q0), int64(q1), int64(q2), int64(qh), int64(remainderLo), int64(remainderHi)}
 }

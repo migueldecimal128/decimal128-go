@@ -168,7 +168,7 @@ func powPreferredQExp(x, y d128) int {
 	prod := d48_multiply(d48_fromD128(y, d128_signFlag(y)), d48_fromInt32(qX))
 	floored := d48_roundToIntegralTowardNegative(prod)
 	l := d48_toLongOrMin(floored)
-	return int(maxI64(minI64(l, const_Q_MAX), const_Q_TINY))
+	return int(max(min(l, const_Q_MAX), const_Q_TINY))
 }
 
 // powFromD48 is pow(x, y) = 10^u, u = y·log10(x), over D48, rounded once. The
@@ -234,7 +234,7 @@ func powExact(x, y d128, preferred int, rounding round, ctxnull *context) (d128,
 	}
 	t5 := 0
 	for t5 < k {
-		q, r := u128DivRemSmall(cy, 5)
+		q, r := divSmall(cy, 5)
 		if r != 0 {
 			break
 		}
@@ -257,11 +257,11 @@ func powExact(x, y d128, preferred int, rounding round, ctxnull *context) (d128,
 
 	// x = 2^A·5^B·w.
 	cx := d128_u128(x)
-	p2 := u128TrailingZeros(cx)
+	p2 := ctz128(cx)
 	cx = shrU128(cx, p2)
 	p5 := 0
 	for {
-		q, r := u128DivRemSmall(cx, 5)
+		q, r := divSmall(cx, 5)
 		if r != 0 {
 			break
 		}
@@ -378,8 +378,8 @@ func iroot5(v u128) (u128, bool) {
 
 // --- 128-bit integer helpers for the exact rules (Swift uses UInt128) ---
 
-// u128DivRemSmall is c / d and c mod d for a one-word d > 0.
-func u128DivRemSmall(c u128, d int64) (u128, int64) {
+// divSmall is c / d and c mod d for a one-word d > 0.
+func divSmall(c u128, d int64) (u128, int64) {
 	qr := divRem_q128r64_128x64(c.dw0, c.dw1, d)
 	return u128{qr.quotDw0, qr.quotDw1}, qr.remDw0
 }
@@ -390,8 +390,8 @@ func u128MulChecked(a, b u128) (u128, bool) {
 	return u128{p.dw0, p.dw1}, (p.dw2 | p.dw3) == 0
 }
 
-// u128TrailingZeros is the number of trailing zero bits of a nonzero c.
-func u128TrailingZeros(c u128) int {
+// ctz128 is the number of trailing zero bits of a nonzero c.
+func ctz128(c u128) int {
 	if c.dw0 != 0 {
 		return bits.TrailingZeros64(uint64(c.dw0))
 	}

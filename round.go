@@ -19,7 +19,7 @@ const (
 	const_ROUND_TOWARD_NEGATIVE round = 4
 )
 
-func roundName(r round) string {
+func (r round) description() string {
 	if r == const_ROUND_TIES_TO_EVEN {
 		return "tiesToEven"
 	}

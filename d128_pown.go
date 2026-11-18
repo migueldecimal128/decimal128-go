@@ -8,7 +8,10 @@
 
 package decimal128
 
-import "math/bits"
+import (
+	"math"
+	"math/bits"
+)
 
 var const_D128_ONE = d128_fromInt64(1)
 var const_D128_TEN = d128_fromInt64(10)
@@ -87,10 +90,21 @@ func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 
 	negative := d128_signFlag(x) && (n&1) != 0
 
-	// |x| == 1: result is ±1 carrying the preferred exponent n·Q(x), clamped to
-	// [-33, 0] (the product saturated: n may be math.MinInt).
+	// |x| == 1: result is ±1 carrying the preferred exponent n·Q(x), clamped to [-33, 0].
+	// n·Q(x) can overflow for |n| near 2^63; the clamp then needs only its sign.
 	if cmpMagFnzFnz(x, const_D128_ONE) == 0 {
-		resultQExp := max(min(satMulSigned(n, d128_qExp(x)), 0), -33)
+		q := int64(d128_qExp(x))
+		p := int64(n) * q
+		overflow := (q != 0) && ((p/q != int64(n)) || ((int64(n) == math.MinInt64) && (q == -1)))
+		nq := p
+		if overflow {
+			if (n < 0) == (q < 0) {
+				nq = math.MaxInt64
+			} else {
+				nq = math.MinInt64
+			}
+		}
+		resultQExp := int(max(min(nq, 0), -33))
 		return d128_oneWithQExp(negative, resultQExp)
 	}
 
@@ -103,8 +117,8 @@ func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 			return finalizeUnderflowFullySwamped(negative, rounding, ctxnull)
 		}
 		preferredQExpLong := int64(n) * int64(d128_qExp(x)) // |n| <= 6176 here
-		minPreferredQExp := minI64(maxI64(int64(n)-33, -32), 0)
-		preferredQExp := int(maxI64(preferredQExpLong, minPreferredQExp))
+		minPreferredQExp := min(max(int64(n)-33, -32), 0)
+		preferredQExp := int(max(preferredQExpLong, minPreferredQExp))
 		return tenPowN(negative, n, preferredQExp, rounding, ctxnull)
 	}
 
@@ -158,12 +172,6 @@ const (
 	const_POWN_QEXP_UNDER = -6250
 )
 
-// ladderStartBit is the bit below |n|'s top bit (n >= 2): the left-to-right
-// ladder starts from x and walks the remaining bits.
-func ladderStartBit(n uint64) uint64 {
-	return uint64(1) << (62 - bits.LeadingZeros64(n))
-}
-
 func pownFNZ_powGE3(x d128, n uint64, rounding round, ctxnull *context) d128 {
 	verify("", func() bool { return n >= 3 })
 	return pown_d48Positive(d48_fromD128(x, d128_signFlag(x)), n, pownPositiveExact(x, n), rounding, ctxnull)
@@ -180,7 +188,7 @@ func pown_d48Ladder(m d48, n uint64) d48 {
 		return m // the top-bit shift needs n >= 2
 	}
 	z := m
-	bit := ladderStartBit(n)
+	bit := uint64(1) << (62 - bits.LeadingZeros64(n))
 	for bit != 0 {
 		z = d48_square(z)
 		if (n & bit) != 0 {
@@ -313,32 +321,6 @@ func saturate(v int) int {
 	return max(-1_000_000_000, min(1_000_000_000, v))
 }
 
-// satMul is a·m clamped to ±2·10^9 (m unsigned, so |math.MinInt| is exact):
-// wide enough that saturate of a sum with a small term is unchanged.
-func satMul(a int, m uint64) int {
-	const lim = 2_000_000_000
-	ua := uint64(a)
-	if a < 0 {
-		ua = -ua
-	}
-	hi, lo := bits.Mul64(ua, m)
-	if (hi != 0) || (lo > lim) {
-		lo = lim
-	}
-	if a < 0 {
-		return -int(lo)
-	}
-	return int(lo)
-}
-
-// satMulSigned is n·q clamped to ±2·10^9, for any int n.
-func satMulSigned(n, q int) int {
-	if n < 0 {
-		return -satMul(q, -uint64(n))
-	}
-	return satMul(q, uint64(n))
-}
-
 // pownNegativeExact is the exact 1/x^m (m >= 1) when it exists in decimal128,
 // else ok = false. Strip x's trailing zeros: x = c'·10^e. 1/x^m is a
 // terminating decimal iff c' = 2^a or 5^b (or 1), and fits 34 digits iff
@@ -353,11 +335,11 @@ func pownNegativeExact(x d128, m uint64, rounding round, ctxnull *context) (d128
 // quantum exponent before any trailing zeros were stripped).
 func pown_negativeExactCoeff(xSign bool, c u128, qExp, preferredBaseQExp int, m uint64,
 	rounding round, ctxnull *context) (d128, bool) {
-	p2 := u128TrailingZeros(c)
+	p2 := ctz128(c)
 	odd := shrU128(c, p2)
 	q5 := 0
 	for {
-		q, r := u128DivRemSmall(odd, 5)
+		q, r := divSmall(odd, 5)
 		if r != 0 {
 			break
 		}
@@ -391,7 +373,7 @@ func pown_negativeExactCoeff(xSign bool, c u128, qExp, preferredBaseQExp int, m 
 		coeff = shlU128(coeff, k)
 	}
 	sign := xSign && ((m & 1) != 0)
-	return d48_exactWithPreferred(sign, coeff, saturate(-k-satMul(e, m)), saturate(-satMul(preferredBaseQExp, m)),
+	return d48_exactWithPreferred(sign, coeff, saturate(-k-e*int(m)), saturate(-int(m)*preferredBaseQExp),
 		rounding, ctxnull), true
 }
 
@@ -424,18 +406,4 @@ func tenPowN(sign bool, n, preferredQExp int, rounding round, ctxnull *context) 
 	}
 	coeff := fromLoHi_128_64x64(pow10_128_dw0(coeffExp), pow10_128_dw1(coeffExp))
 	return finalize_128_ctxnull(sign, preferredQExp, coeff, const_RESIDUE_EXACT, rounding, ctxnull)
-}
-
-func minI64(a, b int64) int64 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func maxI64(a, b int64) int64 {
-	if a > b {
-		return a
-	}
-	return b
 }

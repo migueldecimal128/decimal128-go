@@ -41,8 +41,8 @@ func d128_mortgagePayment_tte(principal, periodicRate d128, numPayments int) d12
 	return d128_divide_tte(num, denom)
 }
 
-// amortizationRowCore is one row in an amortization schedule (core form).
-type amortizationRowCore struct {
+// amortizationRow is one row in an amortization schedule (core form).
+type amortizationRow struct {
 	period        int
 	payment       d128
 	interest      d128
@@ -53,10 +53,10 @@ type amortizationRowCore struct {
 // d128_amortizationSchedule_tte returns one row per payment period. The final
 // balance is clamped to exactly zero when its magnitude is below half a cent (a
 // fixed-payment rounding artifact).
-func d128_amortizationSchedule_tte(principal, periodicRate d128, numPayments int) []amortizationRowCore {
+func d128_amortizationSchedule_tte(principal, periodicRate d128, numPayments int) []amortizationRow {
 	demand("amortizationSchedule: numPayments exceeds 100000", numPayments <= 100000)
 	payment := d128_mortgagePayment_tte(principal, periodicRate, numPayments)
-	rows := make([]amortizationRowCore, 0, numPayments)
+	rows := make([]amortizationRow, 0, numPayments)
 	balance := principal
 	p := 1
 	for p <= numPayments {
@@ -66,7 +66,7 @@ func d128_amortizationSchedule_tte(principal, periodicRate d128, numPayments int
 		if p == numPayments && d128_isLess(d128_abs(balance), const_FIN_HALF_CENT) {
 			balance = const_FIN_ZERO
 		}
-		rows = append(rows, amortizationRowCore{p, payment, interest, principalPaid, balance})
+		rows = append(rows, amortizationRow{p, payment, interest, principalPaid, balance})
 		p += 1
 	}
 	return rows

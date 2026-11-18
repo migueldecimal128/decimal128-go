@@ -119,7 +119,8 @@ func compoundMinusOne(x d128, n int, ctxnull *context) d128 {
 // compoundZeroResult gives a zero power the preferred exponent ⌊|n|·min(0, Q(x))⌋.
 func compoundZeroResult(x d128, n int, result d128) d128 {
 	if d128_isZER(result) {
-		qPreferred := max(min(-satMul(-min(0, d128_qExp(x)), absU64(n)), 6111), -6176)
+		absN := int(min(absU64(n), 10_000))
+		qPreferred := max(min(absN*min(0, d128_qExp(x)), 6111), -6176)
 		return d128_zero(false, qPreferred)
 	}
 	return result

@@ -88,35 +88,35 @@ func mul_256_256x256(xDw0, xDw1, xDw2, xDw3, yDw0, yDw1, yDw2, yDw3 int64) u256 
 	var colLo, colHi uint64
 	didOverflow := false
 
-	mulAddCol256(a0, b0, &colLo, &colHi, &didOverflow)
+	addProduct(a0, b0, &colLo, &colHi, &didOverflow)
 	r0 := colLo
 	colLo, colHi = colHi, 0
 
-	mulAddCol256(a1, b0, &colLo, &colHi, &didOverflow)
-	mulAddCol256(a0, b1, &colLo, &colHi, &didOverflow)
+	addProduct(a1, b0, &colLo, &colHi, &didOverflow)
+	addProduct(a0, b1, &colLo, &colHi, &didOverflow)
 	r1 := colLo
 	colLo, colHi = colHi, 0
 
-	mulAddCol256(a2, b0, &colLo, &colHi, &didOverflow)
-	mulAddCol256(a1, b1, &colLo, &colHi, &didOverflow)
-	mulAddCol256(a0, b2, &colLo, &colHi, &didOverflow)
+	addProduct(a2, b0, &colLo, &colHi, &didOverflow)
+	addProduct(a1, b1, &colLo, &colHi, &didOverflow)
+	addProduct(a0, b2, &colLo, &colHi, &didOverflow)
 	r2 := colLo
 	colLo, colHi = colHi, 0
 
-	mulAddCol256(a3, b0, &colLo, &colHi, &didOverflow)
-	mulAddCol256(a2, b1, &colLo, &colHi, &didOverflow)
-	mulAddCol256(a1, b2, &colLo, &colHi, &didOverflow)
-	mulAddCol256(a0, b3, &colLo, &colHi, &didOverflow)
+	addProduct(a3, b0, &colLo, &colHi, &didOverflow)
+	addProduct(a2, b1, &colLo, &colHi, &didOverflow)
+	addProduct(a1, b2, &colLo, &colHi, &didOverflow)
+	addProduct(a0, b3, &colLo, &colHi, &didOverflow)
 	r3 := colLo
 	colLo, colHi = colHi, 0
 
 	// Columns 4+: any non-zero contribution here is overflow.
-	mulAddCol256(a3, b1, &colLo, &colHi, &didOverflow)
-	mulAddCol256(a2, b2, &colLo, &colHi, &didOverflow)
-	mulAddCol256(a1, b3, &colLo, &colHi, &didOverflow)
-	mulAddCol256(a3, b2, &colLo, &colHi, &didOverflow)
-	mulAddCol256(a2, b3, &colLo, &colHi, &didOverflow)
-	mulAddCol256(a3, b3, &colLo, &colHi, &didOverflow)
+	addProduct(a3, b1, &colLo, &colHi, &didOverflow)
+	addProduct(a2, b2, &colLo, &colHi, &didOverflow)
+	addProduct(a1, b3, &colLo, &colHi, &didOverflow)
+	addProduct(a3, b2, &colLo, &colHi, &didOverflow)
+	addProduct(a2, b3, &colLo, &colHi, &didOverflow)
+	addProduct(a3, b3, &colLo, &colHi, &didOverflow)
 
 	if didOverflow || colLo != 0 || colHi != 0 {
 		impossible("mul_256_256x256 overflow")
@@ -124,10 +124,9 @@ func mul_256_256x256(xDw0, xDw1, xDw2, xDw3, yDw0, yDw1, yDw2, yDw3 int64) u256 
 	return u256{int64(r0), int64(r1), int64(r2), int64(r3)}
 }
 
-// mulAddCol256 adds the 128-bit product a*b into the 128-bit accumulator
-// (colLo:colHi), setting didOverflow on carry-out — the Go spelling of Swift's
-// UInt128 addingReportingOverflow column step.
-func mulAddCol256(a, b uint64, colLo, colHi *uint64, didOverflow *bool) {
+func addProduct(a, b uint64, colLo, colHi *uint64, didOverflow *bool) {
+	// Adds the 128-bit product a*b into the 128-bit accumulator (colLo:colHi),
+	// setting didOverflow on carry-out: Swift's UInt128 addingReportingOverflow step.
 	pHi, pLo := bits.Mul64(a, b)
 	sumLo, c := bits.Add64(*colLo, pLo, 0)
 	sumHi, c2 := bits.Add64(*colHi, pHi, c)

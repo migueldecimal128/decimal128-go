@@ -52,6 +52,33 @@ func rmp10_192_dw0(k int) int64 { return const_RMP10_192_M[k*3] }
 func rmp10_192_dw1(k int) int64 { return const_RMP10_192_M[k*3+1] }
 func rmp10_192_dw2(k int) int64 { return const_RMP10_192_M[k*3+2] }
 
+// True iff any of the low `n` bits (0 <= n < 256) of x are set.
+func lowBitsNonZero_192(d0, d1, d2, d3 int64, n int) bool {
+	if n <= 0 {
+		return false
+	}
+	u0, u1, u2, u3 := uint64(d0), uint64(d1), uint64(d2), uint64(d3)
+	if n < 64 {
+		return u0&((uint64(1)<<n)-1) != 0
+	}
+	if n == 64 {
+		return u0 != 0
+	}
+	if n < 128 {
+		return u0 != 0 || u1&((uint64(1)<<(n-64))-1) != 0
+	}
+	if n == 128 {
+		return u0|u1 != 0
+	}
+	if n < 192 {
+		return u0|u1 != 0 || u2&((uint64(1)<<(n-128))-1) != 0
+	}
+	if n == 192 {
+		return u0|u1|u2 != 0
+	}
+	return u0|u1|u2 != 0 || u3&((uint64(1)<<(n-192))-1) != 0
+}
+
 func divPow10_q128res_192_recipmul(x u256, pow10 int) quot128Residue {
 	demand("recipmul192: pow10 outside [1, 77]", pow10 > 0 && pow10 <= 77)
 	k := pow10
@@ -63,7 +90,7 @@ func divPow10_q128res_192_recipmul(x u256, pow10 int) quot128Residue {
 
 	// Strip k-1 low bits (the 2^(k-1) factor of 10^k); track them as sticky.
 	a := shr_256_256(x.dw0, x.dw1, x.dw2, x.dw3, sh)
-	stickyAlfa := lowBitsNonZero_256(x.dw0, x.dw1, x.dw2, x.dw3, sh)
+	stickyAlfa := lowBitsNonZero_192(x.dw0, x.dw1, x.dw2, x.dw3, sh)
 
 	// P = A * M  (384-bit), M = m2:m1:m0.
 	pLo, pHi := mul384_192x192(uint64(a.dw0), uint64(a.dw1), uint64(a.dw2),
@@ -76,7 +103,7 @@ func divPow10_q128res_192_recipmul(x u256, pow10 int) quot128Residue {
 
 	// stickyBeta = (P mod 2^S192) >= M: low s192 bits of pHi nonzero
 	// (fraction >= 2^192 > M), else compare the low 192 bits (pLo) against M.
-	highFrac := lowBitsNonZero_256(pHi.dw0, pHi.dw1, pHi.dw2, pHi.dw3, s192)
+	highFrac := lowBitsNonZero_192(pHi.dw0, pHi.dw1, pHi.dw2, pHi.dw3, s192)
 	pLoGeM := cmp_int_256x256(pLo.dw0, pLo.dw1, pLo.dw2, pLo.dw3, m0, m1, m2, 0) >= 0
 	sticky := stickyAlfa || highFrac || pLoGeM
 

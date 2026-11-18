@@ -1,7 +1,6 @@
-// The sign representations (CrossPlatformArchitecture.md §4.5): signFlag (bool),
-// signBit (0/1 int), signMask (0/-1 int), with named conversions so each
-// platform can emit its best branchless lowering. The bare term `sign` is not
-// used.
+// The bool → 0/1 conversions (CrossPlatformArchitecture.md §4.5: signFlag is a
+// bool, signBit a 0/1 int). Swift writes `(b) ? 1 : 0`; Go has no conditional
+// expression and no bool-to-int conversion, so the two spellings live here.
 
 package decimal128
 
@@ -11,10 +10,6 @@ func signBitOf(signFlag bool) int {
 	}
 	return 0
 }
-
-func signFlagOf(signBit int) bool { return signBit != 0 }
-
-func signMaskOf(signBit int) int { return -signBit }
 
 // boolToInt64 is the int64 spelling of signBitOf, used when packing a sign into
 // a dword field.
