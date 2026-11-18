@@ -18,8 +18,7 @@ type u256 struct {
 func (x u256) lo() u128 { return u128{dw0: x.dw0, dw1: x.dw1} }
 func (x u256) hi() u128 { return u128{dw0: x.dw2, dw1: x.dw3} }
 
-// bitLen is the bit length of the magnitude (primitive-interior sugar, §3.4;
-// core uses bitLen_int_256). bitLen(0) == 0.
+// Primitive-interior sugar (Section 3.4); internal -- core uses bitLen_int_256.
 func (x u256) bitLen() int {
 	if x.dw3 != 0 {
 		return 256 - bits.LeadingZeros64(uint64(x.dw3))
@@ -33,6 +32,7 @@ func (x u256) bitLen() int {
 	return 64 - bits.LeadingZeros64(uint64(x.dw0))
 }
 
+// Primitive-interior sugar (Section 3.4); internal -- core uses digitLen_int_256.
 func (x u256) digitLen() int {
 	return digitLen_int_256(x.dw0, x.dw1, x.dw2, x.dw3)
 }
@@ -53,8 +53,8 @@ func shl1_256_256(xDw0, xDw1, xDw2, xDw3 int64) u256 {
 	return u256FromHiLo(newHi, newLo)
 }
 
-// shr1_256_256 returns x shifted right by exactly 1 bit; the bottom bit of hi
-// flows into the top bit of the new lo.
+// shr1_256_256 returns `x` shifted right by exactly 1 bit.
+// The bottom bit of `hi` flows into the top bit of the new `lo`.
 func shr1_256_256(xDw0, xDw1, xDw2, xDw3 int64) u256 {
 	lo := fromLoHi_128_64x64(xDw0, xDw1)
 	hi := fromLoHi_128_64x64(xDw2, xDw3)

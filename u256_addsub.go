@@ -7,7 +7,7 @@ package decimal128
 
 import "math/bits"
 
-// add_256_128x128 returns x + y as a u256; cannot overflow.
+// add_256_128x128 returns `x + y` as a U256; cannot overflow.
 func add_256_128x128(xDw0, xDw1, yDw0, yDw1 int64) u256 {
 	r0, c := bits.Add64(uint64(xDw0), uint64(yDw0), 0)
 	r1, c := bits.Add64(uint64(xDw1), uint64(yDw1), c)
@@ -62,8 +62,8 @@ func sub_256_256x256(xDw0, xDw1, xDw2, xDw3, yDw0, yDw1, yDw2, yDw3 int64) u256 
 	return d
 }
 
-// subAbs_d128swap_128x128 returns |x - y| and whether the operands were swapped
-// (y > x). The borrow flag is the swap flag (D14).
+// subAbs_d128swap_128x128 returns `|x - y|` and whether the operands were swapped (y > x).
+// Branch-free conditional negate; the borrow flag is the swap flag (D14).
 func subAbs_d128swap_128x128(xDw0, xDw1, yDw0, yDw1 int64) diff128Swap {
 	diff, borrow := sub128Borrow(u128{xDw0, xDw1}, u128{yDw0, yDw1})
 	swap := borrow != 0
@@ -73,7 +73,8 @@ func subAbs_d128swap_128x128(xDw0, xDw1, yDw0, yDw1 int64) diff128Swap {
 	return diff128Swap{diff.dw0, diff.dw1, swap}
 }
 
-// subAbs_d256swap_256x128 returns |x - y| and the swap flag (y > x).
+// subAbs_d256swap_256x128 returns `|x - y|` and whether the operands were swapped (y > x).
+// Single-pass borrow chain + branch-free conditional negate (D2).
 func subAbs_d256swap_256x128(xDw0, xDw1, xDw2, xDw3, yDw0, yDw1 int64) diff256Swap {
 	diff, borrow := sub256Borrow(
 		u256{xDw0, xDw1, xDw2, xDw3},
@@ -82,7 +83,8 @@ func subAbs_d256swap_256x128(xDw0, xDw1, xDw2, xDw3, yDw0, yDw1 int64) diff256Sw
 	return absDiff256(diff, borrow)
 }
 
-// subAbs_d256swap_256x256 returns |x - y| and the swap flag (y > x).
+// subAbs_d256swap_256x256 returns `|x - y|` and whether the operands were swapped (y > x).
+// Single-pass borrow chain + branch-free conditional negate (D2).
 func subAbs_d256swap_256x256(xDw0, xDw1, xDw2, xDw3, yDw0, yDw1, yDw2, yDw3 int64) diff256Swap {
 	diff, borrow := sub256Borrow(
 		u256{xDw0, xDw1, xDw2, xDw3},

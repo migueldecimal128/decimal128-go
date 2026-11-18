@@ -5,11 +5,14 @@
 
 package decimal128
 
+// residueMerge merges two residues from a single quantity (left = the higher-order
+// truncation).
 func residueMerge(leftResidue, rightResidue residue) residue {
 	verify("", func() bool { return (leftResidue|rightResidue)&^3 == 0 })
 	return (leftResidue | rightResidue>>1 | rightResidue&1) & 3
 }
 
+// The residue of the additive inverse (subtraction) of a value.
 func residueSubtractionInverse(res residue) residue {
 	verify("", func() bool { return res&^3 == 0 })
 	// EXACT->EXACT, LT_HALF->GT_HALF, HALF->HALF, GT_HALF->LT_HALF, packed nybbles.
@@ -17,6 +20,7 @@ func residueSubtractionInverse(res residue) residue {
 	return (const_INVERSE_MAP >> uint(res<<2)) & 0x3
 }
 
+// Residue of a 256-bit remainder against a 256-bit divisor.
 func residueFromRemainderDivisor_256(remainder, divisor u256) residue {
 	if (remainder.dw3 >> 63) == 0 {
 		if isZero_bool_128(remainder.dw2|remainder.dw0, remainder.dw3|remainder.dw1) {
@@ -30,6 +34,7 @@ func residueFromRemainderDivisor_256(remainder, divisor u256) residue {
 	return const_RESIDUE_GT_HALF
 }
 
+// Residue of truncating an entire decade (all digitLen digits) from a value.
 func residueFromDecadeWithDigitLen_128(dw0, dw1 int64, digitLen int) residue {
 	// Not mergeable with residueFromRemainderDivisor_128: digitLen could be 39
 	// but 10^39 does not fit in 128 bits.

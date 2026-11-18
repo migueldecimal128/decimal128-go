@@ -14,9 +14,8 @@ type scaled struct {
 	n int
 }
 
-// expScaled_d48 is exp(x) = z·10^n via range reduction + [12/12] Padé of r/8 +
-// three squarings. The caller has checked sciExp(x) < 6, so n = round(x/ln10)
-// is small.
+// exp(x) = z*10^n via range reduction + [12/12] Pade of r/8 + three squarings.
+// The caller has checked sciExp(x) < 6, so n = round(x/ln10) is small.
 func expScaled_d48(x d128) scaled {
 	xd := d48_fromD128(x, d128_signFlag(x))
 
@@ -43,7 +42,7 @@ func expScaled_d48(x d128) scaled {
 	return scaled{z: e, n: n}
 }
 
-// exp10Scaled_d48 is 10^xd = z·10^n for a non-integer xd with |round(xd)| <= 6200.
+// 10^xd = z*10^n for a non-integer xd with |round(xd)| <= 6200.
 func exp10Scaled_d48(xd d48) scaled {
 	nDec := d48_roundToIntegralTiesToAway(xd)
 	nLong := int(d48_toLongOrMin(nDec))
@@ -63,10 +62,10 @@ func exp10Scaled_d48(xd d48) scaled {
 // ×250 slack.
 var const_E_EXP_D48 = u320FromDw0(10_000)
 
-// finalizeScaled rounds ±exp(z)^8 scaled by 10^n once into decimal128; a
-// non-special exp / exp10 / pow / large-n pown result is irrational, hence
-// Inexact. sign is the result's sign: false except for pown of a negative base
-// to an odd large n (PownLargeNWorkOrder.md LN-5).
+// +/-exp(z)^8 scaled by 10^n, rounded once into decimal128; a non-special exp /
+// exp10 / pow / large-n pown result is irrational, hence Inexact. `sign` is the
+// result's sign: false except for pown of a negative base to an odd large n
+// (PownLargeNWorkOrder.md LN-5).
 func finalizeScaled(sign bool, e d48, n int, rounding round, ctxnull *context) d128 {
 	result := finalize_256_ctxnull(sign, d48_qExp(e)+n, u256{e.coeffDw0, e.coeffDw1, e.coeffDw2, 0},
 		const_RESIDUE_EXACT, rounding, ctxnull)
@@ -77,8 +76,8 @@ func ambiguousScaled(s scaled, e u320) bool {
 	return d48_ambiguous(d48_u320(s.z), d48_qExp(s.z)+s.n, e)
 }
 
-// exp10Trivial is ±10^xd when it needs no kernel: an exact integer power, or
-// certain overflow / underflow. ok = false otherwise. sign as for finalizeScaled.
+// +/-10^xd when it needs no kernel: an exact integer power, or certain overflow /
+// underflow. ok = false otherwise. `sign` as for finalizeScaled.
 func exp10Trivial(sign bool, xd d48, rounding round, ctxnull *context) (d128, bool) {
 	l := d48_toLongOrMin(xd)
 	if l != math.MinInt64 {
@@ -106,9 +105,9 @@ func exp10Trivial(sign bool, xd d48, rounding round, ctxnull *context) (d128, bo
 	return d128{}, false
 }
 
-// expImplFNZ_d48 is exp(x) for a finite non-zero x. Results within 10^4 units
-// of a rounding boundary go to the tiny-argument rule; one it doesn't decide is
-// rounded as is (the documented 1-ulp gap, CrossPlatformArchitecture.md).
+// exp(x) for a finite non-zero x. Results within 10^4 units of a rounding
+// boundary go to the tiny-argument rule; one it doesn't decide is rounded as
+// is (the documented 1-ulp gap, CrossPlatformArchitecture.md).
 func expImplFNZ_d48(x d128, rounding round, ctxnull *context) d128 {
 	// |x| ≥ 10^6: exp certainly overflows (x > 0) or underflows to 0 (x < 0).
 	if d128_sciExp(x) >= 6 {
@@ -124,8 +123,7 @@ func expImplFNZ_d48(x d128, rounding round, ctxnull *context) d128 {
 	return finalizeScaled(false, s.z, s.n, rounding, ctxnull)
 }
 
-// d128_exp10_from_d48 is 10^xd for a D48 argument, rounded once (the exp10
-// entry; also tests).
+// 10^xd for a D48 argument, rounded once (the exp10 entry; also tests).
 func d128_exp10_from_d48(xd d48, rounding round, ctxnull *context) d128 {
 	if t, ok := exp10Trivial(false, xd, rounding, ctxnull); ok {
 		return t
@@ -134,8 +132,7 @@ func d128_exp10_from_d48(xd d48, rounding round, ctxnull *context) d128 {
 	return finalizeScaled(false, s.z, s.n, rounding, ctxnull)
 }
 
-// exp10ImplFNZ_d48 is exp10(x) for a finite non-zero x; the tiny rule as for
-// exp, on u = x·ln10.
+// exp10(x) for a finite non-zero x; the tiny rule as for exp, on u = x*ln10.
 func exp10ImplFNZ_d48(x d128, rounding round, ctxnull *context) d128 {
 	xd := d48_fromD128(x, d128_signFlag(x))
 	if t, ok := exp10Trivial(false, xd, rounding, ctxnull); ok {

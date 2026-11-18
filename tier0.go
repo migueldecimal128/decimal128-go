@@ -9,23 +9,23 @@ package decimal128
 
 import "math/bits"
 
-// umulHi_64_64x64 returns the high 64 bits of the unsigned 64×64 product.
+// High 64 bits of the unsigned 64*64 product.
 func umulHi_64_64x64(a, b int64) int64 {
 	hi, _ := bits.Mul64(uint64(a), uint64(b))
 	return int64(hi)
 }
 
-// udiv_64_64x64 returns the unsigned 64÷64 quotient.
+// Unsigned 64/64 quotient.
 func udiv_64_64x64(a, b int64) int64 {
 	return int64(uint64(a) / uint64(b))
 }
 
-// urem_64_64x64 returns the unsigned 64÷64 remainder.
+// Unsigned 64/64 remainder.
 func urem_64_64x64(a, b int64) int64 {
 	return int64(uint64(a) % uint64(b))
 }
 
-// ucmp_int_64x64 returns -1/0/+1 from an unsigned compare.
+// -1/0/+1 unsigned compare.
 func ucmp_int_64x64(a, b int64) int {
 	ua := uint64(a)
 	ub := uint64(b)
@@ -38,23 +38,23 @@ func ucmp_int_64x64(a, b int64) int {
 	return 1
 }
 
-// clz_int_64 returns the leading-zero count; clz_int_64(0) == 64.
+// Leading zero count; `clz_int_64(0) == 64`.
 func clz_int_64(a int64) int {
 	return bits.LeadingZeros64(uint64(a))
 }
 
-// ushr_64_64 is a logical right shift; n in 0..<64.
+// Logical right shift; `n` in `0..<64`.
 func ushr_64_64(a int64, n int) int64 {
 	verify("", func() bool { return n >= 0 && n < 64 })
 	return int64(uint64(a) >> uint(n))
 }
 
-// hi32_64 returns the high 32 bits of a dword, zero-extended (value in 0..<32).
+// High 32 bits of a dword, zero-extended (the value occupies bits 0..<32).
 func hi32_64(dw int64) int64 {
 	return int64(uint64(dw) >> 32)
 }
 
-// lo32_64 returns the low 32 bits of a dword, zero-extended.
+// Low 32 bits of a dword, zero-extended.
 func lo32_64(dw int64) int64 {
 	return int64(uint64(dw) & 0xFFFF_FFFF)
 }

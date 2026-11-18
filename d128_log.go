@@ -15,6 +15,11 @@ func d128_ln_ctx(x d128, ctx *context) d128 {
 	return d128_ln_rnd_ctxnull(x, ctx.round, ctx)
 }
 
+// IEEE 754-2019 Section 9.2 log(x), the natural logarithm. The finite nonzero
+// magnitude is computed in the 48-digit D48 domain (argument reduction,
+// square-root reduction, an [11/12] Pade approximant), then rounded once with
+// the caller's rounding. Correctly rounded, except within the documented 1-ulp
+// gap (CrossPlatformArchitecture.md, "Transcendental accuracy").
 func d128_ln_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 	return logDispatch(x, false, rounding, ctxnull)
 }
@@ -33,6 +38,9 @@ func d128_log10_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 
 // --- dispatch (IEEE 754-2019 §9.2 special cases) ---
 
+// The IEEE 754-2019 Section 9.2 special cases of log and log10 (zero,
+// negative, NaN, infinity, and log10 of an exact power of ten); any other
+// finite x goes to logImplFNZ.
 func logDispatch(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 	if d128_isFIN(x) {
 		if d128_isZER(x) {
@@ -60,6 +68,7 @@ func logDispatch(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 
 // --- magnitude ---
 
+// The D48 magnitude (D128LogD48), rounded once into D128.
 func logImplFNZ(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 	r := d48_logMagnitude(d48_fromD128(x, false), isLog10)
 	result := finalizeD48_ctxnull(r, rounding, ctxnull)
@@ -77,8 +86,7 @@ func logImplFNZ(x d128, isLog10 bool, rounding round, ctxnull *context) d128 {
 	return d48_forceInexact(result, ctxnull)
 }
 
-// isExactPowerOf10 reports whether x is exactly an integer power of ten (1·10^n)
-// — the log10 fast path.
+// True iff x is exactly an integer power of ten (1*10^n) -- the log10 fast path.
 func isExactPowerOf10(x d128) bool {
 	digitLen := d128_digitLen(x)
 	c := d128_u128(x)

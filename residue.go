@@ -26,7 +26,7 @@ const (
 	const_RESIDUE_GT_HALF residue = 3
 )
 
-// residueName is the debug spelling of a residue value.
+// Debug spelling of a residue value.
 func residueName(r residue) string {
 	if r == 0 {
 		return "EXACT"
@@ -45,11 +45,17 @@ func residueName(r residue) string {
 // per digit: 0 → EXACT, 1–4 → LT_HALF, 5 → HALF, 6–9 → GT_HALF.
 const const_DIGIT_MAP = 0b11_11_11_11_10_01_01_01_01_00
 
+// Residue of a single discarded decimal digit: 0 -> EXACT, 1-4 -> LT_HALF, 5
+// -> HALF, 6-9 -> GT_HALF.
 func residueFromDecimalDigit(digit int) residue {
 	verify("", func() bool { return digit < 10 })
 	return (const_DIGIT_MAP >> (digit << 1)) & 3
 }
 
+// Residue of the remainder of a truncating division. The divPow10 kernels
+// classify in place and return Quot*Residue directly (the D17 shape). The
+// _pow10 forms look up the 10^pow10 divisor; the _divisor forms take an
+// arbitrary divisor (also used by Core's general-division residue).
 func residueFromRemainderPow10_64(remainder int64, pow10 int) residue {
 	return residueFromRemainderDivisor_64(remainder, pow10_128_dw0(pow10))
 }
@@ -77,6 +83,7 @@ func residueFromRemainderDivisor_64(remainder, divisor int64) residue {
 
 // The _pow10 forms look up the 10^pow10 divisor in the pow10 tables.
 
+// Residue of a 128-bit remainder against 10^pow10.
 func residueFromRemainderPow10_128(remDw0, remDw1 int64, pow10 int) residue {
 	verify("", func() bool { return pow10 >= 0 && pow10 <= 38 })
 	return residueFromRemainderDivisor_128(remDw0, remDw1, pow10_128_dw0(pow10), pow10_128_dw1(pow10))

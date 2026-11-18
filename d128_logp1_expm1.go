@@ -45,6 +45,11 @@ const (
 func d128_lnp1_tte(x d128) d128               { return d128_lnp1_rnd_ctxnull(x, const_ROUND_TIES_TO_EVEN, nil) }
 func d128_lnp1_rnd(x d128, rnd round) d128    { return d128_lnp1_rnd_ctxnull(x, rnd, nil) }
 func d128_lnp1_ctx(x d128, ctx *context) d128 { return d128_lnp1_rnd_ctxnull(x, ctx.round, ctx) }
+
+// IEEE 754-2019 Section 9.2 lnp1(x) = ln(1 + x), computed in D48 with one
+// final rounding: accurate for x near 0, where ln(1 + x) composed in
+// decimal128 loses digits. Correctly rounded, except within the documented
+// 1-ulp gap (CrossPlatformArchitecture.md, "Transcendental accuracy").
 func d128_lnp1_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 	return logP1Dispatch(x, const_LOGP1_BASE_E, rounding, ctxnull)
 }
@@ -93,7 +98,7 @@ func d128_exp10m1_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 
 // MARK: - Special values (IEEE 754-2019 §9.2, LP-6)
 
-// logP1Dispatch: −1 → −∞ with divideByZero; below −1 (and −∞) → invalid; +∞ → +∞.
+// Log family: -1 -> -inf with divideByZero; below -1 (and -inf) -> invalid; +inf -> +inf.
 func logP1Dispatch(x d128, base int, rounding round, ctxnull *context) d128 {
 	if d128_isFIN(x) {
 		if d128_isZER(x) {
@@ -120,7 +125,7 @@ func logP1Dispatch(x d128, base int, rounding round, ctxnull *context) d128 {
 	return const_D128_POS_INFINITY
 }
 
-// expM1NonFinite: +∞ → +∞, −∞ → −1 exactly, NaN propagates.
+// Exp family: +inf -> +inf, -inf -> -1 exactly, NaN propagates.
 func expM1NonFinite(x d128, ctxnull *context) d128 {
 	if d128_isNAN(x) {
 		return ctxNanOperand1_ctxnull(ctxnull, x)
@@ -134,7 +139,7 @@ func expM1NonFinite(x d128, ctxnull *context) d128 {
 
 // MARK: - Log family
 
-// logP1FNZ is ln(1 + x) / ln(base) for a finite non-zero x > −1.
+// ln(1 + x) / ln(base) for a finite non-zero x > -1.
 func logP1FNZ(x d128, base int, rounding round, ctxnull *context) d128 {
 	xd := d48_fromD128(x, d128_signFlag(x))
 	series := d128_sciExp(x) < const_SERIES_SCI_EXP
@@ -181,7 +186,7 @@ func logP1FNZ(x d128, base int, rounding round, ctxnull *context) d128 {
 	return d48_forceInexact(finalizeD48_ctxnull(r, rounding, ctxnull), ctxnull)
 }
 
-// logP1ExactPower is k if the exact t = 1 + x is base^k (base 2 or 10, k != 0).
+// k if the exact t = 1 + x is base^k (base 2 or 10, k != 0), else ok = false.
 func logP1ExactPower(t d48, base int) (int, bool) {
 	c := d48_u320(t)
 	q := d48_qExp(t)
@@ -219,8 +224,8 @@ func logP1ExactPower(t d48, base int) (int, bool) {
 
 // MARK: - Exp family
 
-// d48_expm1Series is expm1(x) = x·Σ x^(k−1)/k!, Horner in D48 (const_D48_EXPM1_WEIGHTS,
-// 9 terms): 48 digits relative to x for |x| < 10^-5.
+// expm1(x) = x*sum x^(k-1)/k!, Horner in D48 (D48_EXPM1_WEIGHTS, 9 terms): 48 digits
+// relative to x for |x| < 10^-5.
 func d48_expm1Series(x d48) d48 {
 	w := const_D48_EXPM1_WEIGHTS
 	acc := w[len(w)-1]
@@ -232,7 +237,7 @@ func d48_expm1Series(x d48) d48 {
 	return d48_multiply(acc, x)
 }
 
-// expM1FNZ is e^x − 1 for a finite non-zero x.
+// e^x - 1 for a finite non-zero x.
 func expM1FNZ(x d128, rounding round, ctxnull *context) d128 {
 	neg := d128_signFlag(x)
 	sci := d128_sciExp(x)
@@ -257,7 +262,7 @@ func expM1FNZ(x d128, rounding round, ctxnull *context) d128 {
 	return expM1Kernel(expScaled_d48(x), false, d48{}, rounding, ctxnull)
 }
 
-// exp10M1FNZ is 10^x − 1 for a finite non-zero x.
+// 10^x - 1 for a finite non-zero x.
 func exp10M1FNZ(x d128, rounding round, ctxnull *context) d128 {
 	if d128_isExactIntegral(x) {
 		return exp10M1Integer(x, rounding, ctxnull)
@@ -278,9 +283,9 @@ func exp10M1FNZ(x d128, rounding round, ctxnull *context) d128 {
 	return expM1Kernel(exp10Scaled_d48(xd), true, xd, rounding, ctxnull)
 }
 
-// expM1Kernel rounds r = S − 1 for the kernel's S = z·10^n once. The bound scales
-// with the digits the subtraction cancels: const_E_EXP_D48·10^max(0, sciExp(S) −
-// sciExp(r)) + 1 units of r's 48th digit. isExp10m1 enables RN on xd.
+// r = S - 1 for the kernel's S = z*10^n, rounded once. The bound scales with
+// the digits the subtraction cancels: E_EXP_D48*10^max(0, sciExp(S) - sciExp(r))
+// + 1 units of r's 48th digit. `xd` is exp10m1's argument (for RN), nil for expm1.
 func expM1Kernel(s scaled, isExp10m1 bool, xd d48, rounding round, ctxnull *context) d128 {
 	bigS := d48_fromSignQExp_64x64x64(false, d48_qExp(s.z)+s.n, s.z.coeffDw0, s.z.coeffDw1, s.z.coeffDw2)
 	r := d48_subtract(bigS, const_D48_ONE)
@@ -299,10 +304,9 @@ func expM1Kernel(s scaled, isExp10m1 bool, xd d48, rounding round, ctxnull *cont
 	return d48_forceInexact(finalizeD48_ctxnull(r, rounding, ctxnull), ctxnull)
 }
 
-// exp10M1Integer is exp10m1's integer exit (LP-4): 10^k − 1 exact for |k| <= 34
-// (99…9 at exponent 0, −0.99…9 at exponent k); 10^k nudged down for k >= 35; −1
-// nudged up for k <= −35. Never through D48: for |k| >= 48 the D48 10^k − 1 is
-// rounded.
+// exp10m1's integer exit (LP-4): 10^k - 1 exact for |k| <= 34 (99...9 at exponent
+// 0, -0.99...9 at exponent k); 10^k nudged down for k >= 35; -1 nudged up for
+// k <= -35. Never through D48: for |k| >= 48 the D48 10^k - 1 is rounded.
 func exp10M1Integer(x d128, rounding round, ctxnull *context) d128 {
 	neg := d128_signFlag(x)
 	var k int64
@@ -335,9 +339,9 @@ func exp10M1Integer(x d128, rounding round, ctxnull *context) d128 {
 	return d128Pack(true, int(k), nines.dw0, nines.dw1)
 }
 
-// nearNegativeInteger is RN (§3): exp10m1 at x = k + δ, k = round(x) in [−34, −1],
-// sciExp(δ) + k < const_RN_SCI_EXP: 10^x − 1 = (10^k − 1) + 10^k·(10^δ − 1), whose
-// second term is below D48's resolution; the result is 10^k − 1 nudged by δ's sign.
+// RN (Section 3): exp10m1 at x = k + delta, k = round(x) in [-34, -1], sciExp(delta) + k <
+// RN_SCI_EXP: 10^x - 1 = (10^k - 1) + 10^k*(10^delta - 1), whose second term is below
+// D48's resolution; the result is 10^k - 1 nudged by delta's sign. ok = false otherwise.
 func nearNegativeInteger(xd d48, rounding round, ctxnull *context) (d128, bool) {
 	if !d48_signFlag(xd) {
 		return d128{}, false
@@ -357,21 +361,21 @@ func nearNegativeInteger(xd d48, rounding round, ctxnull *context) (d128, bool) 
 
 // MARK: - Shared rules
 
-// minusOnePlusTiny is −1 + tiny (Inexact): e^x or 10^x below every rounding step of −1.
+// -1 + tiny (Inexact): e^x or 10^x below every rounding step of -1.
 func minusOnePlusTiny(rounding round, ctxnull *context) d128 {
 	return d48_nudge_320(true, 0, u320FromDw0(1), true, rounding, ctxnull)
 }
 
-// nudgeD128 is the decimal128 x nudged toward +∞ (up) or −∞: the tiny rules.
+// The decimal128 x nudged toward +inf (`up`) or -inf: the tiny rules.
 func nudgeD128(x d128, up bool, rounding round, ctxnull *context) d128 {
 	c := d128_u128(x)
 	return d48_nudge_320(d128_signFlag(x), d128_qExp(x), u320{c.dw0, c.dw1, 0, 0, 0}, up, rounding, ctxnull)
 }
 
-// secondOrder is R2 (§3), lnp1 / expm1 series path, const_TINY_SCI_EXP <= sciExp(x) <
-// const_R2_SCI_EXP, x of at most 8 significant digits: v2 = x ∓ x²/2 (lnp1 −, expm1
-// +), exact, nudged toward x's sign (the x³ term has x's sign in both). Only such
-// x can put v2 on a decimal128 point or midpoint. ok is false when the gate fails.
+// R2 (Section 3), lnp1 / expm1 series path, TINY_SCI_EXP <= sciExp(x) < R2_SCI_EXP, x of
+// at most 8 significant digits: v2 = x -/+ x^2/2 (lnp1 -, expm1 +), exact, nudged
+// toward x's sign (the x^3 term has x's sign in both). Only such x can put v2 on
+// a decimal128 point or midpoint. ok = false when the gate fails.
 func secondOrder(x d128, isExpm1 bool, rounding round, ctxnull *context) (d128, bool) {
 	if d128_sciExp(x) >= const_R2_SCI_EXP {
 		return d128{}, false

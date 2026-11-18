@@ -23,9 +23,16 @@ func (f *flags) isSet(exception exception754) bool {
 // (`flags.raw() == 0`) and for serialization in test harnesses.
 func (f *flags) raw() int64 { return f.bits }
 
-// exceptionLetters renders the signaled exceptions in canonical xuozi order
-// (inexact, underflow, overflow, divByZero, invalid) — the lingua franca of the
-// three test corpora.
+// Canonical letter rendering of the signaled exceptions.
+//
+// This is *the* standard flag representation across all three test
+// suites (fptest, Intel, dectest) -- fptest's letter string, promoted to
+// the lingua franca. Maps each flag to its single letter:
+//
+//	`x` = inexact, `u` = underflow, `o` = overflow,
+//	`z` = divisionByZero, `i` = invalidOperation
+//
+// Returned in `xuozi` order regardless of which combination is set.
 func (f *flags) exceptionLetters() string {
 	var b strings.Builder
 	if f.isSet(const_INEXACT) {

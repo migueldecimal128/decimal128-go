@@ -8,6 +8,13 @@
 
 package decimal128
 
+// Magnitude comparison over D48: -1 / 0 / +1.
+//
+// One deliberate difference from d38_cmpMag: D38 aligns by multiplying the
+// larger-exponent coefficient up, which needs the exponent gap to fit the wide
+// type. D48 first compares scientific
+// exponents (exact for nonzero values), so any gap is safe; alignment then
+// needs at most 47 extra digits.
 func d48_cmpMag(x, y d48) int {
 	xZero := d48_isZero(x)
 	yZero := d48_isZero(y)

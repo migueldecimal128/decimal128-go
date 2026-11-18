@@ -13,9 +13,9 @@ package decimal128
 
 import "math/bits"
 
-// vReciprocal_64_64_mg returns the single-word reciprocal v of a normalized
-// 1-word divisor d (top bit set): v = low 64 bits of floor((2^128 - 1) / d),
-// i.e. floor((2^128-1)/d) - 2^64. One 128÷64 divide. Precondition: d >= 2^63.
+// Single-word reciprocal `v` of a normalized 1-word divisor `d` (top bit set):
+// `v = floor((2^128 - 1) / d) - 2^64`. The value DIV2BY1 (Alg. 4) consumes.
+// One 128/64 divide. Precondition: `d` normalized (`d >= 2^63`).
 func vReciprocal_64_64_mg(d int64) int64 {
 	dd := uint64(d)
 	x := (0 - dd) - 1
@@ -23,9 +23,10 @@ func vReciprocal_64_64_mg(d int64) int64 {
 	return int64(qLo)
 }
 
-// vReciprocal_64_128_mg returns the single-word reciprocal v of the normalized
-// 2-word divisor (d1:d0) (d1's top bit set). One 128÷64 divide. Precondition:
-// d1 >= 2^63.
+// Single-word reciprocal `v` of the normalized 2-word divisor `(d1:d0)` (d1's
+// top bit set): extends the Alg. 3 single-word reciprocal of `d1` to the
+// two-word divisor. Returns the value DIV3BY2 (Alg. 5) consumes. One 128/64
+// divide. Precondition: `d1 >= 2^63`.
 func vReciprocal_64_128_mg(d1, d0 int64) int64 {
 	D1 := uint64(d1)
 	D0 := uint64(d0)
@@ -50,9 +51,9 @@ func vReciprocal_64_128_mg(d1, d0 int64) int64 {
 	return int64(v)
 }
 
-// divRem_q64r64_128x64x64_v_mg divides the 2-word numerator (u1:u0) by the
-// normalized 1-word divisor d (top bit set) using the precomputed reciprocal v.
-// Requires u1 < d. Returns the 64-bit quotient and the < d remainder. M&G Alg. 4.
+// Divide the 2-word numerator `(u1:u0)` by the normalized 1-word divisor `d`
+// (top bit set) using the precomputed reciprocal `v`. Requires `u1 < d`.
+// Returns the 64-bit quotient and the `< d` remainder. No hardware divide.
 func divRem_q64r64_128x64x64_v_mg(u1, u0, d, v int64) quot64Rem64 {
 	U1 := uint64(u1)
 	U0 := uint64(u0)
@@ -79,10 +80,9 @@ func divRem_q64r64_128x64x64_v_mg(u1, u0, d, v int64) quot64Rem64 {
 	return quot64Rem64{int64(q), int64(r)}
 }
 
-// divRem_q64r128_192x128x64_v_mg divides the 3-word numerator (n2:n1:n0) by the
-// normalized 2-word divisor (d1:d0) using the precomputed reciprocal v. Requires
-// (n2:n1) < (d1:d0). Returns the 64-bit quotient and the < d 128-bit remainder.
-// M&G Alg. 5.
+// Divide the 3-word numerator `(n2:n1:n0)` by the normalized 2-word divisor
+// `(d1:d0)` using the precomputed reciprocal `v`. Requires `(n2:n1) < (d1:d0)`.
+// Returns the 64-bit quotient and the `< d` 128-bit remainder. No hardware divide.
 func divRem_q64r128_192x128x64_v_mg(n2, n1, n0, d1, d0, v int64) quot64Rem128 {
 	N2 := uint64(n2)
 	N1 := uint64(n1)

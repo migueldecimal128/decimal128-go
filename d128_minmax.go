@@ -102,8 +102,8 @@ func propagateNAN(x, y d128) d128 {
 	return d128_quieted(y)
 }
 
-// compareNumericSigned is a signed numeric compare for min/max returning -1/0/1.
-// Assumes no NaN. Treats +0 == -0; cohort differences yield 0.
+// Signed numeric compare for min/max. Returns -1/0/1. Assumes no NaN.
+// Treats +0 == -0. Cohort differences yield 0.
 func compareNumericSigned(x, y d128) int {
 	verify("", func() bool { return !d128_isNAN(x) && !d128_isNAN(y) })
 	if bothFinite(x, y) {
@@ -158,8 +158,7 @@ func compareNumericSigned(x, y d128) int {
 	return -1
 }
 
-// compareNumericMagnitude is an unsigned magnitude compare returning -1/0/1.
-// Assumes no NaN.
+// Unsigned magnitude compare for min/max. Returns -1/0/1. Assumes no NaN.
 func compareNumericMagnitude(x, y d128) int {
 	verify("", func() bool { return !d128_isNAN(x) && !d128_isNAN(y) })
 	if d128_isFNZ(x) && d128_isFNZ(y) {

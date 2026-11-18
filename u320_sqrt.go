@@ -12,6 +12,9 @@ type sqrtFloor48 struct {
 	residue    residue
 }
 
+// sqrtFloorScaled48 scales the coefficient into a 95-96 digit integer R whose exact floor root
+// has 48 digits, then classifies the exact remainder. The root is the Newton
+// isqrt_320 kernel.
 func sqrtFloorScaled48(coeff u192, qExp, digitLen int) sqrtFloor48 {
 	verify("", func() bool { return !coeff.isZero() })
 	scaleUp := 96 - digitLen

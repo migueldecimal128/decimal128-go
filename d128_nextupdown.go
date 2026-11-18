@@ -12,29 +12,41 @@
 
 package decimal128
 
+// The largest finite magnitude, (10^34 - 1) * 10^6111, with the given sign
+// (also finalize's overflow saturation value).
 func maxFiniteMagnitude(sign bool) d128 {
 	c := sub_128_128x128(pow10_128_dw0(34), pow10_128_dw1(34), 1, 0)
 	return decimalFNZ_128(sign, 6111, c.dw0, c.dw1)
 }
 
+// The smallest finite (subnormal) magnitude, 1 * 10^-6176, with the given
+// sign.
 func minFiniteMagnitude(sign bool) d128 {
 	return decimalFNZ_64x64(sign, -6176, 1, 0)
 }
 
-// d128_nextUp_ctxnull returns the smallest representable value greater than x.
-//   - finite: walks one ulp toward +∞.
-//   - +∞ → +∞; -∞ → the most-negative finite.
-//   - ±0 → the smallest positive subnormal.
-//   - qNaN returned unchanged; sNaN quieted (signalling invalid under a ctx).
+// d128_nextUp_ctxnull returns the smallest representable value greater than `x`.
+// IEEE 754-2019 Section 5.3.1 `nextUp`.
+//
+//   - For finite values, walks one ulp toward +inf.
+//   - `+inf` returns `+inf`; `-inf` returns the most-negative finite.
+//   - `+0` and `-0` return the smallest positive subnormal.
+//   - A quiet NaN is returned unchanged.
+//   - A signaling NaN is quieted; under a context, `invalidOperation`
+//     is signaled. Under Quiet (`ctx == nil`), no flag is raised.
 func d128_nextUp_ctxnull(x d128, ctxnull *context) d128 {
 	return nextUpOrDown_ctxnull(x, true, ctxnull)
 }
 
-// d128_nextDown_ctxnull returns the largest representable value smaller than x.
-//   - finite: walks one ulp toward -∞.
-//   - -∞ → -∞; +∞ → the most-positive finite.
-//   - ±0 → the smallest negative subnormal magnitude.
-//   - qNaN returned unchanged; sNaN quieted (signalling invalid under a ctx).
+// d128_nextDown_ctxnull returns the largest representable value smaller than `x`.
+// IEEE 754-2019 Section 5.3.1 `nextDown`.
+//
+//   - For finite values, walks one ulp toward -inf.
+//   - `-inf` returns `-inf`; `+inf` returns the most-positive finite.
+//   - `+0` and `-0` return the smallest negative subnormal magnitude.
+//   - A quiet NaN is returned unchanged.
+//   - A signaling NaN is quieted; under a context, `invalidOperation`
+//     is signaled. Under Quiet (`ctx == nil`), no flag is raised.
 func d128_nextDown_ctxnull(x d128, ctxnull *context) d128 {
 	return nextUpOrDown_ctxnull(x, false, ctxnull)
 }
@@ -75,7 +87,7 @@ func nextUpOrDown_ctxnull(x d128, isUp bool, ctxnull *context) d128 {
 	return signalSNanOperandFound_quiet(x)
 }
 
-// nextFnzAwayFromZero walks one ulp away from zero (increases magnitude).
+// Walk one ulp away from zero (increase magnitude).
 func nextFnzAwayFromZero(x d128) d128 {
 	verify("", func() bool { return d128_isFNZ(x) })
 	signX := d128_signFlag(x)
@@ -103,7 +115,7 @@ func nextFnzAwayFromZero(x d128) d128 {
 	return decimalFNZ_128(signX, qExp, coeff.dw0, coeff.dw1)
 }
 
-// nextFnzTowardZero walks one ulp toward zero (decreases magnitude).
+// Walk one ulp toward zero (decrease magnitude).
 func nextFnzTowardZero(x d128) d128 {
 	verify("", func() bool { return d128_isFNZ(x) })
 	signX := d128_signFlag(x)

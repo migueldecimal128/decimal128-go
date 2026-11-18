@@ -40,10 +40,12 @@ func d128_signFlag(x d128) bool { return d128_signBit(x) != 0 }
 
 func d128_signMask(x d128) int { return int((x.ubdHi64 << 14) >> 63) }
 
+// The encoded exponent (quantum) of a finite x.
 func d128_qExp(x d128) int { return int(x.ubdHi64 >> 50) }
 
 func d128_qExpAndSignBit(x d128) int64 { return ushr_64_64(x.ubdHi64, 49) }
 
+// The coefficient as a U128.
 func d128_u128(x d128) u128 { return fromLoHi_128_64x64(x.ubdLo64, d128_hi49(x)) }
 
 // --- lengths and scientific exponent ---
@@ -61,12 +63,14 @@ func d128_sciExp(x d128) int {
 
 func d128_isNegative(x d128) bool { return d128_signFlag(x) }
 
+// Whether `x` is infinite or NaN.
 func d128_isNonFinite(x d128) bool { return ushr_64_64(x.ubdHi64, 60) == 7 }
 
 func d128_isFinite(x d128) bool { return ushr_64_64(x.ubdHi64, 60) != 7 }
 
 func d128_isFIN(x d128) bool { return ushr_64_64(x.ubdHi64, 60) != 7 }
 
+// Whether `x` is zero: a finite value whose coefficient is zero.
 func d128_isZER(x d128) bool { return ((x.ubdHi64 << 15) | x.ubdLo64) == 0 }
 
 func d128_isNotZER(x d128) bool { return ((x.ubdHi64 << 15) | x.ubdLo64) != 0 }
@@ -93,6 +97,7 @@ func d128_isNormal(x d128) bool {
 	return d128_isFNZ(x) && d128_sciExp(x) >= -6143
 }
 
+// Whether x is a canonical encoding (IEEE 754-2019 Section 3.5.2).
 func d128_isCanonical(x d128) bool { return true }
 
 func bothFinite(x, y d128) bool { return d128_isFIN(x) && d128_isFIN(y) }
@@ -216,6 +221,8 @@ func decimalFNZ_128(sign bool, qExp int, coeffDw0, coeffDw1 int64) d128 {
 	return d128Pack(sign, qExp, coeffDw0, coeffDw1)
 }
 
+// Limb-native FNZ: pack the D128 straight from the coefficient dwords, without
+// building a U128.
 func decimalFNZ_64x64(sign bool, qExp int, dw0, dw1 int64) d128 {
 	verify("", func() bool { return qExp >= -6176 && qExp <= 6111 })
 	verify("", func() bool { return !isZero_bool_128(dw0, dw1) })

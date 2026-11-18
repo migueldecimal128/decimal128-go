@@ -16,6 +16,9 @@ func d128_divide_ctx(x, y d128, ctx *context) d128 {
 
 // divideInteger never rounds: trunc(x/y) is exact (or NaN/Inf).
 
+// divideInteger never rounds -- `trunc(x/y)` is exact (or NaN/Inf), so there
+// is no `_rnd`/`_tte` rung. `_ctxnull` is the general body; `_ctx` forwards
+// with a flag sink, and the bare form forwards with none. Mirrors remainder.
 func d128_divideInteger(x, y d128) d128 { return d128_divideInteger_ctxnull(x, y, nil) }
 func d128_divideInteger_ctx(x, y d128, ctx *context) d128 {
 	return d128_divideInteger_ctxnull(x, y, ctx)
@@ -191,11 +194,11 @@ func divFnzFnz_rnd_ctx(x, y d128, resultSign bool, rounding round, ctxnull *cont
 }
 
 // PT fast path: divide by a power of ten (value 10^(m + qExp(y))).
-// The result is exact and keeps the dividend's coefficient: Cx * 10^(qPreferred - m),
-// where qPreferred = qExp(x) - qExp(y). As in the general exact case the natural
-// exponent sits m below the preferred exponent, so strip up to m trailing zeros from
-// Cx back toward it (no-op when Cx has none), then let finalize apply the usual
-// range/clamp/subnormal handling. Never rounds.
+// The result is exact and keeps the dividend's coefficient: `Cx * 10^(qPreferred - m)`,
+// where `qPreferred = qExp(x) - qExp(y)`. As in the general exact case, the natural
+// exponent sits `m` below the preferred exponent, so strip up to `m` trailing zeros
+// from `Cx` back toward it (no-op when `Cx` has none), then let `finalize` apply the
+// usual range/clamp/subnormal handling. Never rounds.
 func divPow10Divisor_rnd_ctx(x d128, resultSign bool, qPreferred, m int, rounding round, ctxnull *context) d128 {
 	qZ := qPreferred - m
 	coefficient := d128_u128(x)
@@ -252,8 +255,8 @@ func remQuotientIsZero(x, y d128) bool {
 	return (d > 0) && (d128_digitLen(y)+d > d128_digitLen(x)+1)
 }
 
-// remDivisorAtMinExp: h, |y|'s coefficient at e = min(qExp(x), qExp(y)).
-// Below 10^35 once remQuotientIsZero has been ruled out.
+// h: |y|'s coefficient at e = min(qExp(x), qExp(y)). Below 10^35 once
+// `remQuotientIsZero` has been ruled out.
 func remDivisorAtMinExp(x, y d128) u128 {
 	d := d128_qExp(y) - d128_qExp(x)
 	if d <= 0 {
@@ -263,7 +266,7 @@ func remDivisorAtMinExp(x, y d128) u128 {
 	return mulPow10_128_128(y.ubdLo64, d128_hi49(y), d)
 }
 
-// remMod: a mod m.
+// a mod m.
 func remMod(a, m u128) u128 {
 	qr := u256DivRem_128(u256{a.dw0, a.dw1, 0, 0}, m)
 	return u128{qr.remDw0, qr.remDw1}
@@ -277,10 +280,10 @@ func remMulMod(a, b, m u128) u128 {
 	return u128{qr.remDw0, qr.remDw1}
 }
 
-// remPow10Mod: 10^k mod m, k in 1..12287, m >= 2. k <= 38 reads the table;
-// larger k runs left-to-right over 5-bit windows of k: acc <- acc^32 * 10^w
-// mod m. Each squaring has acc < m, and each window multiply has 10^w < 2^103,
-// so every quotient stays below 2^128.
+// 10^k mod m, k in 1...12287, m >= 2. k <= 38 reads the table; larger k
+// runs left-to-right over 5-bit windows of k: acc <- acc^32 * 10^w mod m.
+// Each squaring has acc < m, and each window multiply has 10^w < 2^103, so
+// every quotient stays below 2^128.
 func remPow10Mod(k int, m u128) u128 {
 	if k <= 38 {
 		return remMod(pow10U128(k), m)
@@ -305,7 +308,7 @@ func remPow10Mod(k int, m u128) u128 {
 	return acc
 }
 
-// remCoeffMod2H: r2 = X mod 2h, X = |x|'s coefficient at e = min(qExp(x), qExp(y)).
+// r2 = X mod 2h, X = |x|'s coefficient at e = min(qExp(x), qExp(y)).
 func remCoeffMod2H(x, y d128, h u128) u128 {
 	m := shl_128_128(h.dw0, h.dw1, 1)
 	k := d128_qExp(x) - d128_qExp(y)
@@ -323,7 +326,7 @@ func remResult(sign bool, e int, r u128) d128 {
 	return decimalFNZ_128(sign, e, r.dw0, r.dw1)
 }
 
-// remainderTruncFnzFnz: x - trunc(x/y) * y, exact.
+// x - trunc(x/y) * y, exact.
 func remainderTruncFnzFnz(x, y d128) d128 {
 	if remQuotientIsZero(x, y) {
 		return x
@@ -337,8 +340,7 @@ func remainderTruncFnzFnz(x, y d128) d128 {
 	return remResult(d128_signFlag(x), e, r2)
 }
 
-// remainderNearFnzFnz: x - n * y, n = x/y rounded to the nearest integer, ties
-// to even; exact.
+// x - n * y, n = x/y rounded to the nearest integer, ties to even; exact.
 func remainderNearFnzFnz(x, y d128) d128 {
 	if remQuotientIsZero(x, y) {
 		return x

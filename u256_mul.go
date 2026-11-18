@@ -11,7 +11,10 @@ package decimal128
 
 import "math/bits"
 
-// mul_256_128x64 returns x * y; fits in 192 bits (dw3 == 0). Interior-only (§3.4).
+// mul_256_128x64 returns `x * y`; the result fits in 192 bits by construction.
+//
+// Primitive-interior helper (Section 3.4, D21 test): no core consumes it, so it
+// has no limb form and is `internal` -- invisible outside the module.
 func mul_256_128x64(x u128, y uint64) u256 {
 	xLo := uint64(x.dw0)
 	xHi := uint64(x.dw1)
@@ -22,7 +25,7 @@ func mul_256_128x64(x u128, y uint64) u256 {
 	return u256{int64(p0Lo), int64(mid), int64(hi), 0}
 }
 
-// mul_256_128x128 returns the full-width 128×128→256 product.
+// mul_256_128x128 returns the full-width 128*128->256 product.
 func mul_256_128x128(xDw0, xDw1, yDw0, yDw1 int64) u256 {
 	a0, a1 := uint64(xDw0), uint64(xDw1)
 	b0, b1 := uint64(yDw0), uint64(yDw1)
@@ -77,8 +80,7 @@ func mul_256_256x128(xDw0, xDw1, xDw2, xDw3, yDw0, yDw1 int64) u256 {
 	return u256{prodLo.dw0, prodLo.dw1, int64(sumLo), int64(sumHi)}
 }
 
-// mul_256_256x256 returns x * y, trapping if the result exceeds 2^256 (or any
-// column sum exceeds the 128-bit accumulator — see file header).
+// mul_256_256x256 returns `x * y`, trapping if the result exceeds 2^256.
 func mul_256_256x256(xDw0, xDw1, xDw2, xDw3, yDw0, yDw1, yDw2, yDw3 int64) u256 {
 	a0, a1 := uint64(xDw0), uint64(xDw1)
 	a2, a3 := uint64(xDw2), uint64(xDw3)
@@ -124,6 +126,8 @@ func mul_256_256x256(xDw0, xDw1, xDw2, xDw3, yDw0, yDw1, yDw2, yDw3 int64) u256 
 	return u256{int64(r0), int64(r1), int64(r2), int64(r3)}
 }
 
+// acc += a*b in a 128-bit running column; didOverflow records a carry out of
+// the column.
 func addProduct(a, b uint64, colLo, colHi *uint64, didOverflow *bool) {
 	// Adds the 128-bit product a*b into the 128-bit accumulator (colLo:colHi),
 	// setting didOverflow on carry-out: Swift's UInt128 addingReportingOverflow step.

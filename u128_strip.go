@@ -7,7 +7,11 @@ package decimal128
 
 import "math/bits"
 
-// strip_s128sc_128 strips up to maxToStrip trailing zero decimal digits from c.
+// strip_s128sc_128 strips up to `maxToStrip` trailing zero decimal digits from `c`
+// (D18 shape). Bulk removal goes through the
+// exact-remainder Barrett pow10 unit in chunks of BARRETT_POW10_MAX;
+// a nonzero remainder ends the bulk phase and the dword tail helper
+// finishes the job.
 func strip_s128sc_128(cDw0, cDw1 int64, maxToStrip int) stripped128StripCount {
 	verify("", func() bool { return (cDw0 | cDw1) != 0 })
 	stripped := fromLoHi_128_64x64(cDw0, cDw1)
@@ -36,6 +40,8 @@ func strip_s128sc_128(cDw0, cDw1 int64, maxToStrip int) stripped128StripCount {
 	}
 }
 
+// u64StripTrailingZeroDigits strips up to maxToStrip trailing zero digits from a single dword (< 10^14),
+// descending by powers of two; returns the stripped value and the count.
 func u64StripTrailingZeroDigits(dw uint64, maxToStrip int) (uint64, int) {
 	verify("", func() bool { return dw != 0 })
 	verify("", func() bool { return dw < uint64(pow10_128_dw0(14)) })

@@ -28,6 +28,8 @@ func finiteParseResultFailure(status parseStatus) finiteParseResult {
 
 // --- parse (boundary API) ---
 
+// Parse a `D128`, observing parse flags on `ctx` when non-nil. `ctx == nil`
+// means a quiet parse. Returns `ok = false` on syntactic failure.
 func d128_parse_ctxnull(s string, ctxnull *context) (d128, bool) {
 	t := newTxt(s)
 	r := parseDec34_ctxnull(&t, ctxnull)
@@ -39,9 +41,14 @@ func d128_parse_ctxnull(s string, ctxnull *context) (d128, bool) {
 	return const_D128_QNAN0, false
 }
 
-func d128_parse(s string) (d128, bool)                   { return d128_parse_ctxnull(s, nil) }
+// Parse a `D128` using the default decimal128 context (tiesToEven, no flag
+// sink). Returns `ok = false` on syntactic failure.
+func d128_parse(s string) (d128, bool) { return d128_parse_ctxnull(s, nil) }
+
+// Parse a `D128`, observing flags raised during parsing on `ctx`.
 func d128_parse_ctx(s string, ctx *context) (d128, bool) { return d128_parse_ctxnull(s, ctx) }
 
+// Parse, or return a quiet NaN on failure ("best effort", never `nil`).
 func d128_parseOrNaN(s string) d128 {
 	d, ok := d128_parse(s)
 	if ok {
@@ -50,10 +57,9 @@ func d128_parseOrNaN(s string) d128 {
 	return const_D128_QNAN0
 }
 
-// d48_parse parses a D48 exactly: an optional sign, digits with at most one
-// '.', an optional exponent; at most 48 significant digits. Panics (impossible)
-// on malformed or inexact input (Swift d48_parse). A zero parses to const_D48_ZERO
-// (no −0).
+// Parse a `D48` exactly: an optional sign, digits with at most one '.', an
+// optional exponent; at most 48 significant digits. Traps on malformed or
+// inexact input. A zero parses to D48_ZERO (no -0).
 func d48_parse(s string) d48 {
 	b := []byte(s)
 	i := 0
@@ -205,19 +211,19 @@ func parseInfinityText(sign bool, chFirst byte, t *txt) d128ParseResult {
 	return d128ParseResultSuccess(d128_infinity(sign))
 }
 
-// Parse "NaN", "qNaN" or "sNaN" (case-insensitive) with an optional decimal
-// payload. The payload may be written bare (NaN123) or parenthesised
-// (NaN(123)); the two spellings produce bit-identical values.
+// Parse `NaN`, `qNaN` or `sNaN` (case-insensitive) with an optional decimal
+// payload. The payload may be written bare (`NaN123`) or parenthesised
+// (`NaN(123)`); the two spellings produce bit-identical values.
 //
-// The parenthesised form is positional and balanced: the '(' must follow the
-// word immediately, at least one digit must appear, and the ')' must be the
-// last character of the input. So "NaN()", "NaN(1", "NaN(1]", "NaN(1)2(3)"
-// and "NaN (1)" are all rejected, and "NaN[1]" / "NaN{1}" are not this form
+// The parenthesised form is positional and balanced: the `(` must follow the
+// word immediately, at least one digit must appear, and the `)` must be the
+// last character of the input. So `NaN()`, `NaN(1`, `NaN(1]`, `NaN(1)2(3)`
+// and `NaN (1)` are all rejected, and `NaN[1]` / `NaN{1}` are not this form
 // at all. The payload alphabet stays decimal digits -- this is a
-// paren-tolerant spelling of our own payload syntax, not C strtod's
-// NAN(n-char-sequence), which reads letters and underscores too.
+// paren-tolerant spelling of our own payload syntax, not C `strtod`'s
+// `NAN(n-char-sequence)`, which reads letters and underscores too.
 //
-// Rendering never emits parentheses: NaN(123) prints back as NaN123.
+// Rendering never emits parentheses: `NaN(123)` prints back as `NaN123`.
 func parseNanText(sign bool, chFirst byte, t *txt) d128ParseResult {
 	ch := chFirst | 0x20
 	hasS := ch == ascii_s

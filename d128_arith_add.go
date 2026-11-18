@@ -12,9 +12,9 @@ func d128_add_ctx(x, y d128, ctx *context) d128 {
 	return d128_add_rnd_ctxnull(x, y, ctx.round, ctx)
 }
 
-// Fast path: same sign and exponent, coefficient sum fits. Everything else
-// tail-calls the (cold) d128_add_slow_rnd_ctxnull, so this body stays tiny and
-// inlines (through the _tte/_rnd/_ctx wrappers) into the + operator.
+// Fast entry: same sign and exponent, and a coefficient sum that fits in 112
+// bits, returns directly (no rounding, no flags). Every other case tail-calls
+// the out-of-line d128_add_slow_rnd_ctxnull.
 func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	xHi49 := d128_hi49(x)
 	yHi49 := d128_hi49(y)
@@ -31,14 +31,16 @@ func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	return d128_add_slow_rnd_ctxnull(x, y, rounding, ctxnull)
 }
 
-// Cold path, kept out of line so the fast entry above stays a small, i-cache-
-// friendly hot function. Go has no always_inline, and the fast entry's
-// guard + inline arithmetic already exceeds the ~80 inline budget, so it does
-// not collapse into Add (unlike the native ports' operators); the split's Go
-// payoff is hot/cold code separation. //go:noinline pins that contract.
+// Slow entry: the non-finite, zero, and general finite-nonzero cases. Kept out
+// of line so the fast entry stays small.
 //
 //go:noinline
 func d128_add_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
+	// Kept out of line so the fast entry stays a small, i-cache-friendly hot function.
+	// Go has no always_inline, and the fast entry's guard + inline arithmetic already
+	// exceeds the ~80 inline budget, so it does not collapse into Add (unlike the
+	// native ports' operators); the split's Go payoff is hot/cold code separation.
+	// The go:noinline directive pins that contract.
 	// Aligned unlike-sign magnitude subtraction, hoisted ahead of the cold
 	// ladder. hi49Sum fitting in 48 bits proves BOTH operands finite (nonfinite
 	// coefficients are >= 10^34, whose bit 48 is set), and the sole caller is
@@ -76,6 +78,10 @@ func d128_add_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 	return addFnzFnz_rnd_ctxnull(x, y, rounding, ctxnull)
 }
 
+// Finite-nonzero + finite-nonzero add core: nearly aligned operands are
+// aligned exactly, the rest go to the unaligned kernels. Subtract delegates
+// here through subtract(x, y) = add(x, negate(y)), so it is module-internal
+// rather than file-private.
 func addFnzFnz_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	qAligned := min(d128_qExp(x), d128_qExp(y))
 	absXShift := d128_qExp(x) - qAligned // one of these is zero
@@ -200,6 +206,9 @@ func addNonFinite_rnd_ctxnull(x, y d128, ctxnull *context) d128 {
 	return ctxSignalInvalidOperation_ctxnull(ctxnull, causeMagnitudeSubtractionOfInfinities, const_D128_QNAN0)
 }
 
+// preferMinimumQExp_exact lowers x's exponent toward otherExp by scaling its coefficient up into the
+// free digits, exactly (the value is unchanged). Returns x unchanged when
+// there is no headroom or otherExp >= qExp(x). Shared with fma.
 func preferMinimumQExp_exact(x d128, otherExp int) d128 {
 	xSign := d128_signFlag(x)
 	xQ := d128_qExp(x)

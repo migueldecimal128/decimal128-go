@@ -11,6 +11,21 @@ const (
 	const_TEN_POW_18_U64 int64 = 1_000_000_000_000_000_000
 )
 
+// dpd128Decode decodes a 128-bit decimal value from DPD (Densely Packed Decimal) format.
+//
+// The 128-bit value is split into two 64-bit words, with `dpdHi` holding the
+// most significant bits (including the sign, combination field, and upper
+// significand) and `dpdLo` holding the lower 64 bits of the significand.
+//
+// The combination field is decoded as follows:
+// - G0-G1 != 11: Case A, leading significand digit 0-7
+// - G0-G3 != 1111: Case B, leading significand digit 8-9
+// - G0-G4 == 11110: Infinity
+// - G0-G4 == 11111: NaN (G5 indicates signaling)
+//
+// The trailing significand bits are decoded from 11 DPD declets into a
+// binary integer, which is then combined with the leading digit to form
+// the full coefficient.
 func dpd128Decode(dpdHi, dpdLo int64) d128 {
 	const bias = 6176
 	const w = 12  // exponent continuation width
@@ -75,6 +90,16 @@ func dpd128Decode(dpdHi, dpdLo int64) d128 {
 	return decimalFNZ_64x64(sign, qExp, coeffLo, coeffHi)
 }
 
+// dpd128Encode encodes a `D128` value into DPD (Densely Packed Decimal) 128-bit format.
+//
+// The coefficient is split into three parts:
+// - The most significant digit (0..9), encoded directly into the combination field
+// - The next 15 digits, encoded as 5 DPD declets into the high significand bits
+// - The least significant 18 digits, encoded as 6 DPD declets into the low significand bits
+//
+// Returned as a `U128`:
+// - High 64 bits: sign bit, 17-bit combination field G, and upper 46 bits of T
+// - Low 64 bits: lower 64 bits of T
 func dpd128Encode(d d128) u128 {
 	var coeff u128
 	if d128_isFIN(d) {
@@ -119,6 +144,16 @@ func dpd128Encode(d d128) u128 {
 	return fromLoHi_128_64x64(dpdLo, dpdHi)
 }
 
+// encodeSignAndGCombinationFieldDpd128 encodes the sign bit and 17-bit G (combination) field for a DPD-128 value.
+//
+// The combination field encodes the sign, exponent MSBs, and most significant
+// digit according to the IEEE 754-2019 DPD rules:
+// - Case A (digit 0-7): `0ee ddd` or `10e eee` -- exponent MSBs in G0-G1, digit in G2-G4
+// - Case B (digit 8-9): `110e ed` or `111e ed` -- exponent MSBs in G2-G3, digit low bit in G4
+// - Infinity: G0-G4 = `11110`
+// - NaN: G0-G4 = `11111`, G5 = signaling flag
+//
+// Returns an 18-bit value: bit 17 is the sign, bits 16-0 are the G field.
 func encodeSignAndGCombinationFieldDpd128(d d128, mostSigBcd4 int) int {
 	sBit := d128_signBit(d)
 	var gField int
@@ -151,6 +186,11 @@ func encodeSignAndGCombinationFieldDpd128(d d128, mostSigBcd4 int) int {
 
 // --- declet packing helpers ---
 
+// binFromDecletsUpTo7 decodes up to 7 DPD declets packed into an `Int64` into a binary integer.
+//
+// Declets are packed 10 bits each from least significant to most significant.
+// The topmost declet may use fewer than 10 bits (at most 4), corresponding to
+// the leading digit of a 34-digit decimal128 coefficient (0-9).
 func binFromDecletsUpTo7(declets7 int64) int64 {
 	var bin int64 = 0
 	decletsT := declets7
@@ -165,6 +205,14 @@ func binFromDecletsUpTo7(declets7 int64) int64 {
 	return bin
 }
 
+// declets6FromBin encodes a binary integer into 6 DPD declets.
+//
+// Repeatedly extracts the least significant 3 decimal digits via a
+// magic-constant reciprocal multiply, encodes each as a 10-bit DPD declet,
+// and packs them from least significant to most significant.
+//
+// - parameter bin: 0..999_999_999_999_999_999 (at most 18 decimal digits).
+// - returns: 60-bit value: 6 packed DPD declets, 10 bits each, LSB-first.
 func declets6FromBin(bin int64) int64 {
 	verify("", func() bool { return ucmp_int_64x64(bin, const_EIGHTEEN_NINES) <= 0 })
 	t := bin
@@ -183,6 +231,9 @@ func declets6FromBin(bin int64) int64 {
 
 // --- declet codec (Cowlishaw's tables, branchless) ---
 
+// Decode a 10-bit IEEE-754 DPD declet (bits 9..0) into 0..999.
+// Mapping: bit9..bit0 -> p q r s t u v w x y
+// Equations: Cowlishaw's dpd2bcd (handles canonical and non-canonical forms).
 func dpdDecodeDeclet(declet int64) int64 {
 	verify("", func() bool { return ucmp_int_64x64(declet, 1023) <= 0 })
 	if declet == 0 {
@@ -230,6 +281,7 @@ func dpdDecodeDeclet(declet int64) int64 {
 	return d2*100 + d1*10 + d0
 }
 
+// Encode 0..999 into a 10-bit IEEE-754 DPD declet.
 func dpdEncodeDeclet(n int64) int64 {
 	verify("", func() bool { return ucmp_int_64x64(n, 999) <= 0 })
 	if n == 0 {
@@ -279,17 +331,30 @@ func dpdEncodeDeclet(n int64) int64 {
 
 // Decode a D128 from a 128-bit DPD-encoded value.
 func d128_from_dpd128(dpd u128) d128 { return dpd128Decode(dpd.dw1, dpd.dw0) }
-func d128_to_dpd128(x d128) u128     { return dpd128Encode(x) }
 
-// dpd64Decode decodes a d128 from a 64-bit DPD-encoded decimal64 value
-// (IEEE 754-2019 §3.5.2). Every decimal64 value is a strict subset of decimal128,
-// so this decode is exact and lossless — no rounding, no context, no signalling.
-// The coefficient (≤ 16 digits) and NaN payload (≤ 15 digits) each fit one word,
-// so unlike dpd128Decode this is entirely single-word. The 50-bit trailing field T
-// holds 5 declets; the most-significant digit d0 comes from the combination field
-// and is folded into the 6th declet slot (dpdDecodeDeclet(d)==d for a lone digit),
-// exactly as dpd128Decode folds in ITS leading digit. DPD declets always decode to
-// ≤ 999, so no canonicalization checks are needed (unlike bid64Decode).
+// Encode this `D128` into a 128-bit DPD-encoded value.
+func d128_to_dpd128(x d128) u128 { return dpd128Encode(x) }
+
+// dpd64Decode decodes a `D128` from a 64-bit DPD-encoded decimal64 value (IEEE 754-2019
+// Section 3.5.2). Every decimal64 value is a strict subset of decimal128, so this decode
+// is exact and lossless -- there is no rounding, no context, and no signaling. The
+// 16-digit coefficient (< 2^54) and 15-digit NaN payload each fit in a single
+// 64-bit word, so unlike `dpd128Decode` this is entirely single-word.
+//
+// The 50-bit trailing significand T holds 5 DPD declets (the low 15 digits); the
+// most significant digit d0 (0..9) comes from the combination field G. Declet
+// decoding is shared with `dpd128Decode` via `binFromDecletsUpTo7` /
+// `dpdDecodeDeclet`.
+//
+// The combination field decodes exactly as for decimal128, only narrower:
+// - G0-G1 != 11: Case A, leading significand digit 0-7
+// - G0-G3 != 1111: Case B, leading significand digit 8-9
+// - G0-G4 == 11110: Infinity
+// - G0-G4 == 11111: NaN (G5 indicates signaling)
+//
+// Non-canonical finite coefficients and NaN payloads cannot arise from DPD (every
+// declet decodes to 0..999), so d0 + 5 declets tops out at exactly 10^16 - 1;
+// canonicalization is handled by the D128 factories.
 func dpd64Decode(dpd64 int64) d128 {
 	const bias = 398
 	const w = 8   // exponent continuation width
@@ -341,7 +406,10 @@ func dpd64Decode(dpd64 int64) d128 {
 	return decimalFNZ_64x64(sign, qExp, coeff, 0)
 }
 
-// Decode a D128 from a 64-bit DPD-encoded decimal64 value. The bit pattern is taken
-// as an int64 (the analog of math.Float64bits), mirroring the seam of
-// d128_from_bid64.
-func d128_from_dpd64(dpd64 int64) d128 { return dpd64Decode(dpd64) }
+// Decode a `D128` from a 64-bit DPD-encoded decimal64 value, its bit pattern
+// taken as one 64-bit word, mirroring the seam of `d128_from_bid64`.
+func d128_from_dpd64(dpd64 int64) d128 {
+	// The word is an int64 (the analog of math.Float64bits), mirroring the seam of
+	// d128_from_bid64.
+	return dpd64Decode(dpd64)
+}

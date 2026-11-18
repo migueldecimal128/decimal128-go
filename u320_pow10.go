@@ -6,8 +6,8 @@
 
 package decimal128
 
-// cmp_int_320_pow10 is -1, 0 or 1 as x <, ==, > 10^p, 0 <= p <= 96. Compares
-// only the limbs 10^p occupies; any nonzero limb of x above them makes x larger.
+// -1, 0 or 1 as x <, ==, > 10^p, 0 <= p <= 96. Compares only the limbs 10^p
+// occupies; any nonzero limb of x above them makes x larger.
 func cmp_int_320_pow10(x u320, p int) int {
 	verify("", func() bool { return (p >= 0) && (p <= 96) })
 	if p <= 38 {
@@ -27,9 +27,8 @@ func cmp_int_320_pow10(x u320, p int) int {
 	return cmp_int_320x320(x, u320{pow10_320_dw0(i), pow10_320_dw1(i), pow10_320_dw2(i), pow10_320_dw3(i), pow10_320_dw4(i)})
 }
 
-// digitLen_320 is the decimal digit count; 0 for x == 0 (as
-// digitLen_int_128). The bit-length estimate picks 10^lo, and the comparison
-// runs at that power's width.
+// Decimal digit count; 0 for x == 0 (as digitLen_int_128). The bit-length
+// estimate picks 10^lo, and the comparison runs at that power's width.
 func digitLen_320(x u320) int {
 	nbits := bitLen_int_320(x)
 	if nbits == 0 {
@@ -42,9 +41,9 @@ func digitLen_320(x u320) int {
 	return lo + 1
 }
 
-// residueFromRemainderPow10_320 is the residue of rem against 10^p, 0 <= rem <
-// 10^p, p <= 48: for the add/sub paths where the smaller operand drops
-// entirely. rem < 10^48 < 2^160, so 2·rem and 10^p both fit three limbs.
+// Residue of `rem` against 10^p, 0 <= rem < 10^p, p <= 48: for the add/sub
+// paths where the smaller operand drops entirely. rem < 10^48 < 2^160, so 2*rem
+// and 10^p both fit three limbs.
 func residueFromRemainderPow10_320(rem u320, p int) residue {
 	verify("", func() bool { return (p >= 0) && (p <= 48) })
 	verify("rem >= 10^p", func() bool { return cmp_int_320_pow10(rem, p) < 0 })
@@ -61,9 +60,8 @@ func residueFromRemainderPow10_320(rem u320, p int) residue {
 	return const_RESIDUE_GT_HALF
 }
 
-// residueFromRemainderDivisor_320 is the residue of rem against a general
-// divisor, 0 <= rem < divisor <= 10^96 (so 2·rem < 2^320): the D48 divide's
-// remainder.
+// Residue of `rem` against a general divisor, 0 <= rem < divisor <= 10^96 (so
+// 2*rem < 2^320): the D48 divide's remainder.
 func residueFromRemainderDivisor_320(rem, divisor u320) residue {
 	verify("rem >= divisor", func() bool { return lt_320(rem, divisor) })
 	if rem.isZero() {

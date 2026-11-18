@@ -11,8 +11,7 @@ package decimal128
 
 import "math/bits"
 
-// divRem_320_160_mg is x / y and x mod y for a nonzero y < 2^160 (as a u192)
-// and any x < 2^320.
+// x / y and x mod y for a nonzero y < 2^160 (as a U192) and any x < 2^320.
 func divRem_320_160_mg(x u320, y u192) quot320Rem160 {
 	y3 := u320FromU192(y)
 	demand("division by zero", !y.isZero())

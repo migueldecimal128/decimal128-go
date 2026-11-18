@@ -9,10 +9,19 @@
 
 package decimal128
 
-// mul384_192x192 returns the full 192x192->384 product A*M as (pLo, pHi): pLo the
-// low 192 bits, pHi the high 192 bits (each with a zero top limb, P < 2^383).
-// Reuses macCol512's 192-bit column accumulator; 9 macs / 6 columns.
+// Full 192x192 -> 384 product, M supplied as its three dwords m0/m1/m2.
+// A comba over the 256 kernel's accumulator and mac/emit helpers, 9 macs across
+// 6 columns:
+//
+//	r0: a0*m0
+//	r1: a1*m0 + a0*m1
+//	r2: a2*m0 + a1*m1 + a0*m2
+//	r3: a2*m1 + a1*m2
+//	r4: a2*m2
+//	r5: final carry
 func mul384_192x192(a0, a1, a2, m0, m1, m2 uint64) (pLo, pHi u256) {
+	// The column accumulator is macCol512's 192-bit one; the product comes back as
+	// (pLo, pHi), each with a zero top limb (P < 2^383).
 	var acc0, acc1, acc2 uint64
 
 	macCol512(a0, m0, &acc0, &acc1, &acc2)
@@ -46,8 +55,8 @@ func mul384_192x192(a0, a1, a2, m0, m1, m2 uint64) (pLo, pHi u256) {
 	return pLo, pHi
 }
 
-// Accessors for the flat reciprocal table: for index k the three dwords of M
-// ascend at const_RMP10_192_M[k*3 + 0..2] (m3 == 0 by the N=191 gate).
+// Dword accessors over the flat RMP10_192_M table: the three dwords of M live at
+// [k*3 + 0/1/2] in ascending significance (m3 is implicitly 0 by the N=191 gate).
 func rmp10_192_dw0(k int) int64 { return const_RMP10_192_M[k*3] }
 func rmp10_192_dw1(k int) int64 { return const_RMP10_192_M[k*3+1] }
 func rmp10_192_dw2(k int) int64 { return const_RMP10_192_M[k*3+2] }
@@ -79,6 +88,13 @@ func lowBitsNonZero_192(d0, d1, d2, d3 int64, n int) bool {
 	return u0|u1|u2 != 0 || u3&((uint64(1)<<(n-192))-1) != 0
 }
 
+// 3x3 recipmul kernel for x / 10^pow10 when the stripped dividend A = x >>
+// (pow10 - 1) fits 3 limbs (A < 2^191), pow10 1..77. A narrowed sibling of the
+// 4x4 divPow10_q128res_256_recipmul: the reciprocal M also fits 3 limbs, so
+// the reciprocal multiply is a 192*192->384 comba, 9 64*64 macs against the
+// 4x4's 16 (PrimitiveLayer.md D52). Same 128-bit quotient and classified
+// residue. Backs Core's div_256_pow10_q128res dispatch when bitLen(x) <= 190 +
+// pow10.
 func divPow10_q128res_192_recipmul(x u256, pow10 int) quot128Residue {
 	demand("recipmul192: pow10 outside [1, 77]", pow10 > 0 && pow10 <= 77)
 	k := pow10

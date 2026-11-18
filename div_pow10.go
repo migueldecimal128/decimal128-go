@@ -5,6 +5,8 @@
 
 package decimal128
 
+// x / 10^pow10 with the residue of the discarded digits. Tolerant entry point:
+// pow10 in 0...13000, in any relation to digitLen(x).
 func div_128_pow10_checked_q128res(x u128, pow10 int) quot128Residue {
 	verify("", func() bool { return pow10 >= 0 && pow10 <= 13000 })
 	if pow10 == 0 {
@@ -27,6 +29,8 @@ func div_128_pow10_checked_q128res(x u128, pow10 int) quot128Residue {
 	return quot128Residue{0, 0, res}
 }
 
+// x / 10^pow10 with the residue of the discarded digits. Requires 1 <= pow10 <
+// digitLen(x).
 func div_128_pow10_q128res(x u128, pow10 int) quot128Residue {
 	verify("", func() bool { return pow10 >= 1 && pow10 < digitLen_int_128(x.dw0, x.dw1) })
 	// pow10 == 1 keeps the divide-by-10 magic (single-digit residue lookup); a
@@ -66,6 +70,7 @@ func div_256_pow10_checked_q256res(x u256, pow10 int) quot256Residue {
 	return quot256Residue{0, 0, 0, 0, res}
 }
 
+// currently only used by AddWide
 func div_256_pow10_q256res(x u256, pow10 int) quot256Residue {
 	pow10Remaining := pow10
 	totalResidue := const_RESIDUE_EXACT

@@ -7,8 +7,8 @@ package decimal128
 
 import "math/bits"
 
-// mul_320_192x192 is x · y for two D48 coefficients (each < 2^160, so the
-// product is < 2^320): the 3x3 comba, nine limb products.
+// x * y for two D48 coefficients (each < 2^160, so the product is < 2^320):
+// the 3x3 comba, nine limb products.
 func mul_320_192x192(x, y u192) u320 {
 	a0, a1, a2 := uint64(x.dw0), uint64(x.dw1), uint64(x.dw2)
 	b0, b1, b2 := uint64(y.dw0), uint64(y.dw1), uint64(y.dw2)
@@ -41,9 +41,8 @@ func mul_320_192x192(x, y u192) u320 {
 	return u320{int64(r0), int64(r1), int64(r2), int64(r3), int64(r4)}
 }
 
-// mulWide_640_320x320 is the full 640-bit product x · y as (lo, hi) halves:
-// the 5x5 comba, 25 limb products. The recipmul divPow10 kernel's reciprocal
-// multiply.
+// The full 640-bit product x * y as (lo, hi) halves: the 5x5 comba, 25 limb
+// products. The recipmul divPow10 kernel's reciprocal multiply.
 func mulWide_640_320x320(x, y u320) (lo, hi u320) {
 	a0, a1, a2, a3, a4 := uint64(x.dw0), uint64(x.dw1), uint64(x.dw2), uint64(x.dw3), uint64(x.dw4)
 	b0, b1, b2, b3, b4 := uint64(y.dw0), uint64(y.dw1), uint64(y.dw2), uint64(y.dw3), uint64(y.dw4)
@@ -108,7 +107,7 @@ func mulWide_640_320x320(x, y u320) (lo, hi u320) {
 
 // --- Width-aware multiply by 10^k (Swift D-4) ---
 
-// mulPow10_320 is x · 10^k, 0 <= k <= 96; the product must fit 320 bits.
+// x * 10^k, 0 <= k <= 96; the product must fit 320 bits.
 //
 // 10^k is read at its own width, never built as a five-limb value: 1 limb for
 // k <= 19 (10^19 < 2^64), 2 for k <= 38 (region A), 3 for k <= 57 (10^57 <
@@ -165,8 +164,8 @@ func mulPow10_320(x u320, k int) u320 {
 	return mulTrunc_320(x, &m, mLen)
 }
 
-// mulTrunc_320 is x · m for an mLen-limb m, the product known to fit 320 bits:
-// operand-scanning schoolbook over x's nonzero limbs and m's limbs only.
+// x * m for an mLen-limb m, the product known to fit 320 bits: operand-scanning
+// schoolbook over x's nonzero limbs and m's limbs only.
 func mulTrunc_320(x u320, m *[5]uint64, mLen int) u320 {
 	a := [5]uint64{uint64(x.dw0), uint64(x.dw1), uint64(x.dw2), uint64(x.dw3), uint64(x.dw4)}
 	xLen := limbLen_320(x)
@@ -194,8 +193,8 @@ func mulTrunc_320(x u320, m *[5]uint64, mLen int) u320 {
 	return u320{int64(r[0]), int64(r[1]), int64(r[2]), int64(r[3]), int64(r[4])}
 }
 
-// mul_320_320x64 is x · y for a one-limb y; the product must fit 320 bits.
-// (exp's range reduction n · ln10.)
+// x * y for a one-limb y; the product must fit 320 bits (exp's range
+// reduction n * ln10).
 func mul_320_320x64(x u320, y int64) u320 {
 	m := [5]uint64{uint64(y)}
 	mLen := 1

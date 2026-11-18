@@ -4,8 +4,8 @@ package decimal128
 
 import "math/bits"
 
-// div_256_128_q128r128_mg: x > 2^128, y > 2^64, quotient <= 2^128. One reciprocal
-// build + two DIV3BY2 steps.
+// M&G 256/128 division for the D128 divide: x > 2^128, y > 2^64,
+// quotient <= 2^128 (divide contract). One reciprocal build + two DIV3BY2 steps.
 func div_256_128_q128r128_mg(x u256, y u128) quot128Rem128 {
 	verify("", func() bool { return y.dw1 != 0 })
 	shift := bits.LeadingZeros64(uint64(y.dw1)) // 0..63
@@ -53,7 +53,11 @@ func div_256_128_q128r128_mg(x u256, y u128) quot128Rem128 {
 	return quot128Rem128{int64(qLo), int64(qHi), int64(remainderLo), int64(remainderHi)}
 }
 
-// div_256_128_q256r128_mg: x > 2^128, y > 2^64, full quotient (sqrt).
+// Full-quotient M&G 256/128 division: x > 2^128, y > 2^64, quotient up to
+// ~192 bits. The sqrt / D38 callers consume the whole U256 quotient (unlike the
+// divide path's <=128-bit `div_256_128_q128r128_mg`). Schoolbook over the 5-limb
+// dividend / 2-limb divisor: the top two limbs give the 2^192 digit
+// (qh in {0,1}, normalized-divisor property), then one DIV3BY2 per lower limb.
 func div_256_128_q256r128_mg(x u256, y u128) quot256Rem128 {
 	verify("", func() bool { return y.dw1 != 0 })
 	shift := bits.LeadingZeros64(uint64(y.dw1))

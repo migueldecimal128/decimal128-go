@@ -22,6 +22,9 @@ func d128_rootn_ctx(x d128, n int, ctx *context) d128 {
 	return d128_rootn_rnd_ctxnull(x, n, ctx.round, ctx)
 }
 
+// IEEE 754-2019 Section 9.2 rootn(x, n) = x^(1/n) for integer n != 0.
+// Correctly rounded, except within the documented 1-ulp gap
+// (CrossPlatformArchitecture.md, "Transcendental accuracy").
 func d128_rootn_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d128 {
 	if n == 0 {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeRootnBadArgs, const_D128_QNAN0)
@@ -104,13 +107,13 @@ func rootnFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 
 // --- D48 route for general n (RootnGeneralNWorkOrder.md) ---
 
-// rootnGeneral_d48 is x^(1/n) for |n| >= 3 not a power of two (x < 0 only for
-// odd n): 10^u with u = log10|x| / n in D48 -- n is exact and 1/n is never
-// formed, so no rounded exponent gets magnified by |ln(result)| -- rounded once
-// with the result's sign. |u| <= 2,059, so 10^u never over- or underflows and
-// keeps about 8 guard digits (pow's bound). An integer u, or a result too close
-// to a rounding boundary, goes to the exact rule; then the tiny rule; anything
-// left is rounded as is: the documented 1-ulp gap near 1.
+// x^(1/n) for |n| >= 3 not a power of two (x < 0 only for odd n): 10^u with
+// u = log10|x| / n in D48 -- n is exact and 1/n is never formed, so no rounded
+// exponent gets magnified by |ln(result)| -- rounded once with the result's
+// sign. |u| <= 2,059, so 10^u never over- or underflows and keeps about 8 guard
+// digits (pow's bound). An integer u, or a result too close to a rounding
+// boundary, goes to the exact rule; then the tiny rule; anything left is rounded
+// as is: the documented 1-ulp gap near 1.
 func rootnGeneral_d48(x d128, n int, rounding round, ctxnull *context) d128 {
 	sign := d128_signFlag(x)
 	u := d48_divide(d48_logMagnitude(d48_fromD128(x, false), true), d48_fromInt32(n))
@@ -146,12 +149,12 @@ func rootnGeneral_d48(x d128, n int, rounding round, ctxnull *context) d128 {
 	return finalizeScaled(sign, s.z, s.n, rounding, ctxnull)
 }
 
-// rootnExactGeneral: if y = cy·10^qy is exactly |x|^(1/n), return ±y at the
-// exponent nearest the preferred ⌊Q(x)/n⌋ (RootnGeneralNWorkOrder.md RN-3).
-// Integers only, with x and y stripped of trailing zeros: n > 0 needs
-// qx = n·qy and cy^n = cx (cx < 10^34, so the power is abandoned once it passes
-// cx); n < 0 needs cx·cy^|n| = 10^k with k = n·qy − qx, so both coefficients
-// are 2^a·5^b and it reduces to exponent arithmetic.
+// If y = cy*10^qy is exactly |x|^(1/n), return +/-y at the exponent nearest the
+// preferred floor(Q(x)/n) (RootnGeneralNWorkOrder.md RN-3); ok = false otherwise. Integers
+// only, with x and y stripped of trailing zeros: n > 0 needs qx = n*qy and
+// cy^n = cx (cx < 10^34, so the power is abandoned once it passes cx); n < 0
+// needs cx*cy^|n| = 10^k with k = n*qy - qx, so both coefficients are 2^a*5^b
+// and it reduces to exponent arithmetic.
 func rootnExactGeneral(x d128, n int, cy u128, qy int, rounding round, ctxnull *context) (d128, bool) {
 	ysC, ysQ := stripTens(cy, qy)
 	xsC, xsQ := stripTens(d128_u128(x), d128_qExp(x))
@@ -214,11 +217,10 @@ func rootnExactGeneral(x d128, n int, cy u128, qy int, rounding round, ctxnull *
 	return d48_exactWithPreferred(d128_signFlag(x), ysC, ysQ, preferred, rounding, ctxnull), true
 }
 
-// rootnChain_d48 is x^(±1/2^shifts) for x > 0 over D48, rounded once. The
-// boundary test gates the exactness check (rootnExact); a result it doesn't
-// decide is rounded as is, and is inexact. Error bound: each √ halves the
-// error so far and adds ½ ulp (< 1 ulp in total), 1/z adds ½: under 1.5 units;
-// 40 leaves wide slack.
+// x^(+/-1/2^shifts) for x > 0 over D48, rounded once. The boundary test gates the
+// exactness check (rootnExact); a result it doesn't decide is rounded as is, and
+// is inexact. Error bound: each sqrt halves the error so far and adds 1/2 ulp (< 1
+// ulp in total), 1/z adds 1/2: under 1.5 units; 40 leaves wide slack.
 func rootnChain_d48(x d128, shifts int, invert bool, rounding round, ctxnull *context) d128 {
 	z := d48_fromD128(x, false)
 	j := 0
@@ -239,7 +241,7 @@ func rootnChain_d48(x d128, shifts int, invert bool, rounding round, ctxnull *co
 	return d48_forceInexact(finalizeD48_ctxnull(z, rounding, ctxnull), ctxnull)
 }
 
-// stripTens is (c, q) with c free of trailing zeros: the same value c·10^q.
+// (c, q) with c free of trailing zeros: the same value c*10^q.
 func stripTens(cIn u128, qIn int) (u128, int) {
 	c := cIn
 	q := qIn
@@ -254,7 +256,7 @@ func stripTens(cIn u128, qIn int) (u128, int) {
 	return c, q
 }
 
-// twoFive is c = 2^a · 5^b exactly, or ok = false.
+// c = 2^a * 5^b exactly, or ok = false.
 func twoFive(cIn u128) (a, b int, ok bool) {
 	a = ctz128(cIn)
 	c := shrU128(cIn, a)
@@ -269,13 +271,13 @@ func twoFive(cIn u128) (a, b int, ok bool) {
 	return a, b, c == (u128{1, 0})
 }
 
-// rootnExact: if y = candidate is exactly x^(±1/2^shifts), return it at the
-// exponent closest to the preferred one the D128 chain would give (√: ⌊Q/2⌋
-// per step; 1/z: −Q(z)). Exact test in integers: y^(2^s) == x, or
-// y^(2^s)·x == 1. y^(2^s) == x needs the power to equal x's coefficient
-// (< 2^113), so it is computed in 128 bits and abandoned on overflow;
-// y^(2^s)·x = 10^k needs both stripped coefficients to be 2^a·5^b, which
-// reduces it to exponent arithmetic.
+// If y = candidate is exactly x^(+/-1/2^shifts), return it at the exponent
+// closest to the preferred one the D128 chain would give (sqrt: floor(Q/2) per step;
+// 1/z: -Q(z)). Exact test in integers: y^(2^s) == x, or y^(2^s)*x == 1.
+//
+// y^(2^s) == x needs the power to equal x's coefficient (< 2^113), so it is
+// computed in U128 and abandoned on overflow; y^(2^s)*x = 10^k needs both
+// stripped coefficients to be 2^a*5^b, which reduces it to exponent arithmetic.
 func rootnExact(x d128, shifts int, invert bool, candidate d128, rounding round, ctxnull *context) (d128, bool) {
 	if !d128_isFNZ(candidate) {
 		return d128{}, false

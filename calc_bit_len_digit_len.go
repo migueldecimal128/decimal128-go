@@ -7,11 +7,14 @@ package decimal128
 
 import "math/bits"
 
+// Bit length of a non-negative Int; calcBitLenInt(0) == 0.
 func calcBitLenInt(x int) int {
 	verify("", func() bool { return x >= 0 })
 	return bits.UintSize - bits.LeadingZeros(uint(x))
 }
 
+// Decimal digit length of a small non-negative scalar (qExp etc.): the same
+// (bitLen * 1233) >> 12 estimate plus one POW10 compare as the 128-bit form.
 func digitLen_int_32(x int) int {
 	verify("", func() bool { return x >= 0 })
 	bitLen := calcBitLenInt(x)
@@ -19,6 +22,8 @@ func digitLen_int_32(x int) int {
 	return calcDigitLen64(bitLen, x64)
 }
 
+// Digit length of a 64-bit value given its bit length: the (bitLen * 1233) >>
+// 12 estimate plus one unsigned POW10 compare.
 func calcDigitLen64(bitLen int, x uint64) int {
 	loDigitCount := (bitLen * 1233) >> 12
 	hiDigitCount := loDigitCount + 1

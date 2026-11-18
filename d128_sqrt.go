@@ -31,6 +31,14 @@ func d128_sqrt_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 	return const_D128_POS_INFINITY
 }
 
+// Square root of a positive, finite, non-zero value, correctly rounded.
+//
+// The coefficient is scaled to a 75-76 digit integer `R` (parity chosen so
+// `(scaleUp - rQExp)` is even, keeping the exponent halving exact). Its exact
+// integer floor root `s = floor(sqrtR)` then has 38 digits -- 34 for the result
+// plus 4 guard digits -- and the exact remainder `rem = R - s^2` gives the
+// residue for the final round. `R`, `s^2` and the Newton intermediates all
+// stay below U256's 1.157*10^77 ceiling.
 func sqrtMagnitudeFnz_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 	f := sqrtFloorScaled(d128_u128(x), d128_qExp(x), d128_digitLen(x))
 	result := finalize_256_ctxnull(false, f.resultQExp, f.s, f.residue, rounding, ctxnull)
@@ -48,8 +56,8 @@ func sqrtMagnitudeFnz_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 	return result
 }
 
-// isMultipleOfPow10_4 is true iff s (always 38 digits) is divisible by 10^4 —
-// i.e. its root reduces to <=34 significant digits.
+// True iff `s` is divisible by 10^4. Since `s` is always exactly 38 digits,
+// this holds exactly when its root reduces to <=34 significant digits.
 func isMultipleOfPow10_4(s u256) bool {
 	qr := u256DivRem128(s, u128{10000, 0})
 	return isZero_bool_128(qr.remDw0, qr.remDw1)

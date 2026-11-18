@@ -20,7 +20,11 @@ const (
 	const_PAYLOAD64_MAX int64 = 999_999_999_999_999   // 10^15 - 1, decimal64 NaN payload max
 )
 
-// bid128Encode encodes a d128 into its 128-bit BID representation.
+// bid128Encode encodes a `D128` value into its 128-bit BID representation.
+//
+// The high 64 bits hold the sign, 17-bit combination field G, and upper 46 bits
+// of the 110-bit trailing significand T. The low 64 bits hold the lower 64 bits
+// of T.
 func bid128Encode(d d128) u128 {
 	var coeff u128
 	if d128_isFIN(d) {
@@ -43,6 +47,12 @@ func bid128Encode(d d128) u128 {
 	return fromLoHi_128_64x64(bidLo, bidHi)
 }
 
+// encodeSignAndGCombinationFieldBid128 encodes the BID-128 sign bit and 17-bit G combination field, returning them
+// positioned in the upper 18 bits of an `Int64` (sign in bit 63, G in bits 62..46).
+//
+// For finite values, G encodes the biased exponent (14 bits) shifted left by 3
+// and OR'd with the top 3 coefficient bits.
+// For Infinity / NaN, G uses the reserved patterns.
 func encodeSignAndGCombinationFieldBid128(d d128, mostSigBits3 int) int64 {
 	signBitLong := int64(d128_signBit(d)) << 63
 	var gCombinationField int
@@ -66,7 +76,20 @@ func encodeSignAndGCombinationFieldBid128(d d128, mostSigBits3 int) int64 {
 	return signBitLong | (int64(gCombinationField) << 46)
 }
 
-// bid128Decode decodes a d128 from its 128-bit BID encoding.
+// bid128Decode decodes a `D128` from its 128-bit BID encoding (IEEE 754-2019 Section 3.5.2).
+//
+// Combination field decoding:
+// G[0:1] = 00,01,10        -- Case A: biased exponent E in G[0:9],
+// coefficient MSD bits in G[10:12]
+// G[0:3] = 1100,1101,1110  -- Case B: biased exponent E in G[2:11],
+// coefficient prefix = 100<G12>
+// G[0:4] = 11110           -- Infinity (lower bits discarded)
+// G[0:4] = 11111           -- NaN; G[5] selects signaling vs quiet,
+// T is the payload
+//
+// Non-canonical finite coefficients (those exceeding 10^34 - 1) are treated as
+// zero per the IEEE specification. Non-canonical NaN payloads (>= 10^33) are
+// zeroed by `D128.nan`.
 func bid128Decode(bidHi, bidLo int64) d128 {
 	const bias = 6176
 	const w5 = 17 // combination field width
@@ -125,15 +148,19 @@ func bid128Decode(bidHi, bidLo int64) d128 {
 
 // Decode a D128 from a 128-bit BID-encoded value.
 func d128_from_bid128(bid u128) d128 { return bid128Decode(bid.dw1, bid.dw0) }
-func d128_to_bid128(x d128) u128     { return bid128Encode(x) }
 
-// bid64Decode decodes a d128 from a 64-bit BID-encoded decimal64 value
-// (IEEE 754-2019 §3.5.2). Every decimal64 value is a strict subset of decimal128,
-// so this decode is exact and lossless — no rounding, no context, no signalling.
-// The coefficient (≤ 16 digits, < 2^54) and NaN payload (≤ 15 digits) each fit
-// one word, so unlike bid128Decode this is entirely single-word. Non-canonical
-// finite coefficients (> 10^16 - 1) are treated as zero; non-canonical NaN
-// payloads (≥ 10^15) are canonicalized to zero.
+// Encode this `D128` into a 128-bit BID-encoded value.
+func d128_to_bid128(x d128) u128 { return bid128Encode(x) }
+
+// bid64Decode decodes a `D128` from a 64-bit BID-encoded decimal64 value (IEEE 754-2019
+// Section 3.5.2). Every decimal64 value is a strict subset of decimal128, so this decode
+// is exact and lossless -- there is no rounding, no context, and no signaling. The
+// coefficient (<= 16 digits, < 2^54) and NaN payload (<= 15 digits) each fit in a
+// single 64-bit word, so unlike `bid128Decode` this is entirely single-word.
+//
+// Non-canonical finite coefficients (those exceeding 10^16 - 1) are treated as
+// zero per the IEEE specification. Non-canonical NaN payloads (>= 10^15) are
+// canonicalized to zero.
 func bid64Decode(bid64 int64) d128 {
 	const bias = 398
 	const w5 = 13 // combination field width
@@ -184,7 +211,10 @@ func bid64Decode(bid64 int64) d128 {
 	return decimalFNZ_64x64(sign, qExp, coeff, 0)
 }
 
-// Decode a D128 from a 64-bit BID-encoded decimal64 value. The bit pattern is taken
-// as an int64 (the analog of math.Float64bits), mirroring the int64 dwords of the
-// u128 seam of d128_from_bid128.
-func d128_from_bid64(bid64 int64) d128 { return bid64Decode(bid64) }
+// Decode a `D128` from a 64-bit BID-encoded decimal64 value, its bit pattern
+// taken as one 64-bit word, mirroring the seam of `d128_from_bid128`.
+func d128_from_bid64(bid64 int64) d128 {
+	// The word is an int64 (the analog of math.Float64bits), mirroring the int64
+	// dwords of the u128 seam of d128_from_bid128.
+	return bid64Decode(bid64)
+}

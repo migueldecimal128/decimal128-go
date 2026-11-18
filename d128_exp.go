@@ -16,6 +16,12 @@ func d128_exp_ctx(x d128, ctx *context) d128 {
 	return d128_exp_rnd_ctxnull(x, ctx.round, ctx)
 }
 
+// IEEE 754-2019 Section 9.2 exp(x) = e^x. The finite nonzero magnitude is
+// computed in the 48-digit D48 domain (range reduction, a [12/12] Pade
+// approximant, three squarings), then rounded once with the caller's rounding.
+// A non-special result is irrational, hence always inexact. Correctly rounded,
+// except within the documented 1-ulp gap (CrossPlatformArchitecture.md,
+// "Transcendental accuracy").
 func d128_exp_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 	return expDispatch(x, false, rounding, ctxnull)
 }

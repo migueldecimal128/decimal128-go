@@ -69,6 +69,9 @@ var const_POW10 = [256]int64{
 
 // --- read surface ---
 
+// Region A -- 10^p (p <= 38), read as its (lo, hi) int64 dwords for the
+// core-facing surface. The index is masked with POW10_BCE so the read is
+// provably in-bounds (BCE); for in-contract p the mask is a no-op.
 func pow10_128_dw0(p int) int64 {
 	verify("", func() bool { return p <= 38 })
 	return const_POW10[(p<<1)&const_POW10_BCE]
@@ -79,6 +82,10 @@ func pow10_128_dw1(p int) int64 {
 	return const_POW10[((p<<1)|1)&const_POW10_BCE]
 }
 
+// Storage: four dwords at const_POW10[const_POW10_QUAD_BASE + (i<<2) + 0..3].
+
+// Region B -- 10^(39+i) as its four dwords dw0..dw3, ascending. `i` is the
+// 0-based index into the region (i = p - 39), so core call sites need no edits.
 func pow10_256_dw0(i int) int64 { return const_POW10[(const_POW10_QUAD_BASE+(i<<2))&const_POW10_BCE] }
 func pow10_256_dw1(i int) int64 { return const_POW10[(const_POW10_QUAD_BASE+(i<<2)+1)&const_POW10_BCE] }
 func pow10_256_dw2(i int) int64 { return const_POW10[(const_POW10_QUAD_BASE+(i<<2)+2)&const_POW10_BCE] }
@@ -131,25 +138,30 @@ var const_POW10_320_DW = [160]int64{
 }
 
 // pow10_320_dw0..dw4 are the dwords of 10^(78+i), 0 <= i <= 18.
+
 func pow10_320_dw0(i int) int64 { return const_POW10_320_DW[(i&const_POW10_320_BCE)*5] }
 func pow10_320_dw1(i int) int64 { return const_POW10_320_DW[(i&const_POW10_320_BCE)*5+1] }
 func pow10_320_dw2(i int) int64 { return const_POW10_320_DW[(i&const_POW10_320_BCE)*5+2] }
 func pow10_320_dw3(i int) int64 { return const_POW10_320_DW[(i&const_POW10_320_BCE)*5+3] }
 func pow10_320_dw4(i int) int64 { return const_POW10_320_DW[(i&const_POW10_320_BCE)*5+4] }
 
+// POW5_64 region -- 5^p (p <= 13) as a single Int64 limb (5^13 < 2^31, so the
+// sign bit is always clear).
 func pow5_64(p int) int64 {
 	verify("", func() bool { return p <= 13 })
 	return const_POW10[(const_POW5_BASE+p)&const_POW10_BCE]
 }
 
-// pow10U128 is the whole 10^p value as a u128 (p <= 38).
+// Whole-value read of table ENTRY e as a U128. Region-A entries are 10^e;
+// Region-B entries are the lo128/hi128 halves of 10^(39 + (e - 39)/2).
 func pow10U128(p int) u128 {
 	return u128{dw0: pow10_128_dw0(p), dw1: pow10_128_dw1(p)}
 }
 
-// isLt_pow10_34_bool_128 / isGe_pow10_34_bool_128 are the FNZ/canonical
-// coefficient-bound predicates over 10^34 (the seam form of core's
-// coeff < 10^34 / coeff >= 10^34). The 10^34 bound has no constant.
+// The FNZ/canonical coefficient bound predicates over 10^34, the seam form of
+// Core's `coeff < 10^34` / `coeff >= 10^34`. Naming follows isZero_bool_128. Non-verify Core reads the dword
+// surface, so the body does too. No fixed _38 pair was added: the general
+// cmp_int_128x128_pow10 (below) serves the 10^38 and variable-power compares (D40).
 func isLt_pow10_34_bool_128(dw0, dw1 int64) bool {
 	return cmp_int_128x128(dw0, dw1, pow10_128_dw0(34), pow10_128_dw1(34)) < 0
 }
@@ -158,8 +170,9 @@ func isGe_pow10_34_bool_128(dw0, dw1 int64) bool {
 	return cmp_int_128x128(dw0, dw1, pow10_128_dw0(34), pow10_128_dw1(34)) >= 0
 }
 
-// cmp_int_128x128_pow10 is core's cmp(coeff, 10^p) with the table lookup folded
-// into the primitive layer. Returns the cmp_int_128x128 sign code.
+// Core's `cmp(coeff, 10^p)` against the POW10 table, with both dword lookups
+// folded into the Primitive layer so Core carries no table reads. Returns the
+// cmp_int_128x128 sign code (<0 / 0 / >0); Core applies the relational test.
 func cmp_int_128x128_pow10(dw0, dw1 int64, p int) int {
 	return cmp_int_128x128(dw0, dw1, pow10_128_dw0(p), pow10_128_dw1(p))
 }

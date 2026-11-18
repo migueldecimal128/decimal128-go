@@ -30,7 +30,10 @@ var const_BARRETT_POW5_MU = [14]uint64{
 
 // --- 128-bit entry ---
 
-// divPow10_q128r64_128_barrett computes x / 10^pow10 with exact remainder.
+// divPow10_q128r64_128_barrett computes `x / 10^pow10` and returns the exact remainder.
+//
+// Strategy: `10 = 2 * 5`, so dividing by `10^k` = dividing by `2^k` then by `5^k`.
+// The `2^k` part is a shift; the `5^k` part uses Barrett reduction.
 func divPow10_q128r64_128_barrett(xDw0, xDw1 int64, pow10 int) quot128Rem64 {
 	verify("", func() bool { return pow10 >= 1 })
 	verify("", func() bool { return pow10 <= const_BARRETT_POW10_MAX })
@@ -42,6 +45,8 @@ func divPow10_q128r64_128_barrett(xDw0, xDw1 int64, pow10 int) quot128Rem64 {
 	return quot128Rem64{qr.quotDw0, qr.quotDw1, int64(remainder10)}
 }
 
+// barrett_128_pow5_q128r64 computes `x / 5^pow5` using Barrett reduction. Specialized by `pow5` and
+// dividend bit length.
 func barrett_128_pow5_q128r64(xDw0, xDw1 int64, pow5 int) quot128Rem64 {
 	verify("", func() bool { return pow5 >= 1 && pow5 <= const_BARRETT_POW10_MAX })
 	denom := pow5_64(pow5)
@@ -49,8 +54,10 @@ func barrett_128_pow5_q128r64(xDw0, xDw1 int64, pow5 int) quot128Rem64 {
 	return barrett_128_32_mu_q128r64(xDw0, xDw1, denom, mu)
 }
 
-// barrett_128_32_mu_q128r64 is the 32-bit chunk kernel (shared with the 256-bit
-// side).
+// 32-bit chunk kernel: divides a 128-bit dividend by denom (a tabulated 5^k,
+// with its reciprocal mu), three Barrett steps folding the high dword and the
+// two 32-bit halves of the low dword, high to low. Shared with the 256-bit
+// chunk ladder.
 func barrett_128_32_mu_q128r64(xDw0, xDw1, denom, mu int64) quot128Rem64 {
 	dwA := lo32_64(xDw0)
 	dwB := hi32_64(xDw0)
@@ -70,12 +77,14 @@ func barrett_128_32_mu_q128r64(xDw0, xDw1, denom, mu int64) quot128Rem64 {
 
 // --- residue-classifying entries (D42) ---
 
+// `x / 10^pow10` (128-bit dividend): quotient + classified residue.
 func divPow10_q128res_128_barrett(xDw0, xDw1 int64, pow10 int) quot128Residue {
 	qr := divPow10_q128r64_128_barrett(xDw0, xDw1, pow10)
 	res := residueFromRemainderPow10_64(qr.remDw0, pow10)
 	return quot128Residue{qr.quotDw0, qr.quotDw1, res}
 }
 
+// `x / 10^pow10` (256-bit dividend): 256-bit quotient + classified residue.
 func divPow10_q256res_256_barrett(xDw0, xDw1, xDw2, xDw3 int64, pow10 int) quot256Residue {
 	qr := divPow10_q256r64_256_barrett(xDw0, xDw1, xDw2, xDw3, pow10)
 	res := residueFromRemainderPow10_64(qr.remDw0, pow10)
@@ -84,6 +93,10 @@ func divPow10_q256res_256_barrett(xDw0, xDw1, xDw2, xDw3 int64, pow10 int) quot2
 
 // --- 256-bit entry, width dispatch, and chunk ladder ---
 
+// divPow10_q256r64_256_barrett computes `x / 10^pow10` (256-bit dividend) and returns the exact remainder.
+//
+// Strategy: `10 = 2 * 5`, so dividing by `10^k` = dividing by `2^k` then by `5^k`.
+// The `2^k` part is a shift; the `5^k` part uses Barrett reduction.
 func divPow10_q256r64_256_barrett(xDw0, xDw1, xDw2, xDw3 int64, pow10 int) quot256Rem64 {
 	verify("", func() bool { return pow10 >= 1 && pow10 <= const_BARRETT_POW10_MAX })
 	loBits := xDw0 & ((int64(1) << uint(pow10)) - 1)
@@ -93,6 +106,8 @@ func divPow10_q256r64_256_barrett(xDw0, xDw1, xDw2, xDw3 int64, pow10 int) quot2
 	return quot256Rem64{qr.quotDw0, qr.quotDw1, qr.quotDw2, qr.quotDw3, remainder10}
 }
 
+// barrett_256_pow5_q256r64 computes `x / 5^pow5` using Barrett reduction. Specialized by `pow5` and
+// dividend bit length.
 func barrett_256_pow5_q256r64(x u256, pow5 int) quot256Rem64 {
 	verify("", func() bool { return pow5 >= 1 && pow5 <= const_BARRETT_POW10_MAX })
 	denom := pow5_64(pow5)

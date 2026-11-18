@@ -7,15 +7,16 @@ package decimal128
 
 import "math"
 
-// scalb2 returns x * 2^n, building the power of two directly (no libm). n must
-// keep n+1023 inside the float64 exponent field, which holds for every U256 bit
-// index.
+// `x * 2^n` built by constructing the power of two directly -- no libm
+// dependency. `n` must keep `n + 1023` inside the Double exponent field
+// (0 < n + 1023 < 2047), which holds for every bit index of a U256.
 func scalb2(x float64, n int) float64 {
 	return x * math.Float64frombits(uint64(n+1023)<<52)
 }
 
-// u256ToFloorDouble renders the top (at most) 53 bits of x scaled by their bit
-// position — x floored to float64 precision. Used only to seed Newton iteration.
+// u256ToFloorDouble renders the top (at most) 53 bits of `x`, scaled by their bit position --
+// i.e. `x` floored to Double precision. Used only to seed the Newton
+// iteration, so discarding the low bits is immaterial.
 func u256ToFloorDouble(x u256) float64 {
 	bitLen := bitLen_int_256(x.dw0, x.dw1, x.dw2, x.dw3)
 	if bitLen == 0 {
@@ -28,8 +29,9 @@ func u256ToFloorDouble(x u256) float64 {
 	return scalb2(hiBits, hiBitIndex)
 }
 
-// u128FromDouble widens a finite, non-negative float64's integer value to a
-// u128, truncating any fraction.
+// Widens a finite, non-negative Double's integer value to a 128-bit
+// unsigned integer, truncating any fraction. The seed value -- `sqrt` of a
+// ~48-digit radicand -- is <= ~24 digits ~= 80 bits, so it always fits U128.
 func u128FromDouble(d float64) u128 {
 	b := math.Float64bits(d)
 	exp := int((b>>52)&0x7FF) - 1023

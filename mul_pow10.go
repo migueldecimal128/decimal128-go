@@ -10,7 +10,7 @@ func mulPow10_128_128(xDw0, xDw1 int64, pow10 int) u128 {
 	return mul_128_128x128(xDw0, xDw1, pow10_128_dw0(pow10), pow10_128_dw1(pow10))
 }
 
-// mulPow10_256_128 returns x * 10^pow10 as a u256, trapping where it must fit.
+// mulPow10_256_128 returns `x * 10^pow10` as a U256, trapping where the result must fit.
 func mulPow10_256_128(xDw0, xDw1 int64, pow10 int) u256 {
 	if pow10 <= 38 {
 		return mul_256_128x128(xDw0, xDw1, pow10_128_dw0(pow10), pow10_128_dw1(pow10))
@@ -20,7 +20,7 @@ func mulPow10_256_128(xDw0, xDw1 int64, pow10 int) u256 {
 	return mul_256_256x128(pow10_256_dw0(b), pow10_256_dw1(b), pow10_256_dw2(b), pow10_256_dw3(b), xDw0, xDw1)
 }
 
-// mulPow10_256_256 returns x * 10^pow10, trapping where it must fit.
+// mulPow10_256_256 returns `x * 10^pow10`, trapping where the result must fit.
 func mulPow10_256_256(xDw0, xDw1, xDw2, xDw3 int64, pow10 int) u256 {
 	if pow10 <= 0 {
 		demand("", pow10 >= 0)
@@ -53,10 +53,9 @@ func mulPow10_256_256(xDw0, xDw1, xDw2, xDw3 int64, pow10 int) u256 {
 	return mul_256_256x256(xDw0, xDw1, xDw2, xDw3, pd0, pd1, pd2, pd3)
 }
 
-// fusedMulPow10Add_256_256x64 returns x * 10^pow10 + addend, interleaving the
-// limb products with the addend's carry chain (§3.4; sole consumer is the
-// digit-accumulation path). Preconditions: pow10 in [0, 19], result fits 77
-// digits.
+// fusedMulPow10Add_256_256x64 returns `x * 10^pow10 + addend`, interleaving the limb products with
+// the addend's carry chain. Preconditions: pow10 in [0, 19], result
+// fits 77 digits.
 func fusedMulPow10Add_256_256x64(x u256, pow10 int, addend uint64) u256 {
 	demand("fusedMulPow10Add: pow10 outside [0, 19]", pow10 >= 0 && pow10 <= 19)
 	demand("overflows 77 digits", x.digitLen()+pow10 <= 77)

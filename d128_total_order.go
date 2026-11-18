@@ -9,17 +9,17 @@
 
 package decimal128
 
-// d128_isTotallyOrdered reports whether x totalOrders before-or-equal-to other.
+// d128_isTotallyOrdered returns `true` iff `x` totalOrders before-or-equal-to `other`.
 func d128_isTotallyOrdered(x, other d128) bool {
 	return d128_compareTotal(x, other) <= 0
 }
 
-// d128_isTotallyOrderedMag reports whether |x| totalOrders before-or-equal-to |other|.
+// d128_isTotallyOrderedMag returns `true` iff `|x|` totalOrders before-or-equal-to `|other|`.
 func d128_isTotallyOrderedMag(x, other d128) bool {
 	return d128_compareTotalMag(x, other) <= 0
 }
 
-// d128_compareTotal returns negative / 0 / positive, like memcmp.
+// Internal: returns negative / 0 / positive, like memcmp.
 func d128_compareTotal(x, y d128) int {
 	xSignMask := d128_signMask(x) // 0 or -1
 	ySignMask := d128_signMask(y)
@@ -107,6 +107,8 @@ func cmpInt(a, b int) int {
 	return 0
 }
 
+// (cmp ^ signMask) - signMask: cmp when signMask == 0, -cmp when signMask ==
+// -1.
 func negateForSign(cmp, signMask int) int {
 	return (cmp ^ signMask) - signMask
 }

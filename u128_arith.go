@@ -75,6 +75,8 @@ func not_128_128(xDw0, xDw1 int64) u128 {
 	return u128{dw0: ^xDw0, dw1: ^xDw1}
 }
 
+// -1/0/+1 unsigned 128-bit compare: high limb first, the low limb to break a
+// tie.
 func cmp_int_128x128(xDw0, xDw1, yDw0, yDw1 int64) int {
 	if uint64(xDw1) != uint64(yDw1) {
 		if uint64(xDw1) < uint64(yDw1) {
@@ -95,13 +97,13 @@ func isZero_bool_128(xDw0, xDw1 int64) bool {
 	return (xDw0 | xDw1) == 0
 }
 
-// fromLoHi_128_64x64 builds a u128 from its low and high dwords (signed-dword
-// uniform-API spelling).
+// fromLoHi_128_64x64 composes a U128 from its low and high dwords (signed dwords, read as
+// unsigned).
 func fromLoHi_128_64x64(dw0, dw1 int64) u128 {
 	return u128{dw0: dw0, dw1: dw1}
 }
 
-// mul_128_64x64 is the full-width 64×64→128 product (PrimitiveLayer.md §4.2).
+// Full-width 64*64->128 product (PrimitiveLayer.md Section 4.2).
 func mul_128_64x64(x, y int64) u128 {
 	hi, lo := bits.Mul64(uint64(x), uint64(y))
 	return u128FromU64(lo, hi)

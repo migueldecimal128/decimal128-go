@@ -38,9 +38,12 @@ func sqrtFloorScaled(coeff u128, qExp, digitLen int) sqrtFloor {
 	return sqrtFloor{resultQExp, s, res}
 }
 
-// isqrtFloor returns the unique s with s² <= R < (s+1)². Double-seeded integer
-// Newton (one unconditional step makes the iterate an overestimate), then a
-// bidirectional ±1 pin guarantees the exact floor.
+// Exact integer floor square root: returns the unique `s` with
+// `s^2 <= R < (s+1)^2`. Integer Newton -- one unconditional step from the seed
+// makes the iterate an overestimate (the integer-Newton invariant
+// `x >= floor(sqrtR)`), then it descends until it stops decreasing. A
+// bidirectional +/-1 pin makes the exact-floor guarantee independent of any
+// seed/rounding edge case.
 func isqrtFloor(r u256) u256 {
 	one := u256{1, 0, 0, 0}
 	seed := u256FromU128(u128FromDouble(math.Sqrt(u256ToFloorDouble(r))))
@@ -80,8 +83,9 @@ func shr1U(x u256) u256 {
 	return shr1_256_256(x.dw0, x.dw1, x.dw2, x.dw3)
 }
 
-// divU computes R / x where x = floor(√R) is <= 38 digits < 2^127, so it always
-// fits U128 and takes the 256÷128 path.
+// `R / x` where `x = floor(sqrtR)` is <=38 digits < 2^127 -- it always fits U128, so
+// this takes the 256/128 path instead of general 256/256 Knuth. The seed
+// widens a U128 (hi==0) and every iterate stays ~= sqrtR, so the invariant holds.
 func divU(R, x u256) u256 {
 	verify("", func() bool { return isZero_bool_128(x.dw2, x.dw3) })
 	qr := u256DivRem128(R, x.lo())

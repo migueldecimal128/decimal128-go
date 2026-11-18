@@ -68,9 +68,8 @@ func d48_addWideUnlikeSign(mSign bool, mQ int, mCoeff u320, nSign bool, nQ int, 
 	return d48_finalize_320(mSign, qAlign, sub_320_320x320(diff, u320FromDw0(1)), residueSubtractionInverse(res))
 }
 
-// d48_addWide is prod + c for an exact wide product (sign, qExp, u320
-// coefficient) and a value c, rounded once. Also exp's range reduction
-// x − n·ln10.
+// prod + c for an exact wide product (sign, qExp, U320 coefficient) and a
+// value c, rounded once. Also exp's range reduction x - n*ln10.
 func d48_addWide(prodSign bool, prodQ int, prodCoeff u320, cSign bool, cQ int, cCoeff u320) d48 {
 	// m = the side with the larger qExp; n = the other.
 	if prodQ >= cQ {
@@ -85,6 +84,7 @@ func d48_addWide(prodSign bool, prodQ int, prodCoeff u320, cSign bool, cQ int, c
 	return d48_addWideUnlikeSign(cSign, cQ, cCoeff, prodSign, prodQ, prodCoeff)
 }
 
+// D48 fused multiply-add (ties-to-even): x*y + c with one rounding.
 func d48_fma(x, y, c d48) d48 {
 	prod := mul_320_192x192(d48_u160(x), d48_u160(y))
 	if prod.isZero() {

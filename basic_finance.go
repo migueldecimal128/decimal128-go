@@ -12,17 +12,17 @@ var const_FIN_HALF_CENT = decimalFNZ_64x64(false, -3, 5, 0) // 0.005
 
 // --- simple & compound interest ---
 
-// d128_simpleInterest_tte: principal × rate × periods.
+// Simple interest earned over `periods` periods: principal * rate * periods.
 func d128_simpleInterest_tte(principal, rate, periods d128) d128 {
 	return d128_multiply_tte(d128_multiply_tte(principal, rate), periods)
 }
 
-// d128_compoundInterest_tte: principal × (1 + rate)^numPeriods.
+// Future value with compound interest: principal * (1 + rate)^numPeriods.
 func d128_compoundInterest_tte(principal, rate d128, numPeriods int) d128 {
 	return d128_multiply_tte(principal, d128_compound_tte(rate, numPeriods))
 }
 
-// d128_effectiveAnnualRate_tte: (1 + nominalRate / timesPerYear)^timesPerYear − 1.
+// Effective annual rate: (1 + nominalRate / timesPerYear)^timesPerYear - 1.
 func d128_effectiveAnnualRate_tte(nominalRate d128, timesPerYear int) d128 {
 	perPeriod := d128_divide_tte(nominalRate, d128_fromInt64(timesPerYear))
 	return d128_subtract_tte(d128_compound_tte(perPeriod, timesPerYear), const_FIN_ONE)
@@ -30,7 +30,8 @@ func d128_effectiveAnnualRate_tte(nominalRate d128, timesPerYear int) d128 {
 
 // --- mortgage / annuity payment ---
 
-// d128_mortgagePayment_tte: PV × r × (1+r)^n / ((1+r)^n − 1). r = 0 → PV / n.
+// Fixed-rate mortgage / annuity payment: PV * r * (1+r)^n / ((1+r)^n - 1).
+// r = 0 -> PV / n (interest-free loan).
 func d128_mortgagePayment_tte(principal, periodicRate d128, numPayments int) d128 {
 	if d128_isZER(periodicRate) {
 		return d128_divide_tte(principal, d128_fromInt64(numPayments))
@@ -50,9 +51,9 @@ type amortizationRow struct {
 	balance       d128
 }
 
-// d128_amortizationSchedule_tte returns one row per payment period. The final
-// balance is clamped to exactly zero when its magnitude is below half a cent (a
-// fixed-payment rounding artifact).
+// Full amortization schedule -- one `AmortizationRow` per payment period. The
+// final balance is clamped to exactly zero when its magnitude is below half a
+// cent (fixed-payment rounding artifact).
 func d128_amortizationSchedule_tte(principal, periodicRate d128, numPayments int) []amortizationRow {
 	demand("amortizationSchedule: numPayments exceeds 100000", numPayments <= 100000)
 	payment := d128_mortgagePayment_tte(principal, periodicRate, numPayments)
@@ -74,7 +75,7 @@ func d128_amortizationSchedule_tte(principal, periodicRate d128, numPayments int
 
 // --- annuity present / future value ---
 
-// d128_presentValueAnnuity_tte: PMT × (1 − (1+r)^−n) / r. r = 0 → PMT × n.
+// Present value of an ordinary annuity: PMT * (1 - (1+r)^-n) / r. r = 0 -> PMT * n.
 func d128_presentValueAnnuity_tte(payment, periodicRate d128, numPeriods int) d128 {
 	if d128_isZER(periodicRate) {
 		return d128_multiply_tte(payment, d128_fromInt64(numPeriods))
@@ -84,7 +85,7 @@ func d128_presentValueAnnuity_tte(payment, periodicRate d128, numPeriods int) d1
 	return d128_divide_tte(d128_multiply_tte(payment, oneMinus), periodicRate)
 }
 
-// d128_futureValueAnnuity_tte: PMT × ((1+r)^n − 1) / r. r = 0 → PMT × n.
+// Future value of an ordinary annuity: PMT * ((1+r)^n - 1) / r. r = 0 -> PMT * n.
 func d128_futureValueAnnuity_tte(payment, periodicRate d128, numPeriods int) d128 {
 	if d128_isZER(periodicRate) {
 		return d128_multiply_tte(payment, d128_fromInt64(numPeriods))
@@ -95,17 +96,17 @@ func d128_futureValueAnnuity_tte(payment, periodicRate d128, numPeriods int) d12
 
 // --- single cash-flow helpers ---
 
-// d128_presentValue_tte: FV / (1+r)^n.
+// Present value of a single future cash flow: FV / (1+r)^n.
 func d128_presentValue_tte(futureValue, rate d128, numPeriods int) d128 {
 	return d128_divide_tte(futureValue, d128_compound_tte(rate, numPeriods))
 }
 
-// d128_futureValue_tte: PV × (1+r)^n.
+// Future value of a single present cash flow: PV * (1+r)^n.
 func d128_futureValue_tte(presentValue, rate d128, numPeriods int) d128 {
 	return d128_multiply_tte(presentValue, d128_compound_tte(rate, numPeriods))
 }
 
-// d128_cagr_tte: (FV/PV)^(1/n) − 1. PV and FV must be positive.
+// Compound annual growth rate: (FV/PV)^(1/n) - 1. PV and FV must be positive.
 func d128_cagr_tte(presentValue, futureValue d128, numPeriods int) d128 {
 	verify("cagr: presentValue must be positive", func() bool { return d128_isGreater(presentValue, const_FIN_ZERO) })
 	verify("cagr: futureValue must be positive", func() bool { return d128_isGreater(futureValue, const_FIN_ZERO) })
@@ -115,7 +116,8 @@ func d128_cagr_tte(presentValue, futureValue d128, numPeriods int) d128 {
 
 // --- NPV / IRR / MIRR ---
 
-// d128_npv_tte: Σ CF_t / (1+rate)^t. cashFlows[0] is the immediate (t=0) flow.
+// Net present value of `cashFlows` discounted at `rate`. `cashFlows[0]` is the
+// immediate (t = 0, undiscounted) flow. NPV = sum CF_t / (1+rate)^t.
 func d128_npv_tte(rate d128, cashFlows []d128) d128 {
 	result := const_FIN_ZERO
 	t := 0
@@ -127,9 +129,9 @@ func d128_npv_tte(rate d128, cashFlows []d128) d128 {
 	return result
 }
 
-// d128_irr_tte: the rate making NPV(cashFlows) = 0, via Newton-Raphson with the
-// analytic derivative. Returns NaN if the derivative vanishes or it fails to
-// converge within maxIter. Needs ≥ 2 cash flows.
+// Internal rate of return -- the rate making NPV(cashFlows) = 0, via
+// Newton-Raphson with the analytic derivative. Returns NaN if the derivative
+// vanishes or it fails to converge within `maxIter`. Needs >= 2 cash flows.
 func d128_irr_tte(cashFlows []d128, guess, tolerance d128, maxIter int) d128 {
 	verify("irr: need at least 2 cash flows", func() bool { return len(cashFlows) >= 2 })
 	rate := guess
@@ -165,8 +167,9 @@ func d128_irr_tte(cashFlows []d128, guess, tolerance d128, maxIter int) d128 {
 	return const_D128_QNAN0 // did not converge
 }
 
-// d128_mirr_tte: (FV_pos / |PV_neg|)^(1/(n−1)) − 1 — positive flows reinvested at
-// reinvestRate, negative flows discounted at financeRate. Needs ≥ 1 negative flow.
+// Modified IRR -- positive flows reinvested at `reinvestRate`, negative flows
+// discounted at `financeRate`: (FV_pos / |PV_neg|)^(1/(n-1)) - 1. Needs at
+// least one negative cash flow.
 func d128_mirr_tte(cashFlows []d128, financeRate, reinvestRate d128) d128 {
 	n := len(cashFlows)
 	pvNeg := const_FIN_ZERO

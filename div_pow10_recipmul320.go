@@ -9,6 +9,9 @@
 
 package decimal128
 
+// The 320-bit-dividend recipmul divPow10 kernel for the D48 domain: x / 10^k
+// with the residue of the discarded digits. Contract: 1 <= k <= 96, x < 10^96
+// (every D48 intermediate).
 func divPow10_q320res_320_recipmul(x u320, k int) quot320Residue {
 	return recipmul320(x, k)
 }
@@ -19,6 +22,9 @@ func divPow10_q320res_320_recipmul(x u320, k int) quot320Residue {
 // entry calls a generated body with k, S and M folded in
 // (div_pow10_recipmul320_fixedk.go; D48GoWorkOrder.md G-7, Phase 5 option B).
 
+// Fixed-k entry points for d48_finalize_320's common drops: a 95-96-digit
+// product loses 47 or 48 digits, a 49-digit quotient 1. With k a constant, the
+// table reads, the shift amounts and the limb selection fold at compile time.
 func divPow10_q320res_320_recipmul_48(x u320) quot320Residue { return recipmul320_k48(x) }
 
 func divPow10_q320res_320_recipmul_47(x u320) quot320Residue { return recipmul320_k47(x) }
@@ -181,8 +187,7 @@ func recipmul320(x u320, k int) quot320Residue {
 	return quot320Residue{q.dw0, q.dw1, q.dw2, q.dw3, q.dw4, res}
 }
 
-// divPow10_q320res is x / 10^k with the residue of the discarded digits,
-// 0 <= k <= 96, x < 10^96.
+// x / 10^k with the residue of the discarded digits, 0 <= k <= 96, x < 10^96.
 func divPow10_q320res(x u320, k int) quot320Residue {
 	if k == 0 {
 		return quot320Residue{x.dw0, x.dw1, x.dw2, x.dw3, x.dw4, const_RESIDUE_EXACT}
@@ -190,9 +195,8 @@ func divPow10_q320res(x u320, k int) quot320Residue {
 	return divPow10_q320res_320_recipmul(x, k)
 }
 
-// divPow10_checked_q320res is divPow10_q320res for any k >= 0: beyond 96 the
-// quotient is 0 and x (< 10^96 <= 10^(k-1)) is under half a unit unless it is
-// zero.
+// As divPow10_q320res, but any k >= 0: beyond 96 the quotient is 0 and x
+// (< 10^96 <= 10^(k-1)) is under half a unit unless it is zero.
 func divPow10_checked_q320res(x u320, k int) quot320Residue {
 	verify("", func() bool { return k >= 0 })
 	// The kernel directly, not through divPow10_q320res: one call layer fewer

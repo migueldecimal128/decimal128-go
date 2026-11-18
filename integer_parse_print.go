@@ -33,8 +33,8 @@ func uIntToASCII(digitPrintCount, u int, ascii unsafe.Pointer, off int) {
 	u64ToASCII(digitPrintCount, int64(u), ascii, off)
 }
 
-// u64ToASCII renders the low digitPrintCount decimal digits of value into ascii
-// starting at off.
+// Render the low `digitPrintCount` decimal digits of `value` into `ascii`
+// starting at `off`. Returns `digitPrintCount`.
 func u64ToASCII(digitPrintCount int, value int64, ascii unsafe.Pointer, off int) {
 	digitsRemaining := digitPrintCount
 	ich := off + digitsRemaining
@@ -52,7 +52,8 @@ func u64ToASCII(digitPrintCount int, value int64, ascii unsafe.Pointer, off int)
 	}
 }
 
-// u128ToASCII renders the low digitPrintCount decimal digits of a 128-bit value.
+// Render the low `digitPrintCount` decimal digits of `value` into `ascii`
+// starting at `off`. Returns `digitPrintCount`.
 func u128ToASCII(digitPrintCount int, value u128, ascii unsafe.Pointer, off int) {
 	hi := value.dw1
 	lo := value.dw0

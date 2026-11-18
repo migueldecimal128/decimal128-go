@@ -26,6 +26,9 @@ func d128_pown_ctx(x d128, n int, ctx *context) d128 {
 	return d128_pown_rnd_ctxnull(x, n, ctx.round, ctx)
 }
 
+// IEEE 754-2019 Section 9.2 pown(x, n): x raised to a signed integer power.
+// Correctly rounded, except within the documented 1-ulp gap
+// (CrossPlatformArchitecture.md, "Transcendental accuracy").
 func d128_pown_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d128 {
 	if d128_isFIN(x) {
 		if d128_isZER(x) {
@@ -181,10 +184,9 @@ func pownFNZ_powGE3(x d128, n uint64, rounding round, ctxnull *context) d128 {
 
 // --- D48-base bodies (shared with compound, CompoundD48OnePlusXWorkOrder.md CX-2) ---
 
-// pown_d48Ladder is left-to-right binary exponentiation m^n (n >= 1; n = 1
-// returns m) in the 48-digit D48 domain. It stops at the first guard-band
-// crossing and returns that value: the caller tests d48_qExp against
-// const_POWN_QEXP_OVER / const_POWN_QEXP_UNDER.
+// Left-to-right binary exponentiation m^n (n >= 1) in the 48-digit D48 domain.
+// Stops at the first guard-band crossing and returns that value: the caller
+// tests d48_qExp against POWN_QEXP_OVER / POWN_QEXP_UNDER.
 func pown_d48Ladder(m d48, n uint64) d48 {
 	if n == 1 {
 		return m // the top-bit shift needs n >= 2
@@ -204,12 +206,12 @@ func pown_d48Ladder(m d48, n uint64) d48 {
 	return z
 }
 
-// pown_d48Positive is m^n for n >= 2 over D48, rounded once into decimal128.
-// exact says the true power is exact in decimal128 (pownPositiveExact): no
-// exact rule gates the ladder (an exact power never leaves 48 digits, so the
-// ladder never rounded it), so z is rounded as is -- the documented 1-ulp gap
-// near 1. Its tail can still fall below 48 digits and land z on a decimal128
-// point: Inexact comes from the operands, not z.
+// m^n for n >= 2 over D48, rounded once into decimal128. `exact` says the true
+// power is exact in decimal128 (pownPositiveExact): no exact rule gates the
+// ladder (an exact power never leaves 48 digits, so the ladder never rounded
+// it), so z is rounded as is -- the documented 1-ulp gap near 1. Its tail can
+// still fall below 48 digits and land z on a decimal128 point: Inexact comes
+// from the operands, not z.
 func pown_d48Positive(m d48, n uint64, exact bool, rounding round, ctxnull *context) d128 {
 	verify("", func() bool { return n >= 2 })
 	resultSign := d48_signFlag(m) && (n&1) != 0
@@ -227,10 +229,10 @@ func pown_d48Positive(m d48, n uint64, exact bool, rounding round, ctxnull *cont
 	return d48_forceInexact(r, ctxnull)
 }
 
-// pown_d48Negative is 1/m^absPow (absPow >= 1) over D48: ladder on absPow, one
-// D48 divide 1/z, one final rounding. The caller has already run the exact
-// rule, so the result is inexact. The guard bands are inverted: a huge z means
-// 1/z fully underflows, a tiny z means 1/z overflows.
+// 1/m^absPow (absPow >= 1) over D48: ladder on absPow, one D48 divide 1/z, one
+// final rounding. The caller has already run the exact rule, so the result is
+// inexact. The guard bands are inverted: a huge z means 1/z fully underflows,
+// a tiny z means 1/z overflows.
 func pown_d48Negative(m d48, absPow uint64, rounding round, ctxnull *context) d128 {
 	verify("", func() bool { return absPow >= 1 })
 	resultSign := d48_signFlag(m) && (absPow&1) != 0
@@ -245,9 +247,9 @@ func pown_d48Negative(m d48, absPow uint64, rounding round, ctxnull *context) d1
 	return d48_forceInexact(r, ctxnull)
 }
 
-// d48_log1pSeries is log1p(ε) for |ε| < 10^-5: ε·Σ (−1)^(k+1)·ε^(k−1)/k, Horner
-// in D48. Ten terms reach 48 digits relative to ε however small ε is; the
-// general d48_logMagnitude is only absolutely accurate near 1.
+// log1p(eps) for |eps| < 10^-5: eps*sum (-1)^(k+1)*eps^(k-1)/k, Horner in D48. Ten terms
+// reach 48 digits relative to eps however small eps is; the general
+// d48_logMagnitude is only absolutely accurate near 1.
 func d48_log1pSeries(eps d48) d48 {
 	w := const_D48_LOG1P_WEIGHTS
 	acc := w[len(w)-1]
@@ -259,15 +261,15 @@ func d48_log1pSeries(eps d48) d48 {
 	return d48_multiply(acc, eps)
 }
 
-// pown_largeN is ±(1 + ε)^n for |n| > 2^31, rounded once: ε = |x| − 1 (pown) or
-// x (compound), exact in D48. |ε| >= 10^-5 certainly overflows or fully
-// underflows; below it z = n·log1p(ε)/ln10 has absolute error about 10^-43 for
-// any finite result, so 10^z keeps about 8 guard digits whatever n is. No exact
-// rule applies (x^n is exact here only for |x| ∈ {1, 10}, handled before), so a
-// result too close to a rounding boundary is rounded as is: the documented 1-ulp
-// gap, which here includes bases a few ulps from 1 in every mode
-// (PownLargeNWorkOrder.md LN-6). tinyRule (compound only, whose ε can be far
-// below 10^-34): |z| < 10^-35 makes 10^z 1 ± tiny, decided by z's sign.
+// +/-(1 + eps)^n for |n| > 2^31, rounded once: eps = |x| - 1 (pown) or x (compound),
+// exact in D48. |eps| >= 10^-5 certainly overflows or fully underflows; below it
+// z = n*log1p(eps)/ln10 has absolute error about 10^-43 for any finite result, so
+// 10^z keeps about 8 guard digits whatever n is. No exact rule applies (x^n is
+// exact here only for |x| in {1, 10}, handled before), so a result too close to
+// a rounding boundary is rounded as is: the documented 1-ulp gap, which here
+// includes bases a few ulps from 1 in every mode (PownLargeNWorkOrder.md LN-6).
+// `tinyRule` (compound only, whose eps can be far below 10^-34): |z| < 10^-35
+// makes 10^z 1 +/- tiny, decided by z's sign.
 func pown_largeN(eps d48, n int, resultSign, tinyRule bool, rounding round, ctxnull *context) d128 {
 	verify("", func() bool { return (absU64(n) > const_POWN_LARGE_N) && !d48_isZero(eps) })
 	// |n·ln(1 + ε)| > 2·10^4: the magnitude exceeds 1 iff ε and n share a sign (LN-3).
@@ -289,16 +291,14 @@ func pown_largeN(eps d48, n int, resultSign, tinyRule bool, rounding round, ctxn
 	return finalizeScaled(resultSign, s.z, s.n, rounding, ctxnull)
 }
 
-// pownPositiveExact is true if x^n (n >= 2) has at most 34 significant digits,
-// i.e. is exact in decimal128 before range limits: c'^n < 10^34 with c' the
-// coefficient of x stripped of trailing zeros (c' not a multiple of 10, so
-// neither is c'^n).
+// True if x^n (n >= 2) has at most 34 significant digits, i.e. is exact in
+// decimal128 before range limits: c'^n < 10^34 with c' the coefficient of x
+// stripped of trailing zeros (c' not a multiple of 10, so neither is c'^n).
 func pownPositiveExact(x d128, n uint64) bool {
 	return pown_positiveExactCoeff(d128_u128(x), n)
 }
 
-// pown_positiveExactCoeff is pownPositiveExact on a coefficient: c^n has at
-// most 34 significant digits.
+// pownPositiveExact on a coefficient: c^n has at most 34 significant digits.
 func pown_positiveExactCoeff(cIn u128, n uint64) bool {
 	c, _ := stripTens(cIn, 0)
 	if c == (u128{1, 0}) {
@@ -317,24 +317,23 @@ func pown_positiveExactCoeff(cIn u128, n uint64) bool {
 	return true
 }
 
-// saturate clamps an exponent to ±10^9 (finalize turns it into the overflow /
-// underflow it is).
+// saturate clamps an exponent to +/-10^9; finalize turns it into the overflow or
+// underflow it stands for.
 func saturate(v int) int {
 	return max(-1_000_000_000, min(1_000_000_000, v))
 }
 
-// pownNegativeExact is the exact 1/x^m (m >= 1) when it exists in decimal128,
-// else ok = false. Strip x's trailing zeros: x = c'·10^e. 1/x^m is a
-// terminating decimal iff c' = 2^a or 5^b (or 1), and fits 34 digits iff
-// a·m <= 48 (5^48 < 10^34) or b·m <= 112 (2^112 < 10^34). The result takes the
-// exponent closest to the preferred n·Q(x).
+// Exact 1/x^m (m >= 1) when it exists in decimal128, else ok = false. Strip x's
+// trailing zeros: x = c'*10^e. 1/x^m is a terminating decimal iff c' = 2^a or
+// 5^b (or 1), and fits 34 digits iff a*m <= 48 (5^48 < 10^34) or b*m <= 112
+// (2^112 < 10^34). The result takes the exponent closest to the preferred n*Q(x).
 func pownNegativeExact(x d128, m uint64, rounding round, ctxnull *context) (d128, bool) {
 	return pown_negativeExactCoeff(d128_signFlag(x), d128_u128(x), d128_qExp(x), d128_qExp(x), m, rounding, ctxnull)
 }
 
-// pown_negativeExactCoeff is pownNegativeExact on a value ±c·10^qExp (m >= 1);
-// an exact result takes the exponent nearest −m·preferredBaseQExp (the base's
-// quantum exponent before any trailing zeros were stripped).
+// pownNegativeExact on a value c*10^qExp with sign `xSign` (m >= 1); an exact
+// result takes the exponent nearest -m*`preferredBaseQExp` (the base's quantum
+// exponent before any trailing zeros were stripped).
 func pown_negativeExactCoeff(xSign bool, c u128, qExp, preferredBaseQExp int, m uint64,
 	rounding round, ctxnull *context) (d128, bool) {
 	p2 := ctz128(c)
@@ -379,8 +378,7 @@ func pown_negativeExactCoeff(xSign bool, c u128, qExp, preferredBaseQExp int, m 
 		rounding, ctxnull), true
 }
 
-// pownFNZ_negative_d48 is pown for n <= −2 (m = |n|): the exact rule, else
-// pown_d48Negative.
+// pown for n <= -2: the exact rule, else pown_d48Negative.
 func pownFNZ_negative_d48(x d128, n uint64, rounding round, ctxnull *context) d128 {
 	verify("", func() bool { return n >= 2 })
 	if exact, ok := pownNegativeExact(x, n, rounding, ctxnull); ok {
@@ -391,16 +389,15 @@ func pownFNZ_negative_d48(x d128, n uint64, rounding round, ctxnull *context) d1
 
 // --- exact builders ---
 
-// d128_oneWithQExp builds ±1 carrying quantum exponent qExp (in [-33, 0]); the
-// coefficient is 10^(-qExp).
+// +/-1 carrying quantum exponent `qExp` (in [-33, 0]); coefficient is 10^(-qExp).
 func d128_oneWithQExp(sign bool, qExp int) d128 {
 	p := -qExp
 	coeff := fromLoHi_128_64x64(pow10_128_dw0(p), pow10_128_dw1(p))
 	return d128Pack(sign, qExp, coeff.dw0, coeff.dw1)
 }
 
-// tenPowN builds ±10^n with the preferred cohort exponent preferredQExp;
-// finalize clamps the exponent into range / overflows in the large-n branch.
+// +/-10^n with the preferred cohort exponent `preferredQExp`; `finalize` clamps
+// the exponent into range / overflows in the large-n branch.
 func tenPowN(sign bool, n, preferredQExp int, rounding round, ctxnull *context) d128 {
 	coeffExp := n - preferredQExp
 	if coeffExp <= 0 || coeffExp > 33 {

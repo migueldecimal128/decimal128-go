@@ -15,8 +15,8 @@ func d48RoundsHalfEven(res residue, coeff u320) bool {
 	return (res == const_RESIDUE_GT_HALF) || ((res == const_RESIDUE_HALF) && ((coeff.dw0 & 1) != 0))
 }
 
-// d48_scaleDownTail rounds a < 10^48 coefficient by res; a carry to 10^48
-// rescales to 10^47 at qExp + 1.
+// Round a < 10^48 coefficient by `residue`; a carry to 10^48 rescales to
+// 10^47 at qExp + 1.
 func d48_scaleDownTail(sign bool, qExp int, coeff u320, res residue) d48 {
 	verify("", func() bool { return lt_320(coeff, const_D48_POW10_48) })
 	if !d48RoundsHalfEven(res, coeff) {
@@ -36,6 +36,9 @@ func d48_scaleDownTail(sign bool, qExp int, coeff u320, res residue) d48 {
 	return d48_fromSignQExp_160(sign, qExp+1, const_D48_POW10_47.u192())
 }
 
+// d48_finalize_320 rounds (sign, qExp, coefficient, residue) into a 48-digit D48
+// (ties-to-even): one entry over U320, where D38 has d38_finalize_128 and
+// _256.
 func d48_finalize_320(sign bool, qExp int, coeff u320, res residue) d48 {
 	digitLen := digitLen_320(coeff)
 	if digitLen <= 48 {

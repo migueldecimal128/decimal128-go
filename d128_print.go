@@ -22,6 +22,7 @@ func withStringBuffer(length int, f func(p unsafe.Pointer)) string {
 	return unsafe.String(unsafe.SliceData(buf), length)
 }
 
+// d128_format renders `x` as text in `formatStyle`, one of the `FORMAT_*` styles.
 func d128_format(x d128, formatStyle int) string {
 	return d128ToString(x, formatStyle)
 }

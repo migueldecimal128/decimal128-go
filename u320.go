@@ -41,7 +41,7 @@ func (x u320) u192() u192 {
 
 // --- Compare, bit length ---
 
-// cmp_int_320x320 is -1, 0 or 1 as x <, ==, > y (unsigned).
+// -1, 0 or 1 as x <, ==, > y (unsigned).
 func cmp_int_320x320(x, y u320) int {
 	if x.dw4 != y.dw4 {
 		return cmpLimb(x.dw4, y.dw4)
@@ -80,9 +80,9 @@ func lt_320(x, y u320) bool {
 	return b != 0
 }
 
-// bitLen_int_320 is the number of significant bits; 0 for x == 0. Spelled
-// with bits.Len64 (= 64 - LeadingZeros64) to fit Go's inline budget (G-7).
+// Number of significant bits; 0 for x == 0.
 func bitLen_int_320(x u320) int {
+	// Spelled with bits.Len64 (= 64 - LeadingZeros64) to fit Go's inline budget (G-7).
 	if x.dw4 != 0 {
 		return 256 + bits.Len64(uint64(x.dw4))
 	}
@@ -98,7 +98,7 @@ func bitLen_int_320(x u320) int {
 	return bits.Len64(uint64(x.dw0))
 }
 
-// limbLen_320 is 0 for x == 0, else 1 + the index of the top nonzero limb.
+// Limb length: 0 for x == 0, else 1 + the index of the top nonzero limb.
 func limbLen_320(x u320) int {
 	if x.dw4 != 0 {
 		return 5
@@ -126,7 +126,7 @@ func limbLen_320(x u320) int {
 // defines a shift by 64 as 0, so the plain form would be safe too; the trick
 // keeps it branch-free, as Swift.)
 
-// limbsDown_320 is the five limbs of x moved down by q whole limbs (zero-filled).
+// The five limbs of x moved down by q whole limbs (zero-filled).
 func limbsDown_320(x u320, q int) (uint64, uint64, uint64, uint64, uint64) {
 	x0, x1, x2, x3, x4 := uint64(x.dw0), uint64(x.dw1), uint64(x.dw2), uint64(x.dw3), uint64(x.dw4)
 	if q == 0 {
@@ -142,7 +142,7 @@ func limbsDown_320(x u320, q int) (uint64, uint64, uint64, uint64, uint64) {
 	}
 }
 
-// limbsUp_320 is the five limbs of x moved up by q whole limbs (zero-filled).
+// The five limbs of x moved up by q whole limbs (zero-filled).
 func limbsUp_320(x u320, q int) (uint64, uint64, uint64, uint64, uint64) {
 	x0, x1, x2, x3, x4 := uint64(x.dw0), uint64(x.dw1), uint64(x.dw2), uint64(x.dw3), uint64(x.dw4)
 	if q == 0 {
@@ -158,7 +158,7 @@ func limbsUp_320(x u320, q int) (uint64, uint64, uint64, uint64, uint64) {
 	}
 }
 
-// shl_320_320 is x << n, 0 <= n < 320; bits shifted past 2^320 must be zero.
+// x << n, 0 <= n < 320; bits shifted past 2^320 must be zero.
 func shl_320_320(x u320, n int) u320 {
 	verify("", func() bool { return (n >= 0) && (n < 320) })
 	verify("shl_320_320 overflow", func() bool { return (n == 0) || (bitLen_int_320(x)+n <= 320) })
@@ -174,7 +174,7 @@ func shl_320_320(x u320, n int) u320 {
 	}
 }
 
-// shr_320_320 is x >> n, 0 <= n < 320.
+// x >> n, 0 <= n < 320.
 func shr_320_320(x u320, n int) u320 {
 	verify("", func() bool { return (n >= 0) && (n < 320) })
 	a0, a1, a2, a3, a4 := limbsDown_320(x, n>>6)
@@ -189,8 +189,8 @@ func shr_320_320(x u320, n int) u320 {
 	}
 }
 
-// lowMaskLimb is the low-n-bits mask for limb i (bits 64i .. 64i+63): all
-// ones, partial or none.
+// The low-n-bits mask for limb i (bits 64i .. 64i+63): all ones, partial or
+// none, branch-free.
 func lowMaskLimb(n, i int) uint64 {
 	m := n - 64*i // bits of this limb below n
 	if m >= 64 {
@@ -202,8 +202,7 @@ func lowMaskLimb(n, i int) uint64 {
 	return (uint64(1) << uint(m)) - 1
 }
 
-// lowBitsNonZero_320 is true iff any of the low n bits (0 <= n <= 320) of x
-// are set.
+// True iff any of the low n bits (0 <= n <= 320) of x are set.
 func lowBitsNonZero_320(x u320, n int) bool {
 	verify("", func() bool { return (n >= 0) && (n <= 320) })
 	return ((uint64(x.dw0) & lowMaskLimb(n, 0)) | (uint64(x.dw1) & lowMaskLimb(n, 1)) |
@@ -213,7 +212,7 @@ func lowBitsNonZero_320(x u320, n int) bool {
 
 // --- Add / sub ---
 
-// add_320_320x320 is x + y; a 320-bit overflow is impossible.
+// x + y, trapping on 320-bit overflow.
 func add_320_320x320(x, y u320) u320 {
 	r0, c := bits.Add64(uint64(x.dw0), uint64(y.dw0), 0)
 	r1, c := bits.Add64(uint64(x.dw1), uint64(y.dw1), c)
@@ -226,12 +225,12 @@ func add_320_320x320(x, y u320) u320 {
 	return u320{int64(r0), int64(r1), int64(r2), int64(r3), int64(r4)}
 }
 
-// add_320_320x64 is x + y for a one-limb y; a 320-bit overflow is impossible.
+// x + y for a one-limb y, trapping on 320-bit overflow.
 func add_320_320x64(x u320, y int64) u320 {
 	return add_320_320x320(x, u320FromDw0(y))
 }
 
-// sub_320_320x320 is x - y; an underflow (x < y) is impossible.
+// x - y, trapping on underflow (x < y).
 func sub_320_320x320(x, y u320) u320 {
 	r0, b := bits.Sub64(uint64(x.dw0), uint64(y.dw0), 0)
 	r1, b := bits.Sub64(uint64(x.dw1), uint64(y.dw1), b)

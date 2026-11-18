@@ -14,13 +14,14 @@ func d128_multiply_ctx(x, y d128, ctx *context) d128 {
 	return d128_multiply_rnd_ctxnull(x, y, ctx.round, ctx)
 }
 
-// Fast path: both coefficients fit in 64 bits (compact product), exponent sum in
-// range, and the 64×64 product fits in 112 bits (canonical significand) -> return
-// directly, no rounding, no flags. Everything else tail-calls the cold slow entry.
-// Go has no always_inline, and the fast entry's guard + inline arithmetic exceeds
-// the ~80 inline budget, so (as with add) it does not collapse into Multiply; the
-// split's Go payoff is hot/cold code separation.
+// Fast entry: both coefficients fit in 64 bits, the exponent sum is in range,
+// and the 64*64 product fits in 112 bits (a canonical coefficient): returns
+// directly, no rounding, no flags. Every other case tail-calls the out-of-line
+// d128_multiply_slow_rnd_ctxnull.
 func d128_multiply_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
+	// Go has no always_inline, and the fast entry's guard + inline arithmetic exceeds
+	// the ~80 inline budget, so (as with add) it does not collapse into Multiply; the
+	// split's Go payoff is hot/cold code separation.
 	// ubdHi64 is [ qExp:14 | sign:1 | coeffHi:49 ]; a 15-bit left shift drops
 	// sign+qExp, so the OR is zero iff both coeffHi49 fields are zero (both
 	// coefficients fit in 64 bits) -> no per-operand mask needed.
@@ -36,13 +37,15 @@ func d128_multiply_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 	return d128_multiply_slow_rnd_ctxnull(x, y, rounding, ctxnull)
 }
 
-// Cold path, kept out of line via //go:noinline so the fast entry stays a small,
-// i-cache-friendly hot function. Wide 128×128→256 product with a fits-in-112
-// early-out before finalize, plus the FNZ and non-finite cases. Also reached from
-// square's fast entry.
+// Slow entry: the wide 128*128->256 product (with its own fits-in-112
+// early-out before finalize), plus the zero and non-finite cases. Kept out of
+// line so the fast entry stays small; square's fast entry also tail-calls
+// it.
 //
 //go:noinline
 func d128_multiply_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
+	// The go:noinline directive keeps this out of line so the fast entry stays a
+	// small, i-cache-friendly hot function.
 	xHi49 := d128_hi49(x)
 	yHi49 := d128_hi49(y)
 	prod := mul_256_128x128(x.ubdLo64, xHi49, y.ubdLo64, yHi49)
@@ -80,9 +83,9 @@ func d128_square_ctx(x d128, ctx *context) d128 {
 	return d128_square_rnd_ctxnull(x, ctx.round, ctx)
 }
 
-// Square: x*x. The fast entry carries an x²-specialized compact guard (single
-// operand check, sign always non-negative) and tail-calls the shared multiply
-// cold body for everything else.
+// Square: x*x. The fast entry carries a square-specialized compact guard (one
+// operand to check; the sign is always non-negative) and tail-calls the
+// multiply slow entry for everything else.
 func d128_square_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 	// See d128_multiply_rnd_ctxnull: the 15-bit left shift drops sign+qExp, so
 	// this is zero iff x's coeffHi49 is zero (x fits in 64 bits).

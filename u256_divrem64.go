@@ -8,6 +8,9 @@ package decimal128
 
 import "math/bits"
 
+// divRem_q256r64_256x64 returns `(x / y0, x % y0)` -- the simple-division unit
+// (PrimitiveLayer.md D3, Section 4.4), full 256/64 quotient and 64-bit
+// remainder, divisor nonzero.
 func divRem_q256r64_256x64(xDw0, xDw1, xDw2, xDw3, y0 int64) quot256Rem64 {
 	d := uint64(y0)
 	x := u256{xDw0, xDw1, xDw2, xDw3}
@@ -44,9 +47,13 @@ func divRem_q256r64_256x64(xDw0, xDw1, xDw2, xDw3, y0 int64) quot256Rem64 {
 	return divRem256by64(x.dw0, x.dw1, x.dw2, x.dw3, y0)
 }
 
-// divRem256by64 is the Möller–Granlund Alg. 4 path: one reciprocal build plus
-// four DIV2BY1 steps. Precondition: 33–64-bit divisor (y >> 32 != 0), so the
-// normalization shift <= 31 and the top normalized limb u4 < dn.
+// Moller-Granlund Algorithm 4 division: U256 / UInt64, base 2^64, for the
+// 33-64-bit-divisor strategy of `divRem_q256r64_256x64`. One reciprocal build
+// (`vReciprocal_64_64_mg`) + four DIV2BY1 steps replace the four serial
+// hardware divides -- no per-limb hardware divide, no Knuth machinery.
+// Module-internal (not Core-facing), so Core reaches 256/64 only through the
+// canonical dispatcher. Precondition: 33-64-bit divisor (`y >> 32 != 0`), so
+// the normalization shift <= 31 and the top normalized limb `u4 < dn`.
 func divRem256by64(xDw0, xDw1, xDw2, xDw3, y int64) quot256Rem64 {
 	x0, x1 := uint64(xDw0), uint64(xDw1)
 	x2, x3 := uint64(xDw2), uint64(xDw3)

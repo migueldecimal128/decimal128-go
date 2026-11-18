@@ -31,20 +31,18 @@ const const_D48_DIGITS = 48
 
 var const_D48_ZERO = d48{0, 0, 0, 0}
 
-// d48_fromSignQExp_160 is from an explicit sign, qExp, and a coefficient below
-// 10^48 (< 2^160, held as a u192).
+// From an explicit sign, qExp, and a coefficient below 10^48 (the value is
+// < 2^160, held as a U192).
 func d48_fromSignQExp_160(sign bool, qExp int, coeff u192) d48 {
 	return d48Pack(sign, qExp, coeff.dw0, coeff.dw1, coeff.dw2)
 }
 
-// d48_fromSignQExp_64x64x64 is from an explicit sign, qExp, and raw coefficient
-// dwords (lo first).
+// From an explicit sign, qExp, and raw coefficient dwords (lo first).
 func d48_fromSignQExp_64x64x64(sign bool, qExp int, dw0, dw1, dw2 int64) d48 {
 	return d48Pack(sign, qExp, dw0, dw1, dw2)
 }
 
-// d48_fromQExpAndSignBit_160 is from a packed qExpAndSignBit field and a
-// coefficient below 10^48.
+// From a packed qExpAndSignBit field and a coefficient below 10^48.
 func d48_fromQExpAndSignBit_160(qExpAndSignBit int32, coeff u192) d48 {
 	return d48{coeff.dw0, coeff.dw1, coeff.dw2, qExpAndSignBit}
 }
@@ -59,7 +57,7 @@ func d48_isZero(x d48) bool { return (x.coeffDw0 | x.coeffDw1 | x.coeffDw2) == 0
 
 func d48_negated(x d48) d48 { return d48{x.coeffDw0, x.coeffDw1, x.coeffDw2, x.qExpAndSignBit ^ 1} }
 
-// d48_u160 / d48_u320 are the coefficient as a u192 / u320 value.
+// The coefficient as a U192 / U320 value.
 func d48_u160(x d48) u192 { return u192{x.coeffDw0, x.coeffDw1, x.coeffDw2} }
 
 func d48_u320(x d48) u320 { return u320{x.coeffDw0, x.coeffDw1, x.coeffDw2, 0, 0} }
@@ -81,7 +79,8 @@ func d48_square(x d48) d48 {
 	return d48_finalize_320(false, zExp, p, const_RESIDUE_EXACT)
 }
 
-// d48_fromInt32 is n as a D48 (|n| taken as unsigned, so the minimum is safe).
+// n as a D48 (exact, qExp 0); |n| is taken as unsigned, so the minimum is
+// safe.
 func d48_fromInt32(n int) d48 {
 	mag := uint64(n)
 	if n < 0 {

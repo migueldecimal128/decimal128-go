@@ -8,6 +8,8 @@ package decimal128
 
 // --- tri-state cores ---
 
+// IEEE 754 quiet compare core. NaN operands yield `.unordered`.
+// Signaling NaNs do not signal under `Quiet` (flags discarded).
 func comparePartialQuiet754(x, y d128) comparison754 {
 	if bothFinite(x, y) {
 		return compareFinFin(x, y)
@@ -18,6 +20,8 @@ func comparePartialQuiet754(x, y d128) comparison754 {
 	return compareNonFinite(x, y)
 }
 
+// IEEE 754 signaling compare core. Same as `comparePartialQuiet754` but signals
+// invalid on any NaN (quiet or signaling). Under `Quiet`, signaling is a no-op.
 func comparePartialSignaling754(x, y d128) comparison754 {
 	if bothFinite(x, y) {
 		return compareFinFin(x, y)
@@ -31,9 +35,16 @@ func comparePartialSignaling754(x, y d128) comparison754 {
 
 // --- Int boundary (quiet) ---
 
-func d128_comparePartial(x, y d128) int          { return comparePartialQuiet754(x, y) }
+// IEEE 754 quiet compare. Returns a `CMP754_*` code; NaN operands yield
+// `CMP754_UNORDERED`.
+func d128_comparePartial(x, y d128) int { return comparePartialQuiet754(x, y) }
+
+// IEEE 754 signaling compare. As `d128_comparePartial`, but signals invalid on any
+// NaN. Returns a `CMP754_*` code.
 func d128_comparePartialSignaling(x, y d128) int { return comparePartialSignaling754(x, y) }
 
+// Magnitude compare of two finite-nonzero values: -1 / 0 / +1. Shared with the
+// add and subtract cores.
 func cmpMagFnzFnz(x, y d128) int {
 	verify("", func() bool { return d128_isFNZ(x) && d128_isFNZ(y) })
 	qDelta := d128_qExp(x) - d128_qExp(y)
@@ -102,14 +113,24 @@ func d128_isGreaterEqual(x, y d128) bool {
 	r := comparePartialQuiet754(x, y)
 	return r == const_CMP754_GT || r == const_CMP754_EQ
 }
-func d128_isUnordered(x, y d128) bool  { return comparePartialQuiet754(x, y) == const_CMP754_UNORDERED }
-func d128_isOrdered(x, y d128) bool    { return comparePartialQuiet754(x, y) != const_CMP754_UNORDERED }
+func d128_isUnordered(x, y d128) bool { return comparePartialQuiet754(x, y) == const_CMP754_UNORDERED }
+func d128_isOrdered(x, y d128) bool   { return comparePartialQuiet754(x, y) != const_CMP754_UNORDERED }
+
+// `not(x > y)` -- true when `x <= y` or unordered. Distinct from
+// `isLessEqual` because NaN cases differ: this returns true on
+// unordered, the other false.
 func d128_isNotGreater(x, y d128) bool { return comparePartialQuiet754(x, y) != const_CMP754_GT }
-func d128_isNotLess(x, y d128) bool    { return comparePartialQuiet754(x, y) != const_CMP754_LT }
+
+// `not(x < y)` -- true when `x >= y` or unordered.
+func d128_isNotLess(x, y d128) bool { return comparePartialQuiet754(x, y) != const_CMP754_LT }
+
+// True when `x > y` or unordered.
 func d128_isGreaterUnordered(x, y d128) bool {
 	r := comparePartialQuiet754(x, y)
 	return r == const_CMP754_GT || r == const_CMP754_UNORDERED
 }
+
+// True when `x < y` or unordered.
 func d128_isLessUnordered(x, y d128) bool {
 	r := comparePartialQuiet754(x, y)
 	return r == const_CMP754_LT || r == const_CMP754_UNORDERED

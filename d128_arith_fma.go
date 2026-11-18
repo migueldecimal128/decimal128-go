@@ -5,6 +5,8 @@
 
 package decimal128
 
+// `d128_fma_rnd_ctxnull` is the general body; the `_tte` (bare), `_rnd`,
+// and `_ctx` forms are thin specializations.
 func d128_fma_rnd_ctxnull(x, y, a d128, rounding round, ctxnull *context) d128 {
 	prod := mul_256_128x128(x.ubdLo64, d128_hi49(x), y.ubdLo64, d128_hi49(y))
 	prodQExp := d128_qExp(x) + d128_qExp(y)
@@ -68,6 +70,11 @@ func fmaSlow_rnd_ctxnull(x, y, a d128, prodHi, prodLo u128, rounding round, ctxn
 		zeroSign, rounding, ctxnull)
 }
 
+// NaN propagation across three operands. sNaN priority: if any operand is
+// sNaN, signal invalid-op and pick an sNaN to quiet; otherwise pick the
+// first qNaN in (x, y, a) order. IEEE 754 also requires invalid-op to be
+// raised if the product would have been 0*INF, even when a NaN is being
+// propagated.
 func fmaNanOperand_ctxnull(x, y, a d128, ctxnull *context) d128 {
 	hasSNAN := d128_isSNAN(x) || d128_isSNAN(y) || d128_isSNAN(a)
 	var pickedNaN d128
@@ -101,6 +108,8 @@ func fmaNanOperand_ctxnull(x, y, a d128, ctxnull *context) d128 {
 	return quieted
 }
 
+// Product is zero (x or y is ZER, both finite). a is FIN. Determine the
+// signed-zero or scaled-FNZ result per IEEE 754.
 func fmaZeroProd_ctxnull(x, y, a d128, rounding round, ctxnull *context) d128 {
 	prodSign := d128_signFlag(x) != d128_signFlag(y)
 	prodQ := d128_qExp(x) + d128_qExp(y)
@@ -119,11 +128,15 @@ func fmaZeroProd_ctxnull(x, y, a d128, rounding round, ctxnull *context) d128 {
 	return a
 }
 
+// Product is infinite. a is FIN. The product dominates; result is the
+// signed infinity.
 func fmaInfProdCtx(infSign bool, a d128) d128 {
 	verify("", func() bool { return !d128_isNAN(a) && d128_isFIN(a) })
 	return d128_infinity(infSign)
 }
 
+// FNZ * FNZ + (signed zero). Result equals the product with preferred-
+// exponent rule: result qExp = min(prodQ, aQ) when achievable.
 func fmaFnzFnzZer_ctxnull(prodSign bool, prodQ int, prodHi, prodLo u128, a d128, rounding round, ctxnull *context) d128 {
 	prodU256 := u256FromHiLo(prodHi, prodLo)
 	productD128 := finalize_256_ctxnull(prodSign, prodQ, prodU256, const_RESIDUE_EXACT, rounding, ctxnull)
@@ -160,6 +173,9 @@ func addWideAndFinalize_rnd_ctxnull(prodSign bool, prodQ int, prodCoeff u256, aS
 	return addWideAndFinalizeUnlikeSign_rnd_ctxnull(mSign, mQ, mCoeff, nSign, nQ, nCoeff, zeroSign, rounding, ctxnull)
 }
 
+// Like-sign path. Result magnitude is |m| + |n| >= |m|.
+// shiftLeft cap = max(0, targetDigits - m.digitLen()). Truncated bits of n
+// are at most half an ULP at qAlign, absorbed by residue.
 func addWideAndFinalizeLikeSign_rnd_ctxnull(sign bool, mQ int, mCoeff u256, nQ int, nCoeff u256, rounding round, ctxnull *context) d128 {
 	qDelta := mQ - nQ
 	verify("", func() bool { return qDelta >= 0 })

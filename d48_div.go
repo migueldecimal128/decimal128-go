@@ -6,6 +6,11 @@
 
 package decimal128
 
+// D48 divide (ties-to-even). Mirrors d38_divide: the numerator is scaled so
+// the quotient lands in [10^47, 10^49) -- 48 or 49 digits -- and the full U320
+// quotient goes to d48_finalize_320, which scales the 49-digit case down. So
+// the result always has exactly 48 digits, exact quotients included. The
+// division is the 320/160 MG kernel.
 func d48_divide(x, y d48) d48 {
 	verify("", func() bool { return !d48_isZero(y) })
 	if d48_isZero(x) {

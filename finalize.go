@@ -22,8 +22,19 @@ func finalize_128_ctxnull(sign bool, qExpIn int, coeffIn u128, residueIn residue
 	return finalize_128_nonTrivial_ctxnull(sign, qExpIn, coeffIn, residueIn, rounding, ctxnull)
 }
 
-// finalizeAddSubFnz_128_ctxnull — narrowed contract: qExp >= -6176 and coeff < 10^35.
-// Skips the underflow diversion and full digit-length scan.
+// Specialized finalize entry point for the unaligned add/subtract paths.
+//
+// Contract (provable at the call sites, never fires the verifies):
+//
+//	qExp >= -6176  AND  coeff < 10^35.  coeff may be zero (subtract cancellation).
+//
+// In the unaligned helpers qAlign = mQ - shift with shift <= qDelta, so
+// qAlign >= the smaller operand's exponent >= -6176; and the coefficient is a
+// sum/difference of <=34-digit values plus at most one guard digit, so < 10^35
+// (=> at most one divide-by-10 of precision trimming).
+//
+// Because the contract is narrowed and provable, this skips the general
+// finalizer's underflow/subnormal diversion and full digit-length scan.
 func finalizeAddSubFnz_128_ctxnull(sign bool, qExpIn int, coeffIn u128, residueIn residue, rounding round, ctxnull *context) d128 {
 	verify("", func() bool { return qExpIn >= -6176 })
 	verify("", func() bool { return cmp_int_128x128_pow10(coeffIn.dw0, coeffIn.dw1, 35) < 0 })
@@ -44,8 +55,21 @@ func finalizeAddSubFnz_128_ctxnull(sign bool, qExpIn int, coeffIn u128, residueI
 	return roundAndPack_128_ctxnull(sign, qExp, coeff0, coeff1, res, rounding, ctxnull)
 }
 
-// finalizeSwampedFnz_128_ctxnull — narrower still: coeff != 0, coeff < 10^34,
-// qExp in [-6176, 6111], residue != EXACT. Round, pack, signal inexact.
+// Further-specialized entry for the Fully/Borderline Swamped add and subtract
+// cases, where the smaller operand lies at or below the result's least-
+// significant digit and so contributes only a sub-ULP residue. The caller
+// guarantees a narrower contract still:
+//
+//   - coeff != 0 and coeff < 10^34 (the larger operand filled to <= 34 digits;
+//     no precision trim is ever needed)
+//   - qExp in [-6176, 6111]
+//   - residue != RESIDUE_EXACT (a swamped operand is always inexact)
+//
+// This collapses finalize to: round, pack, and signal inexact -- skipping the
+// 10^34 trim compare and the general round/pack machinery. The lone non-trivial
+// case is a round-up that rolls 10^34-1 over the decade at the max exponent.
+// (Add passes LT_HALF; subtract passes the borrow-inverted residue. The subtract
+// caller pre-screens out coeff == 10^33, whose borrow would need the guard digit.)
 func finalizeSwampedFnz_128_ctxnull(sign bool, qExpIn int, coeffIn u128, residueIn residue, rounding round, ctxnull *context) d128 {
 	verify("", func() bool { return qExpIn >= -6176 && qExpIn <= 6111 })
 	verify("", func() bool { return !isZero_bool_128(coeffIn.dw0, coeffIn.dw1) })
@@ -131,6 +155,10 @@ func finalizeZero_ctxnull(sign bool, qExp int, res residue, rounding round, ctxn
 	return z
 }
 
+// Overflow saturation, shared with the arithmetic cores: the infinity of the
+// given sign, or the largest finite magnitude when the rounding direction does
+// not overflow to infinity. Signals overflow and inexact when ctxnull is
+// non-nil.
 func finalizeOverflow_ctxnull(sign bool, rounding round, ctxnull *context) d128 {
 	var z d128
 	if roundingOverflowsToInfinity(rounding, sign) {
@@ -264,6 +292,8 @@ func roundAndPack_128_ctxnull(sign bool, qExpIn int, coeffDw0, coeffDw1 int64, t
 	return z
 }
 
+// Whether (qExp, coeff) is already a canonical decimal128: coeff < 10^34 and
+// qExp in range.
 func isCanonical34_128(qExp int, coeff u128) bool {
 	return isLt_pow10_34_bool_128(coeff.dw0, coeff.dw1) && qExp >= -6176 && qExp <= 6111
 }
@@ -276,6 +306,8 @@ func finalizeClamping_128(sign bool, coeffDw0, coeffDw1 int64, qExp int) d128 {
 	return decimalFNZ_64x64(sign, 6111, coeffScaled.dw0, coeffScaled.dw1)
 }
 
+// finalize_256_ctxnull finalizes a 256-bit wide product (multiply, fma): the 128-bit finalizer when
+// the high half is zero, else the full-width path.
 func finalize_256_ctxnull(sign bool, qExpIn int, u256In u256, residueIn residue, rounding round, ctxnull *context) d128 {
 	if isZero_bool_128(u256In.dw2, u256In.dw3) {
 		return finalize_128_ctxnull(sign, qExpIn, u256In.lo(), residueIn, rounding, ctxnull)

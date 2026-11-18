@@ -25,8 +25,8 @@ func d48_roundToIntegralTiesToAway(x d48) d48 {
 	return d48_fromSignQExp_160(sign, 0, quot.u192())
 }
 
-// d48_roundToIntegralTowardNegative is floor(x): positive truncates toward
-// zero; negative with any remainder steps one more negative (magnitude + 1).
+// floor(x): positive truncates toward zero; negative with any remainder steps
+// one more negative (magnitude + 1).
 func d48_roundToIntegralTowardNegative(x d48) d48 {
 	q := d48_qExp(x)
 	if q >= 0 {
@@ -44,8 +44,8 @@ func d48_roundToIntegralTowardNegative(x d48) d48 {
 	return d48_fromSignQExp_160(sign, 0, quot.u192())
 }
 
-// d48_toLongOrMin returns x's exact integer value when x is an exact integer in
-// int64 range; otherwise the sentinel math.MinInt64.
+// d48_toLongOrMin returns x's exact integer value when x is an exact integer in int64 range;
+// otherwise the sentinel `math.MinInt64`.
 func d48_toLongOrMin(x d48) int64 {
 	if d48_isZero(x) {
 		return 0

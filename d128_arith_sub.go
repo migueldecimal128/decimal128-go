@@ -14,10 +14,10 @@ func d128_subtract_ctx(x, y d128, ctx *context) d128 {
 	return d128_subtract_rnd_ctxnull(x, y, ctx.round, ctx)
 }
 
-// Fast path: same exponent. Opposite signs -> magnitude add; same signs ->
-// magnitude subtract. A zero magnitude-subtract result falls through to the
-// (cold) d128_subtract_slow_rnd_ctxnull, as does any non-fast case, so this
-// body stays tiny and inlines (via _tte/_rnd/_ctx) into the - operator.
+// Fast entry: same exponent and a coefficient sum that fits in 112 bits.
+// Opposite signs add the magnitudes; same signs subtract them, returning
+// directly unless the difference is zero. A zero difference, and every other
+// case, tail-calls the out-of-line d128_subtract_slow_rnd_ctxnull.
 func d128_subtract_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 	xHi49 := d128_hi49(x)
 	yHi49 := d128_hi49(y)
@@ -41,11 +41,14 @@ func d128_subtract_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 	return d128_subtract_slow_rnd_ctxnull(x, y, rounding, ctxnull)
 }
 
-// Cold path, kept out of line (see d128_add_slow_rnd_ctxnull). //go:noinline
-// pins it out of line so the fast entry stays the small hot function.
+// Slow entry: NaN operands, then everything else the fast entry did not
+// resolve, through add's non-finite, zero and finite-nonzero paths with y
+// negated (subtract(x, y) = add(x, negate(y))).
 //
 //go:noinline
 func d128_subtract_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
+	// The go:noinline directive pins this out of line so the fast entry stays the
+	// small hot function (see d128_add_slow_rnd_ctxnull).
 	if d128_isNAN(x) || d128_isNAN(y) {
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}

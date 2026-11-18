@@ -4,6 +4,16 @@
 
 package decimal128
 
+// d128_stripTrailingZeros returns this value with up to `maxToStrip` trailing decimal zeros
+// removed from the coefficient, increasing `qExp` by the same count.
+// The numeric value is unchanged.
+//
+// Non-finite values: infinities are returned unchanged; NaNs propagate
+// (with sNaN quieted -- no flag raised under Quiet).
+// Zeros collapse to the canonical zero with `qExp = 0`.
+//
+//   - Parameter maxToStrip: Upper bound on zeros to remove. Defaults
+//     to 99 which effectively means "strip all available".
 func d128_stripTrailingZeros(x d128, maxToStrip int) d128 {
 	return stripTrailingZerosImpl(x, maxToStrip, nil)
 }
@@ -12,6 +22,7 @@ func d128_stripTrailingZeros_ctx(x d128, maxToStrip int, ctx *context) d128 {
 	return stripTrailingZerosImpl(x, maxToStrip, ctx)
 }
 
+// Shared implementation. `ctx == nil` for Quiet, non-nil for ctx-aware.
 func stripTrailingZerosImpl(x d128, maxToStrip int, ctxnull *context) d128 {
 	if d128_isNAN(x) {
 		return ctxNanOperand1_ctxnull(ctxnull, x)

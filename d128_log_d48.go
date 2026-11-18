@@ -4,14 +4,13 @@
 
 package decimal128
 
-// d48_fromD128 is D128 → D48, exact: a 34-digit coefficient fits the low two
-// limbs.
+// D128 -> D48, exact: a 34-digit coefficient fits the low two limbs.
 func d48_fromD128(x d128, sign bool) d48 {
 	return d48Pack(sign, d128_qExp(x), x.ubdLo64, d128_hi49(x), 0)
 }
 
-// d48_padeEval is P(z)/Q(z) by Horner's method with fused multiply-adds.
-// Shared by the ln/log10 and exp/exp10 kernels.
+// P(z)/Q(z) by Horner's method with fused multiply-adds. Shared by the
+// ln/log10 and exp/exp10 kernels.
 func d48_padeEval(zArg d48, P, Q []d48) d48 {
 	pAcc := P[len(P)-1]
 	i := len(P) - 2
@@ -28,9 +27,8 @@ func d48_padeEval(zArg d48, P, Q []d48) d48 {
 	return d48_divide(pAcc, qAcc)
 }
 
-// extractKMostSigDigitRounded is the leading decimal digit of x rounded to
-// nearest (ties away), in [1,10]; callers treat 10 as 1 with the exponent
-// bumped.
+// The leading decimal digit of x rounded to nearest (ties away), in [1,10];
+// callers treat 10 as 1 with the exponent bumped.
 func extractKMostSigDigitRounded(x d48) int {
 	digitLen := d48_digitLen(x)
 	if digitLen == 1 {
@@ -44,9 +42,9 @@ func extractKMostSigDigitRounded(x d48) int {
 	return d
 }
 
-// d48_logMagnitude is the 48-digit ln / log10 of a positive finite-nonzero
-// value, before lowering to D128; pow consumes it directly so y · log10(x)
-// keeps full precision. xd is the sign-stripped operand.
+// The 48-digit ln / log10 of a positive finite-nonzero value, before lowering
+// to D128; pow consumes it directly so y * log10(x) keeps full precision.
+// `xd` is the sign-stripped operand.
 func d48_logMagnitude(xd d48, isLog10 bool) d48 {
 	// Argument reduction: x = k·10^e with k the rounded leading digit, so
 	// c' = x / (k·10^e) ∈ [~0.75, 1.5).

@@ -7,6 +7,7 @@
 
 package decimal128
 
+// u256DivRem128 returns `(x / y, x % y)`.
 func u256DivRem128(x u256, y u128) quot256Rem128 {
 	if y.dw1 == 0 { // y < 2^64
 		qr := divRem_q256r64_256x64(x.dw0, x.dw1, x.dw2, x.dw3, y.dw0)
@@ -42,6 +43,8 @@ func u256DivRem_128(x u256, y u128) quot128Rem128 {
 	return quot128Rem128{qr.quotDw0, qr.quotDw1, qr.remDw0, qr.remDw1}
 }
 
+// x / y with the residue of the discarded remainder (128-bit divisor; the
+// quotient fits in 128 bits). The divider behind D128 divide.
 func u256DivResidue_128(x u256, y u128) quot128Residue {
 	qr := u256DivRem_128(x, y)
 	res := residueFromRemainderDivisor_128(qr.remDw0, qr.remDw1, y.dw0, y.dw1)

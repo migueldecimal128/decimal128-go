@@ -3,6 +3,7 @@
 
 package decimal128
 
+// D48 square root (ties-to-even) via the exact scaled integer floor root.
 func d48_sqrt(x d48) d48 {
 	if d48_isZero(x) {
 		// sqrt(±0) = +0 with halved exponent; the internal domain has no −0.

@@ -11,7 +11,7 @@ import (
 	"math/bits"
 )
 
-// isqrt_320 is floor(sqrt(r)); the root of a u320 is < 2^160, returned as a u192.
+// floor(sqrt(r)); the root of a U320 is < 2^160, returned as a U192.
 func isqrt_320(r u320) u192 {
 	nbits := bitLen_int_320(r)
 	if nbits <= 128 {
@@ -42,8 +42,7 @@ func isqrt_320(r u320) u192 {
 	return x.u192()
 }
 
-// isqrt_128 is floor(sqrt(r)) for a 128-bit radicand (lo, hi), Newton from
-// above.
+// floor(sqrt(r)) for a 128-bit radicand, Newton from above.
 func isqrt_128(lo, hi uint64) uint64 {
 	if (hi == 0) && (lo < 2) {
 		return lo

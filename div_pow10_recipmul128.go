@@ -30,11 +30,18 @@ var const_RMP10_128_S128 = [39]int{
 	32, 34, 34, 36, 38, 41, 42, 41, 44, 44, 46, 49, 50, 50,
 }
 
-// Accessors for the interleaved reciprocal table: for index k the two dwords of
-// M ascend at const_RMP10_128_M[(k<<1)+0..1] (PrimitiveLayer.md D50).
+// Interleaved storage: for index k the two dwords of M ascend at
+// const_RMP10_128_M[(k<<1)+0..1] (PrimitiveLayer.md D50).
+
+// Dword accessors over the RMP10_128_M table; dw0/dw1 are the low/high 64 bits
+// of the 5^k reciprocal M. Mirrors rmp10_256_dw*.
 func rmp10_128_dw0(k int) int64 { return const_RMP10_128_M[k<<1] }
 func rmp10_128_dw1(k int) int64 { return const_RMP10_128_M[(k<<1)|1] }
 
+// Single reciprocal-multiply kernel for x / 10^pow10 (128-bit dividend), pow10
+// 1..38, returning the quotient and the classified residue. One 128*128->256
+// multiply plus a shift, uniform across the whole range. Backs Core's divPow10
+// dispatch for pow10 >= 2 (pow10 == 1 keeps the divide-by-10 magic).
 func divPow10_q128res_128_recipmul(xDw0, xDw1 int64, pow10 int) quot128Residue {
 	demand("recipmul: pow10 outside [1, 38]", pow10 > 0 && pow10 <= 38)
 	k := pow10

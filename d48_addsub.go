@@ -5,6 +5,9 @@
 
 package decimal128
 
+// D48 add/subtract (ties-to-even, no flags). Mirrors D38AddSub: aligns
+// operands by exponent, folding the smaller operand's shifted-out digits into a
+// residue, then routes through d48_finalize_320. Intermediates are U320.
 func d48_add(x, y d48) d48 {
 	// A zero operand must short-circuit: the alignment paths would shift the
 	// non-zero operand down and shred its precision.
@@ -114,6 +117,7 @@ func d48_addUnalignedUnlikeSign(x, y d48) d48 {
 	return const_D48_ZERO
 }
 
+// |m| - |s| with sign zSign, for qExp(m) != qExp(s) and |m| > |s|.
 func d48_subMagUnalignedFnzFnz(zSign bool, m, s d48) d48 {
 	verify("", func() bool { return d48_qExp(m) != d48_qExp(s) })
 	verify("", func() bool { return d48_cmpMag(m, s) > 0 })

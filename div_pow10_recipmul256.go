@@ -25,11 +25,12 @@ func macCol512(a, b uint64, acc0, acc1, acc2 *uint64) {
 	*acc2 += c
 }
 
-// mul512_256x256 returns the full 256×256→512 product A*M as (pLo, pHi): pLo is
-// the low 256 bits, pHi the high 256 bits. acc0:acc1:acc2 is the running column
-// sum; each emit takes the finished low limb and shifts the accumulator down 64
-// bits.
+// Full 256x256 -> 512 product, M supplied as its two 128-bit limbs. A comba
+// whose column accumulator never loses the carry of up to four 64x64 products:
+// columns 0..3 of a 4-limb M = A*Mlo, columns 4..7 = A*Mhi, summed in place.
 func mul512_256x256(a0, a1, a2, a3, m0, m1, m2, m3 uint64) (pLo, pHi u256) {
+	// acc0:acc1:acc2 is the running column sum; each emit takes the finished low
+	// limb and shifts the accumulator down 64 bits. The product comes back as (pLo, pHi).
 	var acc0, acc1, acc2 uint64
 
 	macCol512(a0, m0, &acc0, &acc1, &acc2)
@@ -76,15 +77,17 @@ func mul512_256x256(a0, a1, a2, a3, m0, m1, m2, m3 uint64) (pLo, pHi u256) {
 	return pLo, pHi
 }
 
-// Accessors for the interleaved reciprocal table: for index k the four dwords
-// of M ascend at const_RMP10_256_M[(k<<2)+0..3] (PrimitiveLayer.md D50).
+// Storage: M's four dwords at const_RMP10_256_M[(k<<2)+0..3].
+
+// Dword accessors over the single interleaved RMP10_256_M table (D50); dw0..dw3
+// are the four 64-bit dwords of M in ascending significance. Mirrors
+// pow10_256_dw*.
 func rmp10_256_dw0(k int) int64 { return const_RMP10_256_M[k<<2] }
 func rmp10_256_dw1(k int) int64 { return const_RMP10_256_M[(k<<2)|1] }
 func rmp10_256_dw2(k int) int64 { return const_RMP10_256_M[(k<<2)|2] }
 func rmp10_256_dw3(k int) int64 { return const_RMP10_256_M[(k<<2)|3] }
 
-// lowBitsNonZero_256 is true iff any of the low n bits (0 <= n < 256) of the
-// 256-bit value (d3:d2:d1:d0) are set.
+// True iff any of the low `n` bits (0 <= n < 256) of x are set.
 func lowBitsNonZero_256(d0, d1, d2, d3 int64, n int) bool {
 	if n <= 0 {
 		return false
@@ -111,6 +114,11 @@ func lowBitsNonZero_256(d0, d1, d2, d3 int64, n int) bool {
 	return u0|u1|u2 != 0 || u3&((uint64(1)<<(n-192))-1) != 0
 }
 
+// Single reciprocal-multiply kernel for x / 10^pow10 (256-bit dividend,
+// coefficient above 128 bits), pow10 1..77, returning the 128-bit quotient and
+// the classified residue. One 256*256->512 multiply plus a shift, uniform
+// across the whole range (PrimitiveLayer.md D47). Backs Core's
+// div_256_pow10_q128res dispatch when the high half is nonzero.
 func divPow10_q128res_256_recipmul(x u256, pow10 int) quot128Residue {
 	demand("recipmul256: pow10 outside [1, 77]", pow10 > 0 && pow10 <= 77)
 	k := pow10

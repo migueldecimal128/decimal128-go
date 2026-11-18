@@ -28,6 +28,9 @@ func d128_compound_ctx(x d128, n int, ctx *context) d128 {
 	return d128_compound_rnd_ctxnull(x, n, ctx.round, ctx)
 }
 
+// IEEE 754-2019 Section 9.2 compound(x, n) = (1 + x)^n for x >= -1 and integer
+// n. Correctly rounded, except within the documented 1-ulp gap
+// (CrossPlatformArchitecture.md, "Transcendental accuracy").
 func d128_compound_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d128 {
 	if d128_isFIN(x) {
 		if d128_isZER(x) {
@@ -108,8 +111,8 @@ func compoundFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 	return compoundZeroResult(x, n, compoundPowerD48(t, span <= const_D48_DIGITS, n, rounding, ctxnull))
 }
 
-// compoundMinusOne is x = -1 exactly (n != 0): +∞ with divideByZero for n < 0,
-// else +0 with the preferred exponent ⌊n·min(0, Q(x))⌋.
+// x = -1 exactly (n != 0): +inf with divideByZero for n < 0, else +0 with the
+// preferred exponent floor(n*min(0, Q(x))).
 func compoundMinusOne(x d128, n int, ctxnull *context) d128 {
 	if n < 0 {
 		return ctxSignalDivByZero_ctxnull(ctxnull, false) // +∞
@@ -118,7 +121,7 @@ func compoundMinusOne(x d128, n int, ctxnull *context) d128 {
 	return d128_zero(false, nCapped*min(0, d128_qExp(x)))
 }
 
-// compoundZeroResult gives a zero power the preferred exponent ⌊|n|·min(0, Q(x))⌋.
+// A zero power takes the preferred exponent floor(|n|*min(0, Q(x))).
 func compoundZeroResult(x d128, n int, result d128) d128 {
 	if d128_isZER(result) {
 		absN := int(min(absU64(n), 10_000))
@@ -128,9 +131,8 @@ func compoundZeroResult(x d128, n int, result d128) d128 {
 	return result
 }
 
-// compoundPowerD48 is t^n (n not in {0, 1}) for t = 1 + x > 0 held in D48,
-// rounded once into decimal128. tExact: t is 1 + x exactly (else it is rounded
-// to odd and the result inexact).
+// t^n (n not in {0, 1}) for t = 1 + x > 0 held in D48, rounded once into decimal128.
+// `tExact`: t is 1 + x exactly (else it is rounded to odd and the result inexact).
 func compoundPowerD48(t d48, tExact bool, n int, rounding round, ctxnull *context) d128 {
 	// The exact rules need t exact and its stripped coefficient in a u128.
 	s := t
@@ -161,23 +163,22 @@ func absU64(n int) uint64 {
 	return uint64(n)
 }
 
-// compoundOnePlusXSpan is the digit span of 1 + x: from 10^max(sciExp(x), 0)
-// down to 10^min(qExp(x), 0). A span of at most k means 1 + x is exact in k
-// digits. Over 48 it is not exact: that needs |x| < 10^−14 or x >= 10^48, where
-// nothing cancels. (Cancellation only shortens span-35 sums, x in (−1, −0.1]
-// with qExp −34; they take the D48 path.)
+// The digit span of 1 + x: from 10^max(sciExp(x), 0) down to 10^min(qExp(x), 0).
+// A span of at most k means 1 + x is exact in k digits. Over 48 it is not exact:
+// that needs |x| < 10^-14 or x >= 10^48, where nothing cancels. (Cancellation only
+// shortens span-35 sums, x in (-1, -0.1] with qExp -34; they take the D48 path.)
 func compoundOnePlusXSpan(x d128) int {
 	return max(d128_sciExp(x), 0) - min(d128_qExp(x), 0) + 1
 }
 
-// compoundRoundToOdd is 1 + x rounded to odd at 48 digits, from t = 1 + x
-// rounded ties-to-even (span > 48). Round-to-odd truncates and, if anything was
-// dropped, makes the last digit odd: of the two 48-digit neighbours of 1 + x
-// exactly one is odd, and t is one of them. If t is even, step one unit toward
-// 1 + x. The side comes from the residual r = (1 + x) − t, whose inner
-// difference is exact in D48: span > 48 means x >= 10^48 (t − x is a few units
-// of t's last digit) or |x| < 10^−14 (t − 1 has at most 34 digits); the outer
-// one only needs its sign, which rounding keeps.
+// 1 + x rounded to odd at 48 digits, from t = 1 + x rounded ties-to-even (span >
+// 48). Round-to-odd truncates and, if anything was dropped, makes the last digit
+// odd: of the two 48-digit neighbours of 1 + x exactly one is odd, and t is one
+// of them. If t is even, step one unit toward 1 + x. The side comes from the
+// residual r = (1 + x) - t, whose inner difference is exact in D48: span > 48
+// means x >= 10^48 (t - x is a few units of t's last digit) or |x| < 10^-14
+// (t - 1 has at most 34 digits); the outer one only needs its sign, which
+// rounding keeps.
 func compoundRoundToOdd(x d128, t48 d48) d48 {
 	one := const_D48_COMPOUND_ONE
 	x48 := d48_fromD128(x, d128_signFlag(x))
@@ -208,10 +209,10 @@ func compoundRoundToOdd(x d128, t48 d48) d48 {
 	return d48_fromSignQExp_64x64x64(false, q, c.dw0, c.dw1, c.dw2)
 }
 
-// compoundStripToU128 is t with trailing zeros stripped while its coefficient
-// needs the third limb. A stripped coefficient >= 2^128 satisfies neither exact
-// rule for t = 1 + x with a 34-digit x: c'^n < 10^34 fails outright, and
-// c' = 5^b >= 2^128 (b = 56, m = 2) would need x to span at least 39 digits.
+// t with trailing zeros stripped while its coefficient needs the third limb.
+// A stripped coefficient >= 2^128 satisfies neither exact rule for t = 1 + x
+// with a 34-digit x: c'^n < 10^34 fails outright, and c' = 5^b >= 2^128 (b = 56,
+// m = 2) would need x to span at least 39 digits.
 func compoundStripToU128(t d48) d48 {
 	c := d48_u320(t)
 	q := d48_qExp(t)
