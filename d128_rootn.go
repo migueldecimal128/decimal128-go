@@ -79,10 +79,7 @@ func rootnFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 		// single D128 operations (below). Intermediate roots there are quiet /
 		// ties-to-even; the last honors the caller's rounding + flags.
 		shifts := bits.TrailingZeros64(nAbs)
-		steps := shifts
-		if n < 0 {
-			steps += 1
-		}
+		steps := shifts + int(boolToInt64(n < 0))
 		if steps >= 2 {
 			return rootnChain_d48(x, shifts, n < 0, rounding, ctxnull)
 		}
@@ -158,10 +155,10 @@ func rootnGeneral_d48(x d128, n int, rounding round, ctxnull *context) d128 {
 func rootnExactGeneral(x d128, n int, cy u128, qy int, rounding round, ctxnull *context) (d128, bool) {
 	ysC, ysQ := stripTens(cy, qy)
 	xsC, xsQ := stripTens(d128_u128(x), d128_qExp(x))
-	if (ysQ != 0) && (absU64(n) > 1<<48) {
-		return d128{}, false // |n·qy| > 2^48: no decimal128 exponent matches
-	}
 	nqy := n * ysQ
+	if (ysQ != 0) && (((nqy / ysQ) != n) || ((ysQ == -1) && (n == math.MinInt))) {
+		return d128{}, false // n·qy overflowed
+	}
 	yIsOne := ysC == (u128{1, 0})
 	if n > 0 {
 		if nqy != xsQ {
@@ -187,15 +184,18 @@ func rootnExactGeneral(x d128, n int, cy u128, qy int, rounding round, ctxnull *
 		}
 	} else {
 		k := nqy - xsQ
+		if ((xsQ > 0) && (k > nqy)) || ((xsQ < 0) && (k < nqy)) {
+			return d128{}, false // nqy − xs.q overflowed
+		}
 		fyA, fyB, okY := twoFive(ysC)
 		fxA, fxB, okX := twoFive(xsC)
 		if !okY || !okX {
 			return d128{}, false
 		}
 		// cx·cy^m = 2^(fxA + m·fyA) · 5^(fxB + m·fyB); both exponents must be k.
+		m := absU64(n)
 		a, b := fxA, fxB
 		if !yIsOne {
-			m := absU64(n)
 			if m > 400 {
 				return d128{}, false // cy >= 2: cy^m would dwarf any 10^k in range
 			}

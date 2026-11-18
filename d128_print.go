@@ -235,28 +235,26 @@ func toEngineeringString(sign bool, eExp int, coeff u128, digitLen int) string {
 
 	var i int
 	if isZero {
-		i = signLen + 1 + (func() int {
-			if zerExpAdjustment == 0 {
-				return 0
-			}
-			return 1 + zerExpAdjustment
-		})()
+		zeroTail := 0
+		if zerExpAdjustment != 0 {
+			zeroTail = 1 + zerExpAdjustment
+		}
+		i = signLen + 1 + zeroTail
 	} else {
-		expAlignZeroCount := min(max(0, 1+fnzExpAdjustment-digitLen), 2)
 		leftOfRadixPointCount := 1 + fnzExpAdjustment
 		decimalPointLen := 0
 		if digitLen > leftOfRadixPointCount {
 			decimalPointLen = 1
 		}
+		expAlignZeroCount := min(max(0, 1+fnzExpAdjustment-digitLen), 2)
 		i = signLen + decimalPointLen + digitLen + expAlignZeroCount
 	}
 
-	totalLen := i + (func() int {
-		if adjustedExp == 0 {
-			return 0
-		}
-		return 1 + 1 + expDigitLen
-	})()
+	expTail := 0
+	if adjustedExp != 0 {
+		expTail = 1 + 1 + expDigitLen
+	}
+	totalLen := i + expTail
 
 	return withStringBuffer(totalLen, func(ascii unsafe.Pointer) {
 		if sign {
@@ -272,12 +270,12 @@ func toEngineeringString(sign bool, eExp int, coeff u128, digitLen int) string {
 				}
 			}
 		} else {
-			expAlignZeroCount := min(max(0, 1+fnzExpAdjustment-digitLen), 2)
 			leftOfRadixPointCount := 1 + fnzExpAdjustment
 			decimalPointLen := 0
 			if digitLen > leftOfRadixPointCount {
 				decimalPointLen = 1
 			}
+			expAlignZeroCount := min(max(0, 1+fnzExpAdjustment-digitLen), 2)
 			u128ToASCII(digitLen, coeff, ascii, signLen+decimalPointLen)
 
 			if expAlignZeroCount >= 1 {
@@ -313,7 +311,7 @@ func toCoefficientQExpString(sign bool, qExp int, coeff u128, digitLen int) stri
 	}
 	qExpAbs := qExp
 	if qExpAbs < 0 {
-		qExpAbs = -qExp
+		qExpAbs = -qExpAbs
 	}
 	printedDigitLen := max(digitLen, 1)
 	expSignByte := ascii_plus

@@ -15,8 +15,6 @@
 
 package decimal128
 
-import "math/bits"
-
 // Ambiguity bounds, in units of the D48 result's 48th digit (§2; Phase 0 maxima:
 // series 6, log kernel 570, exp kernel 45 units of S). The +1 is the divide by
 // ln 10 / ln 2 (log family).
@@ -134,11 +132,14 @@ func expM1NonFinite(x d128, ctxnull *context) d128 {
 func logP1FNZ(x d128, base int, rounding round, ctxnull *context) d128 {
 	xd := d48_fromD128(x, d128_signFlag(x))
 	series := d128_sciExp(x) < const_SERIES_SCI_EXP
-	var t, l d48
+	t := const_D48_ZERO
+	if !series {
+		t = d48_add(const_D48_ONE, xd) // 1 + x, kernel path only
+	}
+	var l d48
 	if series {
 		l = d48_log1pSeries(xd)
 	} else {
-		t = d48_add(const_D48_ONE, xd) // 1 + x, kernel path only
 		l = d48_logMagnitude(t, false)
 	}
 	if base == const_LOGP1_BASE_E {
@@ -160,7 +161,7 @@ func logP1FNZ(x d128, base int, rounding round, ctxnull *context) d128 {
 	r := d48_divide(l, div)
 	// The series path has no rule (x/ln2, x/ln10 are irrational): only the kernel
 	// path runs the test.
-	if !series && d48_ambiguous48(r, u320FromDw0(const_E_LOG_D48+1)) {
+	if !series && d48_ambiguous48(r, add_320_320x320(u320FromDw0(const_E_LOG_D48), u320FromDw0(1))) {
 		if d128_sciExp(x) < 34 {
 			// 1 + x is exact (t); every exact case is below 10^34.
 			if k, ok := logP1ExactPower(t, base); ok {
@@ -189,30 +190,25 @@ func logP1ExactPower(t d48, base int) (int, bool) {
 	if (c.dw2 | c.dw3 | c.dw4) != 0 {
 		return 0, false // c' >= 2^128: neither 1, 2^k (k <= 112) nor 5^k (k <= 34)
 	}
-	lo, hi := uint64(c.dw0), uint64(c.dw1)
+	u := fromLoHi_128_64x64(c.dw0, c.dw1)
 	if base == const_LOGP1_BASE_10 {
-		return q, lo == 1 && hi == 0 && q != 0
+		return q, u.dw0 == 1 && u.dw1 == 0 && q != 0
 	}
 	if q == 0 {
 		// t = c': a power of two other than 1
-		if bits.OnesCount64(lo)+bits.OnesCount64(hi) != 1 || (lo == 1 && hi == 0) {
-			return 0, false
-		}
-		if hi != 0 {
-			return 64 + bits.TrailingZeros64(hi), true
-		}
-		return bits.TrailingZeros64(lo), true
+		uMinus1 := sub_128_128x128(u.dw0, u.dw1, 1, 0)
+		return ctz128(u), !(u.dw0 == 1 && u.dw1 == 0) && ((u.dw0&uMinus1.dw0)|(u.dw1&uMinus1.dw1)) == 0
 	}
 	if q > 0 || q < -34 {
 		return 0, false // c'·10^q has a factor 5; 2^k needs k >= −34
 	}
-	p := fromLoHi_128_64x64(1, 0) // t = 2^q = 5^−q · 10^q; 5^34 < 2^80
+	p := u128{1, 0} // t = 2^q = 5^−q · 10^q; 5^34 < 2^80
 	i := 0
 	for i < -q {
 		p = mul_128_128x128(p.dw0, p.dw1, 5, 0)
 		i += 1
 	}
-	return q, p.dw0 == c.dw0 && p.dw1 == c.dw1
+	return q, u.dw0 == p.dw0 && u.dw1 == p.dw1
 }
 
 // MARK: - Exp family
@@ -282,10 +278,7 @@ func exp10M1FNZ(x d128, rounding round, ctxnull *context) d128 {
 func expM1Kernel(s scaled, isExp10m1 bool, xd d48, rounding round, ctxnull *context) d128 {
 	bigS := d48_fromSignQExp_64x64x64(false, d48_qExp(s.z)+s.n, s.z.coeffDw0, s.z.coeffDw1, s.z.coeffDw2)
 	r := d48_subtract(bigS, const_D48_ONE)
-	shift := d48_sciExp(bigS) - d48_sciExp(r)
-	if shift < 0 {
-		shift = 0
-	}
+	shift := max(0, d48_sciExp(bigS)-d48_sciExp(r))
 	e := add_320_320x320(mulPow10_320(const_E_EXP_D48, shift), u320FromDw0(1))
 	if d48_ambiguous48(r, e) {
 		if d48_sciExp(bigS) < const_TINY_SCI_EXP {
@@ -307,10 +300,11 @@ func expM1Kernel(s scaled, isExp10m1 bool, xd d48, rounding round, ctxnull *cont
 func exp10M1Integer(x d128, rounding round, ctxnull *context) d128 {
 	neg := d128_signFlag(x)
 	var k int64
-	if d128_sciExp(x) >= 10 && neg {
-		k = -1_000_000_000
-	} else if d128_sciExp(x) >= 10 {
+	if d128_sciExp(x) >= 10 {
 		k = 1_000_000_000
+		if neg {
+			k = -k
+		}
 	} else {
 		k = d48_toLongOrMin(d48_fromD128(x, neg))
 	}
@@ -327,7 +321,7 @@ func exp10M1Integer(x d128, rounding round, ctxnull *context) d128 {
 	if absK < 0 {
 		absK = -absK
 	}
-	p := pow10U128(absK)
+	p := u128{pow10_128_dw0(absK), pow10_128_dw1(absK)}
 	nines := sub_128_128x128(p.dw0, p.dw1, 1, 0)
 	if k > 0 {
 		return d128Pack(false, 0, nines.dw0, nines.dw1)

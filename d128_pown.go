@@ -393,7 +393,8 @@ func pownFNZ_negative_d48(x d128, n uint64, rounding round, ctxnull *context) d1
 // coefficient is 10^(-qExp).
 func d128_oneWithQExp(sign bool, qExp int) d128 {
 	p := -qExp
-	return decimalFNZ_128(sign, qExp, pow10_128_dw0(p), pow10_128_dw1(p))
+	coeff := fromLoHi_128_64x64(pow10_128_dw0(p), pow10_128_dw1(p))
+	return d128Pack(sign, qExp, coeff.dw0, coeff.dw1)
 }
 
 // tenPowN builds ±10^n with the preferred cohort exponent preferredQExp;

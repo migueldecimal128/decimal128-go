@@ -19,19 +19,19 @@ func d128_roundToIntegral_rnd(x d128, rounding round) d128 {
 }
 
 func d128_roundToIntegralTiesToEven(x d128) d128 {
-	return roundToIntegral128_ctxnull(x, const_ROUND_TIES_TO_EVEN, nil, true)
+	return d128_roundToIntegral_rnd(x, const_ROUND_TIES_TO_EVEN)
 }
 func d128_roundToIntegralTiesToAway(x d128) d128 {
-	return roundToIntegral128_ctxnull(x, const_ROUND_TIES_TO_AWAY, nil, true)
+	return d128_roundToIntegral_rnd(x, const_ROUND_TIES_TO_AWAY)
 }
 func d128_roundToIntegralTowardZero(x d128) d128 {
-	return roundToIntegral128_ctxnull(x, const_ROUND_TOWARD_ZERO, nil, true)
+	return d128_roundToIntegral_rnd(x, const_ROUND_TOWARD_ZERO)
 }
 func d128_roundToIntegralTowardPositive(x d128) d128 {
-	return roundToIntegral128_ctxnull(x, const_ROUND_TOWARD_POSITIVE, nil, true)
+	return d128_roundToIntegral_rnd(x, const_ROUND_TOWARD_POSITIVE)
 }
 func d128_roundToIntegralTowardNegative(x d128) d128 {
-	return roundToIntegral128_ctxnull(x, const_ROUND_TOWARD_NEGATIVE, nil, true)
+	return d128_roundToIntegral_rnd(x, const_ROUND_TOWARD_NEGATIVE)
 }
 
 func d128_roundToIntegralTiesToEven_ctx(x d128, ctx *context) d128 {

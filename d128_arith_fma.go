@@ -168,8 +168,10 @@ func addWideAndFinalizeLikeSign_rnd_ctxnull(sign bool, mQ int, mCoeff u256, nQ i
 	if qDelta > const_FMA_EXACT_ALIGN_DIGITS-mDigitLen {
 		shiftLeft = min(qDelta, max(0, 34-mDigitLen))
 	}
-	mAligned := mCoeff
-	if shiftLeft != 0 {
+	var mAligned u256
+	if shiftLeft == 0 {
+		mAligned = mCoeff
+	} else {
 		mAligned = mulPow10_256_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3, shiftLeft)
 	}
 	qAlign := mQ - shiftLeft
@@ -191,8 +193,10 @@ func addWideAndFinalizeUnlikeSign_rnd_ctxnull(mSign bool, mQ int, mCoeff u256, n
 		maxCancellation := min(mDigitLen, nDigitLen)
 		shiftLeft = min(qDelta, max(0, 34+maxCancellation+1-mDigitLen))
 	}
-	mAligned := mCoeff
-	if shiftLeft != 0 {
+	var mAligned u256
+	if shiftLeft == 0 {
+		mAligned = mCoeff
+	} else {
 		mAligned = mulPow10_256_256(mCoeff.dw0, mCoeff.dw1, mCoeff.dw2, mCoeff.dw3, shiftLeft)
 	}
 	qAlign := mQ - shiftLeft

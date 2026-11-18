@@ -225,8 +225,9 @@ func divIntFnzFnz_rnd_ctx(x, y d128, ctxnull *context) d128 {
 	if headroom < zQ {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeDivIntOverflowsCoefficient, const_D128_QNAN0)
 	}
+	sign := d128_signFlag(q2)
 	scaled := mulPow10_128_128(q2.ubdLo64, d128_hi49(q2), zQ)
-	return decimalFNZ_128(d128_signFlag(q2), 0, scaled.dw0, scaled.dw1)
+	return decimalFNZ_128(sign, 0, scaled.dw0, scaled.dw1)
 }
 
 // RemainderExactWorkOrder.md §2. Both remainders are exact for every finite
@@ -355,8 +356,9 @@ func remainderNearFnzFnz(x, y d128) d128 {
 	twoR := shl_128_128(r.dw0, r.dw1, 1)
 	cmp := cmp_int_128x128(twoR.dw0, twoR.dw1, h.dw0, h.dw1)
 	if (cmp > 0) || ((cmp == 0) && truncIsOdd) {
+		sign := !d128_signFlag(x)
 		hr := sub_128_128x128(h.dw0, h.dw1, r.dw0, r.dw1)
-		return decimalFNZ_128(!d128_signFlag(x), e, hr.dw0, hr.dw1)
+		return decimalFNZ_128(sign, e, hr.dw0, hr.dw1)
 	}
 	return remResult(d128_signFlag(x), e, r)
 }

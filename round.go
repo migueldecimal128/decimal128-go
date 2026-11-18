@@ -56,7 +56,11 @@ func ulpBias(roundingCode round, isOdd bool, res residue) int64 {
 // sign-symmetric rules are unchanged. Branchless via a packed nybble map.
 func forMagnitude(roundingCode round, sign bool) round {
 	magnitudeMap := int64(0x0003421000043210)
-	index := (signBitOf(sign) << 3) | int(roundingCode)
+	signBits := 0
+	if sign {
+		signBits = 8
+	}
+	index := signBits | int(roundingCode)
 	shift := index << 2
 	result := int((magnitudeMap >> uint(shift)) & 0xF)
 	return round(result)

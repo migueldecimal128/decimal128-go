@@ -56,7 +56,7 @@ type amortizationRow struct {
 func d128_amortizationSchedule_tte(principal, periodicRate d128, numPayments int) []amortizationRow {
 	demand("amortizationSchedule: numPayments exceeds 100000", numPayments <= 100000)
 	payment := d128_mortgagePayment_tte(principal, periodicRate, numPayments)
-	rows := make([]amortizationRow, 0, numPayments)
+	rows := make([]amortizationRow, 0, max(0, numPayments))
 	balance := principal
 	p := 1
 	for p <= numPayments {

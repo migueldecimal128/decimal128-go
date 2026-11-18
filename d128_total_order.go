@@ -47,10 +47,7 @@ func compareTotalMagNonNaN(x, y d128) int {
 	}
 	// INF beats everything else in magnitude.
 	if d128_isINF(x) {
-		if d128_isINF(y) {
-			return 0
-		}
-		return 1
+		return int(boolToInt64(!d128_isINF(y)))
 	}
 	if d128_isINF(y) {
 		return -1

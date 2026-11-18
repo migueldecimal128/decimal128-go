@@ -137,15 +137,14 @@ func compoundPowerD48(t d48, tExact bool, n int, rounding round, ctxnull *contex
 		s = compoundStripToU128(t)
 		rulesApply = s.coeffDw2 == 0
 	}
-	sc := u128{s.coeffDw0, s.coeffDw1}
 	if n > 0 {
-		exact := rulesApply && pown_positiveExactCoeff(sc, uint64(n))
+		exact := rulesApply && pown_positiveExactCoeff(u128{s.coeffDw0, s.coeffDw1}, uint64(n))
 		return pown_d48Positive(t, uint64(n), exact, rounding, ctxnull)
 	}
-	absPow := absU64(n)
+	absPow := uint64(-n)
 	if rulesApply {
 		// The preferred exponent is −absPow·Q(t), from t before stripping.
-		if exact, ok := pown_negativeExactCoeff(false, sc, d48_qExp(s), d48_qExp(t), absPow, rounding, ctxnull); ok {
+		if exact, ok := pown_negativeExactCoeff(false, u128{s.coeffDw0, s.coeffDw1}, d48_qExp(s), d48_qExp(t), absPow, rounding, ctxnull); ok {
 			return exact
 		}
 	}

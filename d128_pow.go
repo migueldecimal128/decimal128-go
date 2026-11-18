@@ -370,10 +370,7 @@ func iroot5(v u128) (u128, bool) {
 		}
 	}
 	l4 := mul_128_64x64(lo*lo, lo*lo)
-	if mul_128_128x128(l4.dw0, l4.dw1, lo, 0) == v {
-		return u128{lo, 0}, true
-	}
-	return u128{}, false
+	return u128{lo, 0}, mul_128_128x128(l4.dw0, l4.dw1, lo, 0) == v
 }
 
 // --- 128-bit integer helpers for the exact rules (Swift uses UInt128) ---
