@@ -12,14 +12,7 @@ func d48_cmpMag(x, y d48) int {
 	xZero := d48_isZero(x)
 	yZero := d48_isZero(y)
 	if xZero || yZero {
-		r := 0
-		if !xZero {
-			r += 1
-		}
-		if !yZero {
-			r -= 1
-		}
-		return r
+		return int(boolToInt64(!xZero)) - int(boolToInt64(!yZero))
 	}
 	xs := d48_sciExp(x)
 	ys := d48_sciExp(y)

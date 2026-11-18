@@ -110,9 +110,9 @@ func roundToIntegral128_ctxnull(x d128, rounding round, ctxnull *context, suppre
 	// Case B: mixed integral/fractional — scale to qExp 0, finalize rounds.
 	qr := div_128_pow10_q128res(d128_u128(x), fracDigitLen)
 	coeff := fromLoHi_128_64x64(qr.quotDw0, qr.quotDw1)
-	var ctxForFinalize *context
-	if !suppressInexact {
-		ctxForFinalize = ctxnull
+	ctxForFinalize := ctxnull
+	if suppressInexact {
+		ctxForFinalize = nil
 	}
 	return finalize_128_ctxnull(xSign, 0, coeff, qr.residue, rounding, ctxForFinalize)
 }
@@ -193,8 +193,11 @@ func d128ConvertToInt64_ctxnull(x d128, rounding round, suppressInexact bool, ct
 					res = residueFromDecadeWithDigitLen_128(xU128.dw0, xU128.dw1, xDigitLen)
 					verify("", func() bool { return res != const_RESIDUE_EXACT })
 				}
-				var ret int64 = 0
-				if needsRoundUp(rounding, sign, false, res) {
+				roundUp := needsRoundUp(rounding, sign, false, res)
+				var ret int64
+				if !roundUp {
+					ret = 0
+				} else {
 					ret = (signMask << 1) | 1 // +1 or -1
 				}
 				if !suppressInexact && ctxnull != nil {

@@ -13,8 +13,10 @@ func d48_addWideLikeSign(sign bool, mQ int, mCoeff u320, nQ int, nCoeff u320) d4
 	headroom := max(0, 48-mDigitLen)
 	shiftLeft := min(qDelta, headroom)
 
-	mAligned := mCoeff
-	if shiftLeft != 0 {
+	var mAligned u320
+	if shiftLeft == 0 {
+		mAligned = mCoeff
+	} else {
 		mAligned = mulPow10_320(mCoeff, shiftLeft)
 	}
 	qAlign := mQ - shiftLeft
@@ -35,8 +37,10 @@ func d48_addWideUnlikeSign(mSign bool, mQ int, mCoeff u320, nSign bool, nQ int, 
 	headroom := max(0, 96-mDigitLen)
 	shiftLeft := min(qDelta, headroom)
 
-	mAligned := mCoeff
-	if shiftLeft != 0 {
+	var mAligned u320
+	if shiftLeft == 0 {
+		mAligned = mCoeff
+	} else {
 		mAligned = mulPow10_320(mCoeff, shiftLeft)
 	}
 	qAlign := mQ - shiftLeft

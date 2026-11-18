@@ -67,11 +67,11 @@ func compareTotalMagNonNaN(x, y d128) int {
 
 func compareTotalMagFnzFnz(x, y d128) int {
 	cmpMag := cmpMagFnzFnz(x, y)
-	if cmpMag != 0 {
-		return cmpMag
-	}
-	// Equal magnitudes (same cohort): tie-break on exponent.
-	return cmpInt(d128_qExp(x), d128_qExp(y))
+	cmpExp := cmpInt(d128_qExp(x), d128_qExp(y))
+	// If magnitudes are equal (same cohort), tie-break on exponent.
+	// Branchless: build mask = -1 iff cmpMag == 0, else 0.
+	cmpMagIsZeroMask := ^(cmpMag | -cmpMag) >> 63
+	return cmpMag | (cmpExp & cmpMagIsZeroMask)
 }
 
 func compareTotalMagNaN(x, y d128, xNaN, yNaN bool) int {

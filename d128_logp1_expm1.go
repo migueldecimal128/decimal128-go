@@ -389,9 +389,11 @@ func secondOrder(x d128, isExpm1 bool, rounding round, ctxnull *context) (d128, 
 	lead := mulPow10_320(u320FromDw0(c), 1-q)
 	half := u320FromDw0(5 * c * c) // 5c² < 5·10^16
 	neg := d128_signFlag(x)
-	mag := sub_320_320x320(lead, half)
+	var mag u320
 	if isExpm1 != neg {
 		mag = add_320_320x320(lead, half)
+	} else {
+		mag = sub_320_320x320(lead, half)
 	}
 	return d48_nudge_320(neg, 2*q-1, mag, !neg, rounding, ctxnull), true
 }

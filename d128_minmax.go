@@ -167,18 +167,9 @@ func compareNumericMagnitude(x, y d128) int {
 	}
 	// INF/ZER combinations only. INF beats anything non-INF; ZER loses to
 	// anything non-ZER; equal-class ties to 0.
-	xInf, yInf, xZer, yZer := 0, 0, 0, 0
-	if d128_isINF(x) {
-		xInf = 1
-	}
-	if d128_isINF(y) {
-		yInf = 1
-	}
-	if d128_isZER(x) {
-		xZer = 1
-	}
-	if d128_isZER(y) {
-		yZer = 1
-	}
+	xInf := int(boolToInt64(d128_isINF(x)))
+	yInf := int(boolToInt64(d128_isINF(y)))
+	xZer := int(boolToInt64(d128_isZER(x)))
+	yZer := int(boolToInt64(d128_isZER(y)))
 	return (xInf - yInf) | (yZer - xZer)
 }

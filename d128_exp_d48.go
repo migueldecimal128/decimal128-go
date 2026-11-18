@@ -27,8 +27,8 @@ func expScaled_d48(x d128) scaled {
 	if n != 0 {
 		// n·ln10 < 10^96 for |n| <= 4.4e5; r = x − n·ln10 via the wide signed add.
 		nMag := n
-		if n < 0 {
-			nMag = -n
+		if nMag < 0 {
+			nMag = -nMag
 		}
 		nLn10 := mul_320_320x64(const_U320_LN10_WIDE_COEFF, int64(nMag))
 		r = d48_addWide(d48_signFlag(xd), d48_qExp(xd), d48_u320(xd), n > 0, const_LN10_WIDE_QEXP, nLn10)

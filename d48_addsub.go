@@ -47,10 +47,14 @@ func d48_addAlignedUnlikeSign(x, y d48) d48 {
 	if c == 0 {
 		return const_D48_ZERO
 	}
-	if c < 0 { // |x| < |y|: flip the sign
-		return d48_fromQExpAndSignBit_160(x.qExpAndSignBit^1, sub_320_320x320(yc, xc).u192())
+	swap := c < 0 // |x| < |y|: flip the sign
+	var diff u320
+	if swap {
+		diff = sub_320_320x320(yc, xc)
+	} else {
+		diff = sub_320_320x320(xc, yc)
 	}
-	return d48_fromQExpAndSignBit_160(x.qExpAndSignBit, sub_320_320x320(xc, yc).u192())
+	return d48_fromQExpAndSignBit_160(x.qExpAndSignBit^int32(boolToInt64(swap)), diff.u192())
 }
 
 //go:noinline
@@ -59,9 +63,11 @@ func d48_addUnalignedLikeSign(x, y d48) d48 {
 	verify("", func() bool { return d48_qExp(x) != d48_qExp(y) })
 	verify("", func() bool { return d48_signFlag(x) == d48_signFlag(y) })
 
-	m, n := y, x
+	var m, n d48
 	if d48_qExp(x) > d48_qExp(y) {
 		m, n = x, y
+	} else {
+		m, n = y, x
 	}
 	mQ := d48_qExp(m)
 	nQ := d48_qExp(n)
