@@ -96,13 +96,15 @@ func pownFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 		q := int64(d128_qExp(x))
 		p := int64(n) * q
 		overflow := (q != 0) && ((p/q != int64(n)) || ((int64(n) == math.MinInt64) && (q == -1)))
-		nq := p
+		var nq int64
 		if overflow {
 			if (n < 0) == (q < 0) {
 				nq = math.MaxInt64
 			} else {
 				nq = math.MinInt64
 			}
+		} else {
+			nq = p
 		}
 		resultQExp := int(max(min(nq, 0), -33))
 		return d128_oneWithQExp(negative, resultQExp)
