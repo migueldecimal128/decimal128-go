@@ -81,7 +81,10 @@ func toNonFiniteString(x d128) string {
 
 func toFiniteString(sign bool, qExp int, coeff u128, formatStyle int) string {
 	digitLen := digitLen_int_128(coeff.dw0, coeff.dw1)
-	eExp := qExp + digitLen + (-digitLen >> 63)
+	eExp := qExp
+	if digitLen != 0 {
+		eExp = qExp + digitLen - 1
+	}
 	if formatStyle == const_FORMAT_COEFFICIENT_QEXP {
 		return toCoefficientQExpString(sign, qExp, coeff, digitLen)
 	}
@@ -153,16 +156,18 @@ func toDecimalPointString(sign bool, qExp int, coeff u128, digitLen int) string 
 				idx += 1
 			}
 			u128ToASCII(digitLen, coeff, ascii, signLen+leadingZeroCount+1)
-		} else {
-			u128ToASCII(digitLen, coeff, ascii, signLen)
-			iDot := totalLen - digitsRightOfDecimal - 1
-			i := totalLen - 1
-			for i > iDot {
-				writeByte(ascii, i, readByte(ascii, i-1))
-				i -= 1
-			}
-			writeByte(ascii, iDot, ascii_dot)
+			return
 		}
+
+		// leadingZeroCount == 0
+		u128ToASCII(digitLen, coeff, ascii, signLen)
+		iDot := totalLen - digitsRightOfDecimal - 1
+		i := totalLen - 1
+		for i > iDot {
+			writeByte(ascii, i, readByte(ascii, i-1))
+			i -= 1
+		}
+		writeByte(ascii, iDot, ascii_dot)
 	})
 }
 
@@ -177,7 +182,7 @@ func toExponentialString(sign bool, eExp int, coeff u128, digitLen int) string {
 	if digitLen > 1 {
 		decimalPointLen = 1
 	}
-	printedDigitLen := digitLen + 1 + (-digitLen >> 63)
+	printedDigitLen := max(digitLen, 1)
 	expSignByte := ascii_plus
 	if eExp < 0 {
 		expSignByte = ascii_minus

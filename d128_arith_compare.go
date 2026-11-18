@@ -55,7 +55,9 @@ func cmpMagFnzFnz(x, y d128) int {
 	}
 	xAligned := xCoeff
 	yAligned := yCoeff
-	qDelta = d128_qExp(x) - d128_qExp(y)
+	// |qDelta| is bounded by digitLen_max (34 for decimal128) because sciExps
+	// match, so qDelta = digitLen_y - digitLen_x. The binary-bracket pre-check
+	// makes typical qDelta small but doesn't tighten this worst-case bound.
 	if qDelta > 0 {
 		xAligned = mulPow10_128_128(xAligned.dw0, xAligned.dw1, qDelta)
 	} else if qDelta < 0 {

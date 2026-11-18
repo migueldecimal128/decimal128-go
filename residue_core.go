@@ -23,14 +23,8 @@ func residueFromRemainderDivisor_256(remainder, divisor u256) residue {
 			return const_RESIDUE_EXACT
 		}
 		doubled := shl1_256_256(remainder.dw0, remainder.dw1, remainder.dw2, remainder.dw3)
-		ge := 0
-		if !doubled.less(divisor) {
-			ge = 1
-		}
-		eq := 0
-		if doubled == divisor {
-			eq = 1
-		}
+		ge := int(boolToInt64(!doubled.less(divisor)))
+		eq := int(boolToInt64(doubled == divisor))
 		return (ge << 1) | (1 ^ eq)
 	}
 	return const_RESIDUE_GT_HALF
@@ -64,14 +58,8 @@ func residueFromDecadeWithDigitLen_256(v u256, digitLen int) residue {
 	if digitLen >= 39 && digitLen <= 77 {
 		i := digitLen - 39
 		halfPow10 := shr1_256_256(pow10_256_dw0(i), pow10_256_dw1(i), pow10_256_dw2(i), pow10_256_dw3(i))
-		ge := 0
-		if !v.less(halfPow10) {
-			ge = 1
-		}
-		eq := 0
-		if v == halfPow10 {
-			eq = 1
-		}
+		ge := int(boolToInt64(!v.less(halfPow10)))
+		eq := int(boolToInt64(v == halfPow10))
 		return (ge << 1) | (1 ^ eq)
 	}
 	impossible("invalid digitLen")
