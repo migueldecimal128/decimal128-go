@@ -14,6 +14,8 @@
 
 package decimal128
 
+var const_D48_COMPOUND_ONE = d48_fromInt32(1)
+
 var const_D128_COMPOUND_ONE = d128_fromInt64(1)
 
 func d128_compound_tte(x d128, n int) d128 {
@@ -87,7 +89,7 @@ func compoundFNZ(x d128, n int, rounding round, ctxnull *context) d128 {
 	}
 	// t = 1 + x in D48. Rounding to 48 digits never changes the sign or makes a
 	// non-zero sum zero, so the sign and zero tests below are exact.
-	t := d48_add(d48_fromInt32(1), d48_fromD128(x, d128_signFlag(x)))
+	t := d48_add(const_D48_COMPOUND_ONE, d48_fromD128(x, d128_signFlag(x)))
 	if d48_signFlag(t) && !d48_isZero(t) {
 		return ctxSignalInvalidOperation_ctxnull(ctxnull, causeCompoundXLtNegOne, const_D128_QNAN0) // x < -1
 	}
@@ -177,7 +179,7 @@ func compoundOnePlusXSpan(x d128) int {
 // of t's last digit) or |x| < 10^−14 (t − 1 has at most 34 digits); the outer
 // one only needs its sign, which rounding keeps.
 func compoundRoundToOdd(x d128, t48 d48) d48 {
-	one := d48_fromInt32(1)
+	one := const_D48_COMPOUND_ONE
 	x48 := d48_fromD128(x, d128_signFlag(x))
 	var r d48
 	if d128_sciExp(x) >= const_D48_DIGITS {

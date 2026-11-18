@@ -15,6 +15,12 @@
 
 package decimal128
 
+var const_D48_EXP10M1_MINUS_ONE = d48_fromInt32(50)
+
+var const_D48_EXP10M1_OVERFLOW = d48_fromInt32(6200)
+
+var const_D128_LOGP1_ONE = d128_fromInt64(1)
+
 // Ambiguity bounds, in units of the D48 result's 48th digit (§2; Phase 0 maxima:
 // series 6, log kernel 570, exp kernel 45 units of S). The +1 is the divide by
 // ln 10 / ln 2 (log family).
@@ -94,7 +100,7 @@ func logP1Dispatch(x d128, base int, rounding round, ctxnull *context) d128 {
 			return x // ±0, sign and exponent kept
 		}
 		if d128_signFlag(x) {
-			cmp := cmpMagFnzFnz(x, d128_fromInt64(1))
+			cmp := cmpMagFnzFnz(x, const_D128_LOGP1_ONE)
 			if cmp == 0 {
 				return ctxSignalDivByZero_ctxnull(ctxnull, true)
 			}
@@ -258,10 +264,10 @@ func exp10M1FNZ(x d128, rounding round, ctxnull *context) d128 {
 	}
 	neg := d128_signFlag(x)
 	xd := d48_fromD128(x, neg)
-	if !neg && d48_cmpMag(xd, d48_fromInt32(6200)) > 0 {
+	if !neg && d48_cmpMag(xd, const_D48_EXP10M1_OVERFLOW) > 0 {
 		return finalizeOverflow_ctxnull(false, rounding, ctxnull) // x > 6200
 	}
-	if neg && d48_cmpMag(xd, d48_fromInt32(50)) > 0 {
+	if neg && d48_cmpMag(xd, const_D48_EXP10M1_MINUS_ONE) > 0 {
 		return minusOnePlusTiny(rounding, ctxnull) // x < −50
 	}
 	if d128_sciExp(x) < const_SERIES_SCI_EXP {
