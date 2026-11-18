@@ -81,3 +81,12 @@ func parseHex16(chars []byte, off int) (int64, bool) {
 	}
 	return dw, true
 }
+
+// dpd64ParseDecTestHex parses the dectest `#` + 16-hex-digit decimal64 spelling.
+func dpd64ParseDecTestHex(s string) (uint64, bool) {
+	if len(s) != 17 || s[0] != '#' {
+		return 0, false
+	}
+	bits, ok := parseHex16([]byte(s), 1)
+	return uint64(bits), ok
+}

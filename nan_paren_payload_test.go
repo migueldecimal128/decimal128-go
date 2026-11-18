@@ -49,7 +49,7 @@ var nanParenBareStillAccepted = []string{
 	"NaN123", "qNaN7", "sNaN5", "-sNaN45", "NaN0",
 }
 
-func TestNanParenFormEqualsBareForm(t *testing.T) {
+func TestNanParenPayloadParenFormEqualsBareForm(t *testing.T) {
 	for _, pair := range nanParenEquivalentPairs {
 		paren, okP := d128_parse(pair[0])
 		bare, okB := d128_parse(pair[1])
@@ -67,7 +67,7 @@ func TestNanParenFormEqualsBareForm(t *testing.T) {
 	}
 }
 
-func TestNanParenRejectsMalformed(t *testing.T) {
+func TestNanParenPayloadRejectsMalformedParenPayload(t *testing.T) {
 	for _, input := range nanParenRejects {
 		if _, ok := d128_parse(input); ok {
 			t.Errorf("d128_parse(%q) expected to fail, but succeeded", input)
@@ -75,7 +75,7 @@ func TestNanParenRejectsMalformed(t *testing.T) {
 	}
 }
 
-func TestNanParenBareSpellingsStillParse(t *testing.T) {
+func TestNanParenPayloadBareSpellingsStillParse(t *testing.T) {
 	for _, input := range nanParenBareStillAccepted {
 		if _, ok := d128_parse(input); !ok {
 			t.Errorf("d128_parse(%q) expected to succeed", input)
@@ -85,7 +85,7 @@ func TestNanParenBareSpellingsStillParse(t *testing.T) {
 
 // Rendering never emits parentheses -- a value parsed from the parenthesised
 // form prints back in the bare form.
-func TestNanParenRendersBare(t *testing.T) {
+func TestNanParenPayloadRendersBare(t *testing.T) {
 	cases := [][2]string{
 		{"NaN(123)", "NaN123"},
 		{"-sNaN(45)", "-sNaN45"},
@@ -103,7 +103,7 @@ func TestNanParenRendersBare(t *testing.T) {
 // The 33-digit limit counts digits AS WRITTEN, inside the parentheses exactly
 // as it counts bare ones: 34 digits is non-canonical and reads as payload zero
 // (IEEE 754-2019 §3.5.2).
-func TestNanParenDigitLimitCountsAsWritten(t *testing.T) {
+func TestNanParenPayloadDigitLimitCountsAsWritten(t *testing.T) {
 	nines33 := strings.Repeat("9", 33)
 	nines34 := strings.Repeat("9", 34)
 

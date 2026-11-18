@@ -5,13 +5,6 @@ import (
 	"testing"
 )
 
-// The wrapper runner drives the same files through the public Decimal128 /
-// Context API (rosettaSource / rosettaNative, rosetta_test.go).
-func TestRosettaWrapperDectest(t *testing.T) { rosettaSource(t, "wrapper", "dectest", dispatchWrapper) }
-func TestRosettaWrapperFptest(t *testing.T)  { rosettaSource(t, "wrapper", "fptest", dispatchWrapper) }
-func TestRosettaWrapperIntel(t *testing.T)   { rosettaSource(t, "wrapper", "intel", dispatchWrapper) }
-func TestRosettaWrapperNative(t *testing.T)  { rosettaNative(t, "wrapper", dispatchWrapper) }
-
 // logRosettaTotal logs a corpus total and its unsupported cases by reason.
 func logRosettaTotal(t *testing.T, label string, r rosettaResult) {
 	t.Helper()

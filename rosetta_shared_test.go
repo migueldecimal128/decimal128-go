@@ -507,6 +507,17 @@ func (r *rosettaReport) checkRows(files map[string]bool) {
 	}
 }
 
+// checkRowsOnly is the selection verdict: no file/row mismatches (no cases
+// need have run).
+func (r *rosettaReport) checkRowsOnly(t *testing.T) {
+	for _, m := range r.mismatches {
+		t.Logf("ROSETTA-MISMATCH %s %s %s %s", rosettaPort, r.runner, r.source, m)
+	}
+	if len(r.mismatches) != 0 {
+		t.Fatalf("%s %s: %d mismatch(es) against expected.tsv (see ROSETTA-MISMATCH)", r.runner, r.source, len(r.mismatches))
+	}
+}
+
 // check is the test-side verdict: cases ran, no failures, no count mismatches.
 func (r *rosettaReport) check(t *testing.T) {
 	for _, m := range r.mismatches {

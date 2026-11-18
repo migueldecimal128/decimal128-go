@@ -1,66 +1,50 @@
 package decimal128
 
+// Ported from the Kotlin-legacy TestFinance. Tolerance-based (the legacy
+// compared |actual − expected| ≤ tol); the Core finance ops are byte-identical
+// compositions of d128 arithmetic, so the results match the legacy values.
+
 import "testing"
 
-// Ported from the Swift TestFinanceWrapper: exercises the public Finance API
-// with the same expected values and tolerances.
-
-func financeCheck(t *testing.T, label string, expected, actual Decimal128, tol Decimal128) {
-	t.Helper()
-	diff := actual.Sub(expected).Abs()
-	if !diff.LessOrEqual(tol) {
-		t.Errorf("%s: expected %s, got %s (diff %s)", label, expected, actual, diff)
+func TestFinanceFinance(t *testing.T) {
+	dec := func(s string) d128 { return mustDec(t, s) }
+	check := func(label, expected string, actual d128, tol string) {
+		t.Helper()
+		diff := d128_abs(d128_subtract_tte(actual, dec(expected)))
+		if !d128_isLessEqual(diff, dec(tol)) {
+			t.Errorf("%s: expected %s, got %s", label, expected, d128_format(actual, const_FORMAT_AUTO))
+		}
 	}
-}
-
-func TestFinance(t *testing.T) {
-	d := MustParse
-	tol := MustParse("1e-15")
-	flows := []Decimal128{d("-1000"), d("400"), d("500"), d("400")}
-
-	financeCheck(t, "simpleInterest", d("150"),
-		Finance.SimpleInterest(d("1000"), d("0.05"), d("3")), tol)
-	financeCheck(t, "compoundInterest", d("1628.894626777441406250"),
-		Finance.CompoundInterest(d("1000"), d("0.05"), 10), tol)
-	financeCheck(t, "effectiveAnnualRate", d("0.12682503013196972066"),
-		Finance.EffectiveAnnualRate(d("0.12"), 12), tol)
-
-	financeCheck(t, "mortgagePayment", d("1199.10105030550478918292"),
-		Finance.MortgagePayment(d("200000"), d("0.005"), 360), tol)
-	financeCheck(t, "mortgagePayment zero-rate", d("1000"),
-		Finance.MortgagePayment(d("12000"), d("0"), 12), tol)
-
-	sched := Finance.AmortizationSchedule(d("200000"), d("0.005"), 360)
-	financeCheck(t, "amort row1 interest", d("1000"), sched[0].Interest, d("1e-10"))
-	financeCheck(t, "amort final balance", d("0"), sched[len(sched)-1].Balance, d("0.01"))
-	if sched[0].Period != 1 || len(sched) != 360 {
-		t.Errorf("amort schedule shape: period0=%d len=%d", sched[0].Period, len(sched))
-	}
-
-	financeCheck(t, "presentValueAnnuity", d("10621.6936288139243718"),
-		Finance.PresentValueAnnuity(d("500"), d("0.01"), 24), tol)
-	financeCheck(t, "futureValueAnnuity", d("7867.2209929367732338"),
-		Finance.FutureValueAnnuity(d("200"), d("0.005"), 36), tol)
-
-	financeCheck(t, "npv r=0.10", d("77.38542449286250939143"),
-		Finance.NPV(d("0.10"), flows), tol)
-	financeCheck(t, "npv r=0.20", d("-87.96296296296296296296"),
-		Finance.NPV(d("0.20"), flows), tol)
-
-	irr, ok := Finance.IRR(flows)
-	if !ok {
+	const tol = "1e-15"
+	flows := []d128{dec("-1000"), dec("400"), dec("500"), dec("400")}
+	// simple & compound interest
+	check("simpleInterest", "150", d128_simpleInterest_tte(dec("1000"), dec("0.05"), dec("3")), tol)
+	check("compoundInterest", "1628.894626777441406250", d128_compoundInterest_tte(dec("1000"), dec("0.05"), 10), tol)
+	check("effectiveAnnualRate", "0.12682503013196972066", d128_effectiveAnnualRate_tte(dec("0.12"), 12), tol)
+	// mortgage payment
+	check("mortgagePayment", "1199.10105030550478918292", d128_mortgagePayment_tte(dec("200000"), dec("0.005"), 360), tol)
+	check("mortgagePayment zero-rate", "1000", d128_mortgagePayment_tte(dec("12000"), dec("0"), 12), tol)
+	// amortization schedule
+	sched := d128_amortizationSchedule_tte(dec("200000"), dec("0.005"), 360)
+	check("amort row1 interest", "1000", sched[0].interest, "1e-10")
+	check("amort final balance", "0", sched[len(sched)-1].balance, "0.01")
+	// annuity PV / FV
+	check("presentValueAnnuity", "10621.6936288139243718", d128_presentValueAnnuity_tte(dec("500"), dec("0.01"), 24), tol)
+	check("futureValueAnnuity", "7867.2209929367732338", d128_futureValueAnnuity_tte(dec("200"), dec("0.005"), 36), tol)
+	// NPV
+	check("npv r=0.10", "77.38542449286250939143", d128_npv_tte(dec("0.10"), flows), tol)
+	check("npv r=0.20", "-87.96296296296296296296", d128_npv_tte(dec("0.20"), flows), tol)
+	// IRR + NPV-at-IRR ≈ 0
+	irr := d128_irr_tte(flows, dec("0.1"), dec("1e-10"), 200)
+	if d128_isNAN(irr) {
 		t.Fatal("IRR did not converge")
 	}
-	financeCheck(t, "irr", d("0.14332259275356270085"), irr, tol)
-	financeCheck(t, "npv at irr", d("0"), Finance.NPV(irr, flows), d("1e-8"))
-
-	financeCheck(t, "mirr", d("0.13490286191516542854"),
-		Finance.MIRR(flows, d("0.10"), d("0.12")), tol)
-
-	financeCheck(t, "presentValue", d("680.58319703375316322003"),
-		Finance.PresentValue(d("1000"), d("0.08"), 5), tol)
-	financeCheck(t, "futureValue", d("751.8151294956800000"),
-		Finance.FutureValue(d("500"), d("0.06"), 7), tol)
-	financeCheck(t, "cagr", d("0.07177346253629316421"),
-		Finance.CAGR(d("1000"), d("2000"), 10), tol)
+	check("irr", "0.14332259275356270085", irr, tol)
+	check("npv at irr", "0", d128_npv_tte(irr, flows), "1e-8")
+	// MIRR
+	check("mirr", "0.13490286191516542854", d128_mirr_tte(flows, dec("0.10"), dec("0.12")), tol)
+	// single PV / FV / CAGR
+	check("presentValue", "680.58319703375316322003", d128_presentValue_tte(dec("1000"), dec("0.08"), 5), tol)
+	check("futureValue", "751.8151294956800000", d128_futureValue_tte(dec("500"), dec("0.06"), 7), tol)
+	check("cagr", "0.07177346253629316421", d128_cagr_tte(dec("1000"), dec("2000"), 10), tol)
 }

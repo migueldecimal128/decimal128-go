@@ -333,9 +333,9 @@ func dispatch(c *rosettaCase) (outcome, string) {
 		return checkMinMaxNumber(c, d128_maximumMagnitudeNumber_ctx)
 	case "d128_totalOrder":
 		return checkBinaryBoolCtx(c, func(x, y d128, _ *context) bool { return d128_isTotallyOrdered(x, y) })
-	case "comparetotal":
+	case "comparetotal", "d128_compareTotal":
 		return checkCompareInt(c, d128_compareTotal)
-	case "comparetotmag":
+	case "comparetotmag", "d128_compareTotalMag":
 		return checkCompareInt(c, d128_compareTotalMag)
 	case "d128_nextUp_ctxnull", "nextplus":
 		return checkUnaryCtx(c, d128_nextUp_ctxnull)

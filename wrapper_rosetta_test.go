@@ -5,6 +5,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"testing"
 )
 
 // WrapperRosetta: the same conformance corpora, driven entirely through the
@@ -1181,4 +1182,26 @@ func wrapComparePartial(c *rosettaCase, op func(*Context, Decimal128, Decimal128
 
 func runWrapperRosetta(cases []rosettaCase) rosettaResult {
 	return runCases(cases, dispatchWrapper)
+}
+
+// The wrapper runner drives the same files through the public Decimal128 /
+// Context API (rosettaSource / rosettaNative, rosetta_test.go).
+func TestWrapperRosettaRosettaWrapperDectest(t *testing.T) {
+	rosettaSource(t, "wrapper", "dectest", dispatchWrapper)
+}
+func TestWrapperRosettaRosettaWrapperFptest(t *testing.T) {
+	rosettaSource(t, "wrapper", "fptest", dispatchWrapper)
+}
+func TestWrapperRosettaRosettaWrapperIntel(t *testing.T) {
+	rosettaSource(t, "wrapper", "intel", dispatchWrapper)
+}
+
+// The native files run are exactly expected.tsv's native rows.
+func TestWrapperRosettaRosettaWrapperNativeSelection(t *testing.T) {
+	rosettaNativeSelection(t, "wrapper")
+}
+
+// Every native file, each checked against its own row.
+func TestWrapperRosettaRosettaWrapperNative(t *testing.T) {
+	rosettaNative(t, "wrapper", dispatchWrapper)
 }

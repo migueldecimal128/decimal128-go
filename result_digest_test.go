@@ -197,7 +197,7 @@ func digestLine(op string, mode int, count int, seed uint64) uint64 {
 	return h
 }
 
-func TestResultDigests(t *testing.T) {
+func TestResultDigestResultDigests(t *testing.T) {
 	record := os.Getenv("PARITY_DIGEST_RECORD") == "1"
 	data, err := os.ReadFile(filepath.Join(resourcesDir(), "digests.tsv"))
 	if err != nil {

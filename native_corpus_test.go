@@ -257,3 +257,15 @@ func TestNativeCorpusExclusionWithoutReasonFails(t *testing.T) {
 		t.Errorf("got %v", err)
 	}
 }
+
+func TestNativeCorpusRealIndexLoadsAndEveryFileExists(t *testing.T) {
+	found := false
+	for _, p := range nativeCorpusFiles(t, "core") {
+		if filepath.Base(p) == "transcendental_pown.txt" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("native.index does not select transcendental_pown.txt")
+	}
+}
