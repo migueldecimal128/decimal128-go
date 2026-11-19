@@ -11,7 +11,7 @@ import "strings"
 //
 // A value-type snapshot read from a `Context`. The bit positions are identical
 // to the core's `Exception754` ordering, so a snapshot crosses the wrapper/core
-// boundary as a single `int` with no translation (CrossPlatformArchitecture.md
+// boundary as a single integer with no translation (CrossPlatformArchitecture.md
 // Section 6.4).
 type Flags int
 
