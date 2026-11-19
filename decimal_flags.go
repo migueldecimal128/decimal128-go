@@ -38,7 +38,7 @@ func (f Flags) Has(mask Flags) bool { return f&mask == mask }
 func (f Flags) IsEmpty() bool { return f == 0 }
 
 // String renders the set flags as a brace-enclosed, comma-separated list (e.g.
-// "{Inexact, Rounded}" style), or "{}" when empty.
+// "{Overflow, Inexact}"), or "{}" when empty.
 func (f Flags) String() string {
 	if f == 0 {
 		return "{}"
