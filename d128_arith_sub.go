@@ -136,8 +136,10 @@ func subMagUnalignedFnzFnz_rnd_ctxnull(zSign bool, m, s d128, rounding round, ct
 	qr := div_128_pow10_checked_q128res(sCoeff, shiftSRight)
 	rawResidue := qr.residue
 	zCoeff = sub_128_128x128(zCoeff.dw0, zCoeff.dw1, qr.quotDw0, qr.quotDw1)
-	res := const_RESIDUE_EXACT
-	if rawResidue != const_RESIDUE_EXACT {
+	var res residue
+	if rawResidue == const_RESIDUE_EXACT {
+		res = const_RESIDUE_EXACT
+	} else {
 		res = residueSubtractionInverse(rawResidue)
 		zCoeff = sub_128_128x128(zCoeff.dw0, zCoeff.dw1, 1, 0)
 	}

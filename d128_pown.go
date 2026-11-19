@@ -300,7 +300,14 @@ func pownPositiveExact(x d128, n uint64) bool {
 
 // pownPositiveExact on a coefficient: c^n has at most 34 significant digits.
 func pown_positiveExactCoeff(cIn u128, n uint64) bool {
-	c, _ := stripTens(cIn, 0)
+	c := cIn
+	for {
+		quot, r := divSmall(c, 10)
+		if r != 0 {
+			break
+		}
+		c = quot
+	}
 	if c == (u128{1, 0}) {
 		return true
 	}

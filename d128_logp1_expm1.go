@@ -327,11 +327,7 @@ func exp10M1Integer(x d128, rounding round, ctxnull *context) d128 {
 	if k < -34 {
 		return minusOnePlusTiny(rounding, ctxnull)
 	}
-	absK := int(k)
-	if absK < 0 {
-		absK = -absK
-	}
-	p := u128{pow10_128_dw0(absK), pow10_128_dw1(absK)}
+	p := u128{pow10_128_dw0(int(absU64(int(k)))), pow10_128_dw1(int(absU64(int(k))))}
 	nines := sub_128_128x128(p.dw0, p.dw1, 1, 0)
 	if k > 0 {
 		return d128Pack(false, 0, nines.dw0, nines.dw1)
