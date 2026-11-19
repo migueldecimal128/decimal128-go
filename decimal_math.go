@@ -14,7 +14,7 @@ func (d Decimal128) Sqrt() Decimal128 { return Decimal128{d128_sqrt_tte(d.core)}
 // Square returns this value squared (`d * d`), rounded ties-to-even.
 func (d Decimal128) Square() Decimal128 { return Decimal128{d128_square_tte(d.core)} }
 
-// FMA returns `d + (lhs * rhs)` computed with a single rounding (ties-to-even).
+// FMA returns `d + (a * b)` computed with a single rounding (ties-to-even).
 func (d Decimal128) FMA(a, b Decimal128) Decimal128 {
 	return Decimal128{d128_fma_tte(a.core, b.core, d.core)}
 }
