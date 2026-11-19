@@ -32,6 +32,7 @@ type IntConversionError struct {
 	Target string
 }
 
+// Error returns the message `decimal128: <Value> is not an exact <Target>`.
 func (e *IntConversionError) Error() string {
 	return "decimal128: " + e.Value + " is not an exact " + e.Target
 }

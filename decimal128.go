@@ -68,8 +68,12 @@ func ParseOrNaN(text string) Decimal128 {
 }
 
 // ParseError reports a string that could not be parsed as a decimal128 value.
-type ParseError struct{ Text string }
+type ParseError struct {
+	// Text is the string that could not be parsed.
+	Text string
+}
 
+// Error returns the message `decimal128: cannot parse "<Text>"`, with Text quoted.
 func (e *ParseError) Error() string {
 	return "decimal128: cannot parse " + strconv.Quote(e.Text)
 }
