@@ -15,13 +15,20 @@ package decimal128
 import "strconv"
 
 // Decimal128 is an IEEE 754-2019 decimal128 floating-point value.
+//
+// `Decimal128` is the public face of the library: it wraps the internal engine
+// value and adapts it to the language's conventions.
+//
+// The bare arithmetic operations (`+ - * /`) round ties-to-even with no flag
+// tracking. For an explicit rounding direction use the `Rounding` methods; to
+// also record IEEE 754 exception flags use the `Context` methods.
 type Decimal128 struct {
 	core d128
 }
 
 // --- construction ---
 
-// FromInt64 returns the Decimal128 value exactly equal to n.
+// FromInt64 creates a value exactly equal to the given integer.
 func FromInt64(n int64) Decimal128 {
 	return Decimal128{d128_fromInt64(int(n))}
 }
@@ -31,9 +38,8 @@ func FromUInt64(n uint64) Decimal128 {
 	return Decimal128{d128_fromUInt64(uint(n))}
 }
 
-// Parse parses a decimal string (e.g. "3.14", "-1E+10", "Infinity", "NaN"),
-// rounding ties-to-even. It returns an error if the text is not a valid
-// decimal128 string.
+// Parse parses a decimal string (e.g. `"3.14"`, `"-1E+10"`, `"Infinity"`,
+// `"NaN"`). Returns an error if the text is not a valid decimal128 string.
 func Parse(text string) (Decimal128, error) {
 	if parsed, ok := d128_parse(text); ok {
 		return Decimal128{parsed}, nil
@@ -53,8 +59,10 @@ func MustParse(text string) Decimal128 {
 }
 
 // ParseOrNaN parses a decimal string, returning a quiet NaN instead of an error
-// when the text is not a valid decimal128 string. It rounds ties-to-even and
-// raises no flags.
+// when the text is not a valid decimal128 string. Rounds ties-to-even and
+// raises no flags -- the only difference from `Parse` is that failure is
+// reported in-band as a NaN rather than as an error. For IEEE/GDAS parse
+// semantics (rounding + flags) use `Context.ParseOrNaN`.
 func ParseOrNaN(text string) Decimal128 {
 	return Decimal128{d128_parseOrNaN(text)}
 }
@@ -77,7 +85,7 @@ func NaN() Decimal128 { return Decimal128{const_D128_QNAN0} }
 // SignalingNaN returns a signaling NaN with no payload.
 func SignalingNaN() Decimal128 { return Decimal128{const_D128_SNAN0} }
 
-// Inf returns positive infinity if sign >= 0, negative infinity otherwise.
+// Inf returns positive infinity if `sign >= 0`, negative infinity otherwise.
 func Inf(sign int) Decimal128 {
 	if sign < 0 {
 		return Decimal128{const_D128_NEG_INFINITY}
@@ -87,69 +95,77 @@ func Inf(sign int) Decimal128 {
 
 // --- classification ---
 
-// IsNaN reports whether d is a quiet or signaling NaN.
+// IsNaN reports whether this value is a quiet or signaling NaN.
 func (d Decimal128) IsNaN() bool { return d128_isNAN(d.core) }
 
-// IsSignalingNaN reports whether d is a signaling NaN.
+// IsSignalingNaN reports whether this value is a signaling NaN.
 func (d Decimal128) IsSignalingNaN() bool { return d128_isSNAN(d.core) }
 
-// IsFinite reports whether d is finite (neither infinite nor NaN).
+// IsFinite reports whether this value is finite (neither infinite nor NaN).
 func (d Decimal128) IsFinite() bool { return d128_isFinite(d.core) }
 
-// IsInf reports whether d is positive or negative infinity.
+// IsInf reports whether this value is positive or negative infinity.
 func (d Decimal128) IsInf() bool { return d128_isINF(d.core) }
 
-// IsZero reports whether d is positive or negative zero.
+// IsZero reports whether this value is positive or negative zero.
 func (d Decimal128) IsZero() bool { return d128_isZER(d.core) }
 
-// Signbit reports whether d carries a negative sign (including −0 and −NaN).
+// Signbit reports whether the sign of this value is negative. NaN and zero carry
+// a sign like any other value.
 func (d Decimal128) Signbit() bool { return d128_isNegative(d.core) }
 
 // --- formatting ---
 
-// String returns the GDAS "to-scientific-string" rendering of d (plain when the
-// adjusted exponent allows, scientific otherwise) — the form BigDecimal.toString
-// and Python's decimal.Decimal produce. It implements fmt.Stringer.
-func (d Decimal128) String() string { return d128_format(d.core, const_FORMAT_AUTO) }
+// String returns the GDAS "to-scientific-string" rendering (plain when the
+// adjusted exponent allows, scientific otherwise) -- the form
+// `BigDecimal.toString` and Python's `decimal.Decimal` produce.
+func (d Decimal128) String() string {
+	// Implements fmt.Stringer.
+	return d128_format(d.core, const_FORMAT_AUTO)
+}
 
 // --- arithmetic (ties-to-even, no flags) ---
 
-// Add returns d + other, rounded ties-to-even.
+// Add returns the sum of the operands, rounded ties-to-even, with no flag
+// tracking.
 func (d Decimal128) Add(other Decimal128) Decimal128 {
 	return Decimal128{d128_add_tte(d.core, other.core)}
 }
 
-// Sub returns d − other, rounded ties-to-even.
+// Sub returns the difference of the operands, rounded ties-to-even, with no
+// flag tracking.
 func (d Decimal128) Sub(other Decimal128) Decimal128 {
 	return Decimal128{d128_subtract_tte(d.core, other.core)}
 }
 
-// Mul returns d × other, rounded ties-to-even.
+// Mul returns the product of the operands, rounded ties-to-even, with no flag
+// tracking.
 func (d Decimal128) Mul(other Decimal128) Decimal128 {
 	return Decimal128{d128_multiply_tte(d.core, other.core)}
 }
 
-// Quo returns d ÷ other, rounded ties-to-even.
+// Quo returns the quotient of the operands, rounded ties-to-even, with no flag
+// tracking.
 func (d Decimal128) Quo(other Decimal128) Decimal128 {
 	return Decimal128{d128_divide_tte(d.core, other.core)}
 }
 
-// Neg returns −d.
+// Neg returns bit-level negation: the operand with its sign flipped. Never
+// rounds and raises no flags.
 func (d Decimal128) Neg() Decimal128 { return Decimal128{d128_negate(d.core)} }
 
-// Abs returns the magnitude (absolute value) of d.
+// Abs returns the magnitude (absolute value).
 func (d Decimal128) Abs() Decimal128 { return Decimal128{d128_abs(d.core)} }
 
 // --- comparison (IEEE semantics) ---
 
-// Equal reports whether d and other are numerically equal under IEEE 754
-// semantics: +0 equals −0, and a NaN equals nothing, itself included.
+// Equal reports whether `d == other` under IEEE rules (`+0 == -0`, NaN compares
+// unequal).
 func (d Decimal128) Equal(other Decimal128) bool {
 	return d128_isEqual(d.core, other.core)
 }
 
-// Less reports whether d is numerically less than other under IEEE 754
-// semantics (any NaN operand yields false).
+// Less reports whether `d < other` under IEEE rules (false if either is NaN).
 func (d Decimal128) Less(other Decimal128) bool {
 	return d128_isLess(d.core, other.core)
 }

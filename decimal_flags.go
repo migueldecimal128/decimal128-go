@@ -7,20 +7,25 @@ package decimal128
 
 import "strings"
 
-// Flags is the set of IEEE 754-2019 exceptions raised by an operation, read as a
-// snapshot from a Context. Combine and test with the bitwise operators or the
-// Has method.
+// Flags is the set of IEEE 754-2019 exceptions raised by an operation.
+//
+// A value-type snapshot read from a `Context`. The bit positions are identical
+// to the core's `Exception754` ordering, so a snapshot crosses the wrapper/core
+// boundary as a single `int` with no translation (CrossPlatformArchitecture.md
+// Section 6.4).
 type Flags int
 
 const (
 	// FlagInvalidOperation: an operand or operation was mathematically undefined
-	// (e.g. 0/0, ∞ − ∞, a signaling-NaN operand).
+	// (e.g. `0/0`, `inf - inf`, a signaling NaN operand).
 	FlagInvalidOperation Flags = 1 << 0
 	// FlagDivisionByZero: a finite nonzero value was divided by zero.
 	FlagDivisionByZero Flags = 1 << 1
-	// FlagOverflow: the result's magnitude exceeded the largest finite value.
+	// FlagOverflow: the result's magnitude exceeded the largest representable
+	// finite value.
 	FlagOverflow Flags = 1 << 2
-	// FlagUnderflow: the result was tiny and lost precision to subnormal form.
+	// FlagUnderflow: the result was tiny and lost precision to subnormal
+	// representation.
 	FlagUnderflow Flags = 1 << 3
 	// FlagInexact: the result had to be rounded; it is not exactly the true value.
 	FlagInexact Flags = 1 << 4

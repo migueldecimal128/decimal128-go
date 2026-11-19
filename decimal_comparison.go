@@ -4,16 +4,24 @@
 
 package decimal128
 
-// Comparison is the outcome of comparing two Decimal128 values. CmpUnordered
-// arises only from the numeric comparisons when an operand is NaN; the
-// total-order comparisons never produce it.
+// Comparison is the outcome of an IEEE 754 comparison of two `Decimal128`
+// values.
+//
+// `CmpUnordered` arises only from the quiet/signaling numeric comparisons when
+// an operand is NaN; the total-order comparisons never produce it.
 type Comparison int
 
 const (
-	CmpLess      Comparison = iota // the receiver is less than the operand
-	CmpEqual                       // the two compare equal
-	CmpGreater                     // the receiver is greater than the operand
-	CmpUnordered                   // an operand is NaN — not numerically ordered
+	// CmpLess: the receiver is less than the operand.
+	CmpLess Comparison = iota // the receiver is less than the operand
+	// CmpEqual: the two compare equal (numerically, or -- for total order --
+	// identically).
+	CmpEqual // the two compare equal
+	// CmpGreater: the receiver is greater than the operand.
+	CmpGreater // the receiver is greater than the operand
+	// CmpUnordered: at least one operand is NaN, so the two are not numerically
+	// ordered.
+	CmpUnordered // an operand is NaN — not numerically ordered
 )
 
 // String returns a short name for the comparison outcome.
@@ -48,9 +56,10 @@ func comparisonFromCode(code comparison754) Comparison {
 
 // --- numeric three-way comparison (IEEE 754 compare) ---
 
-// ComparePartial returns the quiet IEEE 754 comparison of d to other. A NaN
-// operand yields CmpUnordered; a signaling-NaN operand additionally raises
-// InvalidOperation — use Context.ComparePartial to capture that flag.
+// ComparePartial returns the quiet IEEE 754 partial comparison of `d` to
+// `other`. NaN operands yield `CmpUnordered`; a signaling-NaN operand
+// additionally raises `FlagInvalidOperation` -- use `Context.ComparePartial` to
+// capture that flag.
 func (d Decimal128) ComparePartial(other Decimal128) Comparison {
 	return comparisonFromCode(d128_comparePartial(d.core, other.core))
 }
@@ -58,20 +67,21 @@ func (d Decimal128) ComparePartial(other Decimal128) Comparison {
 // --- total-order comparison (never unordered) ---
 
 // TotalOrder returns the IEEE 754 total-ordering comparison: a reflexive
-// ordering over all values — NaNs, signed zeros, and distinct cohorts included —
-// so it never returns CmpUnordered.
+// ordering over *all* values -- NaNs, signed zeros, and distinct cohorts
+// included -- so it never returns `CmpUnordered`.
 func (d Decimal128) TotalOrder(other Decimal128) Comparison {
 	return totalThreeWay(d.IsTotallyOrdered(other), other.IsTotallyOrdered(d))
 }
 
-// TotalOrderByMagnitude returns the total ordering of magnitudes (signs
-// ignored). Never CmpUnordered.
+// TotalOrderByMagnitude returns total ordering of magnitudes (signs ignored).
+// Never `CmpUnordered`.
 func (d Decimal128) TotalOrderByMagnitude(other Decimal128) Comparison {
 	return totalThreeWay(d.IsTotallyOrderedByMagnitude(other), other.IsTotallyOrderedByMagnitude(d))
 }
 
-// IsTotallyOrdered reports whether d totalOrders at or before other (the
-// reflexive total-order ≤).
+// IsTotallyOrdered returns the IEEE 754 total-ordering predicate: a single,
+// reflexive ordering over *all* values including NaNs, signed zeros, and cohort
+// members. Unlike `<`, this never returns "unordered".
 func (d Decimal128) IsTotallyOrdered(other Decimal128) bool {
 	return d128_isTotallyOrdered(d.core, other.core)
 }
@@ -99,12 +109,14 @@ func totalThreeWay(leftBelowEqual, rightBelowEqual bool) Comparison {
 // Equal and Less are already provided on Decimal128 (the IEEE == and < forms);
 // these add the remaining named predicates.
 
-// NotEqual reports whether d ≠ other under IEEE rules (true if either is NaN).
+// NotEqual reports whether `d != other` under IEEE rules (`true` if either
+// operand is NaN).
 func (d Decimal128) NotEqual(other Decimal128) bool {
 	return d128_isNotEqual(d.core, other.core)
 }
 
-// LessOrEqual reports whether d ≤ other under IEEE rules (false if either is NaN).
+// LessOrEqual reports whether `d <= other` under IEEE rules (false if either is
+// NaN).
 func (d Decimal128) LessOrEqual(other Decimal128) bool {
 	return d128_isLessEqual(d.core, other.core)
 }
@@ -114,7 +126,8 @@ func (d Decimal128) Greater(other Decimal128) bool {
 	return d128_isGreater(d.core, other.core)
 }
 
-// GreaterOrEqual reports whether d ≥ other under IEEE rules (false if either is NaN).
+// GreaterOrEqual reports whether `d >= other` under IEEE rules (false if either
+// is NaN).
 func (d Decimal128) GreaterOrEqual(other Decimal128) bool {
 	return d128_isGreaterEqual(d.core, other.core)
 }
@@ -124,12 +137,14 @@ func (d Decimal128) IsUnordered(other Decimal128) bool {
 	return d128_isUnordered(d.core, other.core)
 }
 
-// NotGreater reports NOT(d > other): true if d <= other or the two are unordered.
+// NotGreater reports whether `NOT(d > other)`: `d <= other` or the two are
+// unordered.
 func (d Decimal128) NotGreater(other Decimal128) bool {
 	return d128_isNotGreater(d.core, other.core)
 }
 
-// NotLess reports NOT(d < other): true if d >= other or the two are unordered.
+// NotLess reports whether `NOT(d < other)`: `d >= other` or the two are
+// unordered.
 func (d Decimal128) NotLess(other Decimal128) bool {
 	return d128_isNotLess(d.core, other.core)
 }
@@ -158,48 +173,83 @@ func (c *Context) ComparePartial(a, b Decimal128) Comparison {
 	return comparisonFromCode(d128_comparePartial_ctx(a.core, b.core, c.core))
 }
 
-// ComparePartialSignaling returns the signaling IEEE 754 comparison of a to b:
-// any NaN operand (quiet or signaling) raises InvalidOperation into this context.
-// Returns CmpUnordered for NaN.
+// ComparePartialSignaling returns the signaling IEEE 754 comparison of `a` to
+// `b`: *any* NaN operand (quiet or signaling) raises `FlagInvalidOperation`
+// into this context. Returns `CmpUnordered` for NaN.
 func (c *Context) ComparePartialSignaling(a, b Decimal128) Comparison {
 	return comparisonFromCode(d128_comparePartialSignaling_ctx(a.core, b.core, c.core))
 }
 
 // --- signaling boolean comparisons (raise invalidOperation on any NaN) ---
 
+// EqualSignaling reports whether `a == b`; any NaN operand raises
+// `FlagInvalidOperation` into this context.
 func (c *Context) EqualSignaling(a, b Decimal128) bool {
 	return d128_isEqualSignaling_ctx(a.core, b.core, c.core)
 }
+
+// NotEqualSignaling reports whether `a != b`; any NaN operand raises
+// `FlagInvalidOperation` into this context.
 func (c *Context) NotEqualSignaling(a, b Decimal128) bool {
 	return d128_isNotEqualSignaling_ctx(a.core, b.core, c.core)
 }
+
+// LessSignaling reports whether `a < b`; any NaN operand raises
+// `FlagInvalidOperation` into this context.
 func (c *Context) LessSignaling(a, b Decimal128) bool {
 	return d128_isLessSignaling_ctx(a.core, b.core, c.core)
 }
+
+// LessOrEqualSignaling reports whether `a <= b`; any NaN operand raises
+// `FlagInvalidOperation` into this context.
 func (c *Context) LessOrEqualSignaling(a, b Decimal128) bool {
 	return d128_isLessEqualSignaling_ctx(a.core, b.core, c.core)
 }
+
+// GreaterSignaling reports whether `a > b`; any NaN operand raises
+// `FlagInvalidOperation` into this context.
 func (c *Context) GreaterSignaling(a, b Decimal128) bool {
 	return d128_isGreaterSignaling_ctx(a.core, b.core, c.core)
 }
+
+// GreaterOrEqualSignaling reports whether `a >= b`; any NaN operand raises
+// `FlagInvalidOperation` into this context.
 func (c *Context) GreaterOrEqualSignaling(a, b Decimal128) bool {
 	return d128_isGreaterEqualSignaling_ctx(a.core, b.core, c.core)
 }
+
+// IsUnorderedSignaling reports whether either operand is NaN; any NaN operand
+// raises `FlagInvalidOperation` into this context.
 func (c *Context) IsUnorderedSignaling(a, b Decimal128) bool {
 	return d128_isUnorderedSignaling_ctx(a.core, b.core, c.core)
 }
+
+// NotGreaterSignaling reports whether NOT(`a > b`); any NaN operand raises
+// `FlagInvalidOperation` into this context.
 func (c *Context) NotGreaterSignaling(a, b Decimal128) bool {
 	return d128_isNotGreaterSignaling_ctx(a.core, b.core, c.core)
 }
+
+// NotLessSignaling reports whether NOT(`a < b`); any NaN operand raises
+// `FlagInvalidOperation` into this context.
 func (c *Context) NotLessSignaling(a, b Decimal128) bool {
 	return d128_isNotLessSignaling_ctx(a.core, b.core, c.core)
 }
+
+// IsOrderedSignaling reports whether neither operand is NaN; any NaN operand
+// raises `FlagInvalidOperation` into this context.
 func (c *Context) IsOrderedSignaling(a, b Decimal128) bool {
 	return d128_isOrderedSignaling_ctx(a.core, b.core, c.core)
 }
+
+// GreaterUnorderedSignaling reports whether `a > b` or unordered; any NaN
+// operand raises `FlagInvalidOperation` into this context.
 func (c *Context) GreaterUnorderedSignaling(a, b Decimal128) bool {
 	return d128_isGreaterUnorderedSignaling_ctx(a.core, b.core, c.core)
 }
+
+// LessUnorderedSignaling reports whether `a < b` or unordered; any NaN operand
+// raises `FlagInvalidOperation` into this context.
 func (c *Context) LessUnorderedSignaling(a, b Decimal128) bool {
 	return d128_isLessUnorderedSignaling_ctx(a.core, b.core, c.core)
 }

@@ -2,7 +2,7 @@
 
 package decimal128
 
-// DecimalClass is the IEEE 754-2019 §5.7.2 class of a Decimal128 value: one of
+// DecimalClass is the IEEE 754-2019 Section 5.7.2 class of a Decimal128 value: one of
 // ten mutually exclusive categories. The values match the core class ordering.
 type DecimalClass int
 
@@ -47,5 +47,5 @@ func (c DecimalClass) String() string {
 	}
 }
 
-// DecimalClass returns the IEEE 754 class of d.
+// DecimalClass returns the IEEE 754 class of this value.
 func (d Decimal128) DecimalClass() DecimalClass { return DecimalClass(d128_ieeeClass(d.core)) }

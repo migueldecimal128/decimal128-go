@@ -6,17 +6,23 @@ package decimal128
 
 import "strconv"
 
-// Rounding is a rounding direction for inexact results, per IEEE 754-2019. It is
-// the idiomatic face of the core's load-bearing Round codes; the values mirror
-// the core ordering exactly.
+// Rounding is a rounding direction for inexact results, per IEEE 754-2019.
+//
+// The wrapper face of the core's `Round` codes (CrossPlatformArchitecture.md
+// Section 6.4); the raw values mirror the core ordering exactly.
 type Rounding int
 
 const (
-	TiesToEven     Rounding = iota // ties to even (the default)
-	TiesToAway                     // ties away from zero
-	TowardZero                     // truncate
-	TowardPositive                 // ceiling
-	TowardNegative                 // floor
+	// TiesToEven: round to nearest, ties to even.
+	TiesToEven Rounding = iota
+	// TiesToAway: round to nearest, ties away from zero.
+	TiesToAway
+	// TowardZero: round toward zero (truncate).
+	TowardZero
+	// TowardPositive: round toward positive infinity (ceiling).
+	TowardPositive
+	// TowardNegative: round toward negative infinity (floor).
+	TowardNegative
 )
 
 // core bridges to the package-internal round value (identical ordering).
@@ -42,22 +48,22 @@ func (r Rounding) String() string {
 
 // --- arithmetic in this direction (modifier-as-receiver) ---
 
-// Add returns a + b rounded in this direction.
+// Add returns `a + b`, rounded in this direction.
 func (r Rounding) Add(a, b Decimal128) Decimal128 {
 	return Decimal128{d128_add_rnd(a.core, b.core, r.core())}
 }
 
-// Sub returns a − b rounded in this direction.
+// Sub returns `a - b`, rounded in this direction.
 func (r Rounding) Sub(a, b Decimal128) Decimal128 {
 	return Decimal128{d128_subtract_rnd(a.core, b.core, r.core())}
 }
 
-// Mul returns a × b rounded in this direction.
+// Mul returns `a * b`, rounded in this direction.
 func (r Rounding) Mul(a, b Decimal128) Decimal128 {
 	return Decimal128{d128_multiply_rnd(a.core, b.core, r.core())}
 }
 
-// Quo returns a ÷ b rounded in this direction.
+// Quo returns `a / b`, rounded in this direction.
 func (r Rounding) Quo(a, b Decimal128) Decimal128 {
 	return Decimal128{d128_divide_rnd(a.core, b.core, r.core())}
 }

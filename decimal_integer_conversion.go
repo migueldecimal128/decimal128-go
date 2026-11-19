@@ -38,26 +38,28 @@ func (e *IntConversionError) Error() string {
 
 // --- (a) range guards ---
 
-// FitsInt64 reports whether d is finite and lies in [math.MinInt64,
-// math.MaxInt64] — the rounding-independent guarantee that an int64 conversion
-// under any direction cannot overflow. This is a range test only; it does not
-// check integrality (3.7 fits). NaN and infinity are false.
+// FitsInt64 reports whether this value is finite and lies in
+// `math.MinInt64...math.MaxInt64` -- the rounding-independent guarantee that an
+// `int64` conversion under any direction cannot overflow. This is a *range*
+// test only; it does not check integrality (`3.7` fits). NaN and infinity are
+// `false`.
 func (d Decimal128) FitsInt64() bool { return d128_fitsInt64(d.core) }
 
-// FitsUInt64 reports whether d is finite, non-negative in value, and lies in
-// [0, math.MaxUint64]. −0 fits (it converts to 0); a negative nonzero value does
-// not. Like FitsInt64, a range test only — it does not check integrality. NaN and
-// infinity are false.
+// FitsUInt64 reports whether this value is finite, non-negative in value, and
+// lies in `0...math.MaxUint64`. `-0` fits (it converts to `0`); a negative
+// nonzero value does not. Like `FitsInt64`, a range test only -- it does not
+// check integrality. NaN and infinity are `false`.
 func (d Decimal128) FitsUInt64() bool { return d128_fitsUInt64(d.core) }
 
 // --- (b) fallible-exact conversions ---
 
-// Int64 converts d to int64 only when it is an exact integer in range, returning
-// a non-nil *IntConversionError otherwise. A fractional part, out-of-range
-// magnitude, NaN, or infinity all fail — there is no truncation or clamping. To
-// round a fraction, use a directed Rounding/Context form; to test range only, use
-// FitsInt64.
+// Int64 converts the value to `int64` only when it is an *exact integer* in
+// range, returning an error otherwise. A fractional part, NaN, infinity, or
+// out-of-range magnitude all yield an error -- there is no truncation or
+// clamping. To round a fraction, use a directed `Rounding`/`Context` form; to
+// test range only, use `FitsInt64`.
 func (d Decimal128) Int64() (int64, error) {
+	// The error is a non-nil *IntConversionError.
 	// Integrality: d equals its own truncation. False for any fraction and for
 	// NaN; infinity passes here but is rejected by the range guard.
 	if !d128_isEqual(d.core, d128_roundToIntegralTowardZero(d.core)) {
@@ -70,11 +72,13 @@ func (d Decimal128) Int64() (int64, error) {
 	return d128_toInt64TowardZero_ctxnull(d.core, nil), nil
 }
 
-// Uint64 converts d to uint64 only when it is an exact integer in range,
-// returning a non-nil *IntConversionError otherwise. A fractional part, negative
-// nonzero value, out-of-range magnitude, NaN, or infinity all fail — no
-// truncation or clamping. −0 converts to 0. To test range only, use FitsUInt64.
+// Uint64 converts the value to `uint64` only when it is an *exact integer* in
+// range, returning an error otherwise. A fractional part, negative nonzero
+// value, NaN, infinity, or out-of-range magnitude all yield an error -- no
+// truncation or clamping. `-0` converts to `0`. To test range only, use
+// `FitsUInt64`.
 func (d Decimal128) Uint64() (uint64, error) {
+	// The error is a non-nil *IntConversionError.
 	if !d128_isEqual(d.core, d128_roundToIntegralTowardZero(d.core)) {
 		return 0, &IntConversionError{d.String(), "uint64"}
 	}
@@ -86,48 +90,50 @@ func (d Decimal128) Uint64() (uint64, error) {
 
 // --- (c) directed / flag-tracking conversions (unchanged) ---
 
-// ToInt64 converts x to int64, discarding any fraction in this direction, with
-// no flag tracking.
+// ToInt64 converts `x` to `int64`, discarding any fraction in this direction,
+// with no flag tracking. A NaN/infinite/out-of-range operand returns an
+// unspecified sentinel.
 func (r Rounding) ToInt64(x Decimal128) int64 { return toInt64Mode_ctxnull(x, r, nil, false) }
 
-// ToInt64Exact is like ToInt64 but is the signaling form (IEEE
-// convertToIntegerExact). Without a context there is no sink, so the Inexact
-// signal is dropped; use Context.ToInt64Exact to capture it.
+// ToInt64Exact is like `ToInt64`, but the signaling form (IEEE
+// convertToIntegerExact). Without a context there is no sink, so the
+// `FlagInexact` signal is dropped; use `Context.ToInt64Exact` to capture it.
 func (r Rounding) ToInt64Exact(x Decimal128) int64 { return toInt64Mode_ctxnull(x, r, nil, true) }
 
-// ToInt64 converts x to int64, discarding any fraction by this context's
-// rounding. Raises InvalidOperation into the context for a NaN/infinite/
-// out-of-range operand; does not raise Inexact for a discarded fraction — use
-// ToInt64Exact for that.
+// ToInt64 converts `x` to `int64`, discarding any fraction by this context's
+// `Rounding`. Raises `FlagInvalidOperation` into the context for a
+// NaN/infinite/out-of-range operand; does not raise `FlagInexact` for a
+// discarded fraction -- use `ToInt64Exact` for that.
 func (c *Context) ToInt64(x Decimal128) int64 {
 	return toInt64Mode_ctxnull(x, c.rounding, c.core, false)
 }
 
-// ToInt64Exact is like ToInt64 but additionally raises Inexact into the context
-// when a fractional part is discarded (IEEE convertToIntegerExact).
+// ToInt64Exact is like `ToInt64`, but additionally raises `FlagInexact` into
+// the context when a fractional part is discarded (IEEE convertToIntegerExact).
 func (c *Context) ToInt64Exact(x Decimal128) int64 {
 	return toInt64Mode_ctxnull(x, c.rounding, c.core, true)
 }
 
-// ToUInt64 converts x to uint64, discarding any fraction in this direction, with
-// no flag tracking.
+// ToUInt64 converts `x` to `uint64`, discarding any fraction in this direction,
+// with no flag tracking. A NaN/infinite/negative/out-of-range operand returns
+// an unspecified sentinel (`0`); guard with `x.FitsUInt64` if that matters.
 func (r Rounding) ToUInt64(x Decimal128) uint64 { return toUInt64Mode_ctxnull(x, r, nil, false) }
 
-// ToUInt64Exact is like ToUInt64 but is the signaling form (IEEE
-// convertToIntegerExact). Without a context there is no sink, so the Inexact
-// signal is dropped; use Context.ToUInt64Exact to capture it.
+// ToUInt64Exact is like `ToUInt64`, but the signaling form (IEEE
+// convertToIntegerExact). Without a context there is no sink, so the
+// `FlagInexact` signal is dropped; use `Context.ToUInt64Exact` to capture it.
 func (r Rounding) ToUInt64Exact(x Decimal128) uint64 { return toUInt64Mode_ctxnull(x, r, nil, true) }
 
-// ToUInt64 converts x to uint64, discarding any fraction by this context's
-// rounding. Raises InvalidOperation into the context for a NaN/infinite/negative/
-// out-of-range operand; does not raise Inexact for a discarded fraction — use
-// ToUInt64Exact for that.
+// ToUInt64 converts `x` to `uint64`, discarding any fraction by this context's
+// `Rounding`. Raises `FlagInvalidOperation` into the context for a
+// NaN/infinite/negative/out-of-range operand; does not raise `FlagInexact` for
+// a discarded fraction -- use `ToUInt64Exact` for that.
 func (c *Context) ToUInt64(x Decimal128) uint64 {
 	return toUInt64Mode_ctxnull(x, c.rounding, c.core, false)
 }
 
-// ToUInt64Exact is like ToUInt64 but additionally raises Inexact into the context
-// when a fractional part is discarded (IEEE convertToIntegerExact).
+// ToUInt64Exact is like `ToUInt64`, but additionally raises `FlagInexact` into
+// the context when a fractional part is discarded (IEEE convertToIntegerExact).
 func (c *Context) ToUInt64Exact(x Decimal128) uint64 {
 	return toUInt64Mode_ctxnull(x, c.rounding, c.core, true)
 }

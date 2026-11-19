@@ -6,15 +6,15 @@ package decimal128
 
 // --- finer-grained classification ---
 
-// IsNormal reports whether d is finite, nonzero, and not subnormal.
+// IsNormal reports whether this value is finite, nonzero, and not subnormal.
 func (d Decimal128) IsNormal() bool { return d128_isNormal(d.core) }
 
-// IsSubnormal reports whether d is finite, nonzero, and below the normal range
-// (reduced precision).
+// IsSubnormal reports whether this value is finite, nonzero, and below the
+// normal range (reduced precision).
 func (d Decimal128) IsSubnormal() bool { return d128_isSubnormal(d.core) }
 
-// IsCanonical reports whether d is in canonical encoding (always true for the
-// library's internal representation).
+// IsCanonical reports whether this value is in canonical encoding (always
+// `true` for the library's internal representation).
 func (d Decimal128) IsCanonical() bool { return d128_isCanonical(d.core) }
 
 // --- IEEE minimum / maximum (NaN-propagating) ---
@@ -74,8 +74,8 @@ func MaximumMagnitudeNumber(x, y Decimal128) Decimal128 {
 
 // --- sign composition ---
 
-// Copysign returns a value with the magnitude of d and the sign of sign
-// (IEEE copySign).
+// Copysign returns a value with the magnitude of `d` and the sign of `sign` (IEEE
+// `copySign`).
 func (d Decimal128) Copysign(sign Decimal128) Decimal128 {
 	return Decimal128{d128_copySign(d.core, sign.core)}
 }
@@ -87,50 +87,50 @@ func (d Decimal128) Copysign(sign Decimal128) Decimal128 {
 // NaN-ignoring …Number forms signal on sNaN identically, differing only in
 // quiet-NaN handling (propagating returns NaN; …Number returns the number).
 
-// Minimum returns the lesser of x and y; NaN if either is a quiet NaN.
-// A signaling NaN operand raises InvalidOperation into this context.
+// Minimum returns the lesser of `x` and `y`; NaN if either is NaN. Flag-tracked
+// (a signaling NaN raises `FlagInvalidOperation`).
 func (c *Context) Minimum(x, y Decimal128) Decimal128 {
 	return Decimal128{d128_minimum_ctx(x.core, y.core, c.core)}
 }
 
-// Maximum returns the greater of x and y; NaN if either is a quiet NaN.
-// A signaling NaN operand raises InvalidOperation into this context.
+// Maximum returns the greater of `x` and `y`; NaN if either is NaN.
+// Flag-tracked.
 func (c *Context) Maximum(x, y Decimal128) Decimal128 {
 	return Decimal128{d128_maximum_ctx(x.core, y.core, c.core)}
 }
 
-// MinimumMagnitude returns the lesser-magnitude operand; NaN if either is a
-// quiet NaN. A signaling NaN operand raises InvalidOperation into this context.
+// MinimumMagnitude returns the lesser-magnitude operand; NaN if either is NaN.
+// Flag-tracked.
 func (c *Context) MinimumMagnitude(x, y Decimal128) Decimal128 {
 	return Decimal128{d128_minimumMagnitude_ctx(x.core, y.core, c.core)}
 }
 
-// MaximumMagnitude returns the greater-magnitude operand; NaN if either is a
-// quiet NaN. A signaling NaN operand raises InvalidOperation into this context.
+// MaximumMagnitude returns the greater-magnitude operand; NaN if either is NaN.
+// Flag-tracked.
 func (c *Context) MaximumMagnitude(x, y Decimal128) Decimal128 {
 	return Decimal128{d128_maximumMagnitude_ctx(x.core, y.core, c.core)}
 }
 
-// MinimumNumber returns the lesser of x and y, ignoring a single NaN operand;
-// flag-tracked through this context.
+// MinimumNumber returns the lesser of `x` and `y`, ignoring a single NaN
+// operand; flag-tracked.
 func (c *Context) MinimumNumber(x, y Decimal128) Decimal128 {
 	return Decimal128{d128_minimumNumber_ctx(x.core, y.core, c.core)}
 }
 
-// MaximumNumber returns the greater of x and y, ignoring a single NaN operand;
-// flag-tracked through this context.
+// MaximumNumber returns the greater of `x` and `y`, ignoring a single NaN
+// operand; flag-tracked.
 func (c *Context) MaximumNumber(x, y Decimal128) Decimal128 {
 	return Decimal128{d128_maximumNumber_ctx(x.core, y.core, c.core)}
 }
 
-// MinimumMagnitudeNumber returns the lesser-magnitude operand, ignoring a single
-// NaN operand; flag-tracked through this context.
+// MinimumMagnitudeNumber returns the lesser-magnitude operand, ignoring a
+// single NaN operand; flag-tracked.
 func (c *Context) MinimumMagnitudeNumber(x, y Decimal128) Decimal128 {
 	return Decimal128{d128_minimumMagnitudeNumber_ctx(x.core, y.core, c.core)}
 }
 
 // MaximumMagnitudeNumber returns the greater-magnitude operand, ignoring a
-// single NaN operand; flag-tracked through this context.
+// single NaN operand; flag-tracked.
 func (c *Context) MaximumMagnitudeNumber(x, y Decimal128) Decimal128 {
 	return Decimal128{d128_maximumMagnitudeNumber_ctx(x.core, y.core, c.core)}
 }

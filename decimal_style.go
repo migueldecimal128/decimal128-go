@@ -2,21 +2,24 @@
 
 package decimal128
 
-// Style is a textual-rendering style for Decimal128.Text. (Named Style rather
-// than FormatStyle; its values mirror the core FORMAT_* ordering.)
+// Style is a textual-rendering style for `Decimal128.Text`.
+//
+// The wrapper face of the core's `FORMAT_*` codes (CrossPlatformArchitecture.md
+// Section 6.4, where the concept is named `FormatStyle`); the raw values mirror
+// the core ordering.
 type Style int
 
 const (
-	// StyleAutomatic is the GDAS "to-scientific-string": plain decimal when the
-	// adjusted exponent allows, scientific otherwise. This is what String uses.
+	// StyleAutomatic: GDAS "to-scientific-string": plain decimal when the adjusted
+	// exponent allows, scientific otherwise. This is what `String` uses.
 	StyleAutomatic Style = iota
-	// StyleExponential always uses exponential notation.
+	// StyleExponential: always exponential notation.
 	StyleExponential
-	// StyleEngineering is the GDAS "to-engineering-string": the exponent is
-	// constrained to a multiple of 3.
+	// StyleEngineering: GDAS "to-engineering-string": exponent constrained to a
+	// multiple of 3.
 	StyleEngineering
-	// StyleCoefficientExponent is the raw cohort form coefficient × 10^qExp,
-	// preserving the exact internal state.
+	// StyleCoefficientExponent: raw cohort form, `coefficient * 10^qExp` --
+	// preserves exact internal state.
 	StyleCoefficientExponent
 )
 
@@ -36,8 +39,7 @@ func (s Style) String() string {
 	}
 }
 
-// Text renders d in the given style. (The no-argument String method uses
-// StyleAutomatic.)
+// Text renders this value in the given style.
 func (d Decimal128) Text(style Style) string {
 	return d128_format(d.core, int(style))
 }
