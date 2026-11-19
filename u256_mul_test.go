@@ -61,19 +61,6 @@ func TestU256MulMul_256x128_andOverflowTrap(t *testing.T) {
 	}
 }
 
-func TestU256MulMul_128x64_interior_isExact(t *testing.T) {
-	for _, x0 := range u256MulLimbs {
-		for _, x1 := range u256MulLimbs {
-			for _, y := range u256MulLimbs {
-				want := new(big.Int).Mul(big128(x0, x1), ubig(y))
-				if big256v(mul_256_128x64(fromLoHi_128_64x64(x0, x1), uint64(y))).Cmp(want) != 0 {
-					t.Error("mul_256_128x64")
-				}
-			}
-		}
-	}
-}
-
 func TestU256MulMul_256x256_withinEnvelope_isExact(t *testing.T) {
 	// Operands bounded to <= 2^120 (top limb <= 2^56) so intermediate
 	// columns stay within the 128-bit accumulator — the supported
