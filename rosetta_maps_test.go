@@ -175,6 +175,7 @@ var rosettaArity = map[string]int{
 	// 3 operands
 	"d128_fma_ctx": 3,
 	"fma":          3,
+	"fms":          3,
 }
 
 // fitOperands applies the R-7 operand-count rule. Too few operands is always an

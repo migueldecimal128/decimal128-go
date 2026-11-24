@@ -43,25 +43,28 @@ import (
 
 const rosettaPort = "go"
 
-var rosettaMappedSources = []string{"dectest", "fptest", "intel"}
+var rosettaMappedSources = []string{"dectest", "fptest", "intel", "cairo"}
 
 // rosettaCanonical maps a canonical op name to this harness's dispatch token.
 var rosettaCanonical = map[string]string{
-	"d128_abs":                             "d128_abs",
-	"d128_add_ctx":                         "add",
-	"d128_apply_ctx":                       "apply",
-	"d128_compareSignaling_ctx":            "comparesig",
-	"d128_compareTotal":                    "comparetotal",
-	"d128_compareTotalMag":                 "comparetotmag",
-	"d128_compare_ctx":                     "compare",
-	"d128_copy":                            "d128_copy",
-	"d128_copySign":                        "copysign",
-	"d128_divideInteger_ctx":               "divideint",
-	"d128_divide_ctx":                      "divide",
-	"d128_exp10_ctx":                       "d128_exp10_ctx",
-	"d128_exp_ctx":                         "d128_exp_ctx",
-	"d128_expm1_ctx":                       "d128_expm1_ctx",
-	"d128_fma_ctx":                         "fma",
+	"d128_abs":                  "d128_abs",
+	"d128_add_ctx":              "add",
+	"d128_apply_ctx":            "apply",
+	"d128_compareSignaling_ctx": "comparesig",
+	"d128_compareTotal":         "comparetotal",
+	"d128_compareTotalMag":      "comparetotmag",
+	"d128_compare_ctx":          "compare",
+	"d128_copy":                 "d128_copy",
+	"d128_copySign":             "copysign",
+	"d128_divideInteger_ctx":    "divideint",
+	"d128_divide_ctx":           "divide",
+	"d128_exp10_ctx":            "d128_exp10_ctx",
+	"d128_exp_ctx":              "d128_exp_ctx",
+	"d128_expm1_ctx":            "d128_expm1_ctx",
+	"d128_fma_ctx":              "fma",
+	// Cairo `*-`, the fused a*b - c. Test-only: not a core or wrapper entry
+	// point; the arms compose it from fma (CairoVectorsWorkOrder.md C-4, D-1).
+	"d128_fms_ctx":                         "fms",
 	"d128_fromInt64":                       "from_int64",
 	"d128_fromUInt64":                      "from_uint64",
 	"d128_ieeeClass":                       "class",
@@ -249,6 +252,8 @@ func sharedSkipTag(c *rosettaCase) string {
 		src = "intel"
 	case srcFptest:
 		src = "fptest"
+	case srcCairo:
+		src = "cairo"
 	default:
 		return ""
 	}

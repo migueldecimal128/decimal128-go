@@ -95,6 +95,9 @@ func wrapCheck(c *rosettaCase, ctx *Context, got Decimal128) (outcome, string) {
 	if c.src == srcFptest {
 		return wrapCheckFptest(c, flags, got)
 	}
+	if c.src == srcCairo {
+		return wrapCheckCairo(c, flags, got)
+	}
 	want := decodeOperandWrapper(c.result)
 	if c.src == srcIntel {
 		want = intelNormalizeWant(c, want)
@@ -156,6 +159,32 @@ func isMinMaxOp(op string) bool {
 	default:
 		return false
 	}
+}
+
+// fmsAddendPublic is the public-API fmsAddend: -c, or c itself when c is a NaN.
+func fmsAddendPublic(c Decimal128) Decimal128 {
+	if c.IsNaN() {
+		return c
+	}
+	return c.Neg()
+}
+
+// wrapCheckCairo: cairo results are cohort-exact, so compare the BID128
+// pattern against the core runner's decode of the expected, and every flag
+// including `u` (CairoVectorsWorkOrder.md C-6, D-2 (a)). A trap column or `#`
+// result is a failure (C-3), as in the core runner.
+func wrapCheckCairo(c *rosettaCase, flags string, got Decimal128) (outcome, string) {
+	if q := cairoQuirk(c); q != "" {
+		return outFail, q
+	}
+	want := cairoExpectedBID(c.result)
+	gh, gl := got.BID128()
+	wh, wl := want.BID128()
+	if gh == wh && gl == wl && flags == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
+		got.Text(StyleCoefficientExponent), flags, c.result, c.expectedFlags)
 }
 
 // wrapCheckFptest compares against an fptest expected result: a raw cohort form
@@ -871,6 +900,13 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		return wrapBinaryCtx(c, (*Context).Quo)
 	case "d128_fma_ctx", "fma":
 		return wrapTernaryCtxRnd(c, (*Context).FMA, Rounding.FMA)
+	case "fms":
+		// Cairo `*-` (a*b - c), test-only: composed from the public fma with -c,
+		// except that a NaN c propagates unchanged (CairoVectorsWorkOrder.md C-4,
+		// D-1 (a)). Cross-checked through `_rnd` as the fma arm is.
+		return wrapTernaryCtxRnd(c,
+			func(ctx *Context, a, b, cc Decimal128) Decimal128 { return ctx.FMA(a, b, fmsAddendPublic(cc)) },
+			func(r Rounding, a, b, cc Decimal128) Decimal128 { return r.FMA(a, b, fmsAddendPublic(cc)) })
 	case "d128_sqrt_ctx", "squareroot":
 		return wrapUnaryCtxRnd(c, (*Context).Sqrt, Rounding.Sqrt)
 	case "d128_exp_ctx":
@@ -1194,6 +1230,13 @@ func TestWrapperRosettaRosettaWrapperFptest(t *testing.T) {
 }
 func TestWrapperRosettaRosettaWrapperIntel(t *testing.T) {
 	rosettaSource(t, "wrapper", "intel", dispatchWrapper)
+}
+
+// The Cairo vectors (8.9M cases): opt-in, ROSETTA_CAIRO=1
+// (CairoVectorsWorkOrder.md D-3). Without it the test skips.
+func TestWrapperRosettaRosettaWrapperCairo(t *testing.T) {
+	cairoEnabled(t)
+	rosettaSource(t, "wrapper", "cairo", dispatchWrapper)
 }
 
 // The native files run are exactly expected.tsv's native rows.

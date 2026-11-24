@@ -38,3 +38,23 @@ jobs:
 
       - name: Test (assertions armed)
         run: go test -tags verify ./...
+
+  # The Cairo University vectors (8.9M cases, ~365x fptest), opt-in via
+  # ROSETTA_CAIRO=1 and run here in their own job (CairoVectorsWorkOrder.md D-3).
+  # In the test job the two cairo tests skip.
+  cairo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive   # decimal128-resources (rosetta + telco) mounted at resources/
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false # pure stdlib, no go.sum — nothing to cache
+
+      - name: Cairo vectors (core + wrapper)
+        env:
+          ROSETTA_CAIRO: "1"
+        run: go test -run 'Cairo' -count=1 .

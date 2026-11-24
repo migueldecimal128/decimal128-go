@@ -26,6 +26,11 @@ const (
 	srcFptest
 	srcIntel
 	srcNative
+	// srcCairo: the Cairo University decimal128 vectors — fptest syntax with
+	// `h>` (ties-to-away) and the `*+`/`*-`/`V` operators, cohort-exact, no trap
+	// column and no `#` result; reconciled strictly (bitwise value, every flag
+	// including `u`). CairoVectorsWorkOrder.md C-3, C-6, D-2.
+	srcCairo
 )
 
 // rosettaCase is one parsed, in-scope conformance case. Operand and result
@@ -39,7 +44,7 @@ type rosettaCase struct {
 	result        string
 	expectedFlags string // canonical xuozi
 	rounding      string // canonical rounding token
-	traps         string // fptest trap column; empty elsewhere
+	traps         string // fptest/cairo trap column; empty elsewhere (a cairo case carrying one fails)
 	line          int    // 1-based source line (native corpus; 0 elsewhere)
 }
 
@@ -151,6 +156,9 @@ func dispatch(c *rosettaCase) (outcome, string) {
 	}
 	if c.src == srcFptest {
 		return checkFptest(c)
+	}
+	if c.src == srcCairo {
+		return checkCairo(c)
 	}
 	switch c.operation {
 	case "d128_toString":
@@ -549,6 +557,76 @@ func checkFptest(c *rosettaCase) (outcome, string) {
 		return outFail, fmt.Sprintf("flags got %q want %q (u-stripped)", flags, c.expectedFlags)
 	}
 	return outPass, ""
+}
+
+// MARK: - cairo (core)
+
+// cairoQuirk: cairo has no trap column and no `#` result
+// (CairoVectorsWorkOrder.md C-3). A case that shows either is a failure, never
+// an fptest-style un-wrap or any-value pass. "" = clean.
+func cairoQuirk(c *rosettaCase) string {
+	if c.traps != "" {
+		return "cairo: unexpected trap column '" + c.traps + "'"
+	}
+	if c.result == "#" {
+		return "cairo: unexpected '#' result"
+	}
+	return ""
+}
+
+// fmsAddend is the addend that makes fma compute the cairo `*-` (a*b - c): -c,
+// except that a NaN c propagates unchanged (CairoVectorsWorkOrder.md D-1 (a);
+// 754-2019 §6.3 leaves a NaN result's sign unspecified, and the corpus expects
+// the operand's).
+func fmsAddend(c d128) d128 {
+	if d128_isNAN(c) {
+		return c
+	}
+	return d128_negate(c)
+}
+
+// checkCairo runs one cairo case through the core and reconciles it strictly:
+// bitwise value, flags exact including `u` (C-6, D-2 (a)). `*-` (fms) is
+// test-only, composed from fma (C-4).
+func checkCairo(c *rosettaCase) (outcome, string) {
+	if q := cairoQuirk(c); q != "" {
+		return outFail, q
+	}
+	ctx := newContextRound(roundingFromToken(c.rounding))
+	op := func(i int) d128 { return decodeNativeResult(c.operands[i]) }
+	var z d128
+	switch c.operation {
+	case "add":
+		z = d128_add_ctx(op(0), op(1), ctx)
+	case "subtract":
+		z = d128_subtract_ctx(op(0), op(1), ctx)
+	case "multiply":
+		z = d128_multiply_ctx(op(0), op(1), ctx)
+	case "divide":
+		z = d128_divide_ctx(op(0), op(1), ctx)
+	case "fma":
+		z = d128_fma_ctx(op(0), op(1), op(2), ctx)
+	case "fms":
+		z = d128_fma_ctx(op(0), op(1), fmsAddend(op(2)), ctx)
+	case "squareroot":
+		z = d128_sqrt_ctx(op(0), ctx)
+	default:
+		return outFail, "no cairo dispatch arm for " + c.operation
+	}
+	expected := decodeNativeResult(c.result)
+	flags := ctx.exceptionLetters()
+	if d128_bitwiseEQ(z, expected) && flags == c.expectedFlags {
+		return outPass, ""
+	}
+	return outFail, fmt.Sprintf("got %s flags=%q want %s flags=%q",
+		d128_format(z, const_FORMAT_COEFFICIENT_QEXP), flags,
+		d128_format(expected, const_FORMAT_COEFFICIENT_QEXP), c.expectedFlags)
+}
+
+// cairoExpectedBID is a cairo expected result as its public BID128 pattern, so
+// the wrapper runner compares bitwise against the core runner's decode (C-6).
+func cairoExpectedBID(s string) Decimal128 {
+	return coreToBid(decodeNativeResult(s))
 }
 
 // fptestTrapWrapDelta is the scaleB exponent delta to un-wrap a trap-enabled

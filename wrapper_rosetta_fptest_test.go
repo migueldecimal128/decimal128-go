@@ -37,8 +37,11 @@ func isFptestExceptionStr(s string) bool {
 
 // fptestRoundingToken maps an fptest symbolic rounding token to the canonical
 // rounding token.
-func fptestRoundingToken(tok string) (string, bool) {
+func fptestRoundingToken(tok string, src source) (string, bool) {
 	switch tok {
+	case "h>":
+		// Cairo spells ties-to-away `h>`; fptest has no such token.
+		return "TIES_TO_AWAY", src == srcCairo
 	case "=0":
 		return "TIES_TO_EVEN", true
 	case "=^":
@@ -57,6 +60,16 @@ func fptestRoundingToken(tok string) (string, bool) {
 // parseFptestLine parses one fptest line into a rosettaCase. ok=false for
 // comments, blanks, and non-d128 (decimal64) lines.
 func parseFptestLine(line string) (rosettaCase, bool) {
+	return parseFptestSourceLine(line, srcFptest)
+}
+
+// parseFptestSourceLine parses one fptest or cairo line (the two share this
+// syntax; the source picks the map and the rounding-token dialect).
+func parseFptestSourceLine(line string, src source) (rosettaCase, bool) {
+	mapName := "fptest"
+	if src == srcCairo {
+		mapName = "cairo"
+	}
 	trimmed := strings.TrimSpace(line)
 	if trimmed == "" || strings.HasPrefix(trimmed, "--") {
 		return rosettaCase{}, false
@@ -66,17 +79,17 @@ func parseFptestLine(line string) (rosettaCase, bool) {
 		return rosettaCase{}, false
 	}
 	// Coarse width pre-filter: only lines of fptest.map's `format` (d128).
-	format := sharedScope("fptest", "format")
+	format := sharedScope(mapName, "format")
 	if format == "" || !strings.HasPrefix(tokens[0], format) {
 		return rosettaCase{}, false
 	}
 	op := tokens[0][len(format):]
-	mapped, ok := sharedOpFor("fptest", op)
+	mapped, ok := sharedOpFor(mapName, op)
 	if !ok {
 		return rosettaCase{}, false
 	}
 
-	rounding, ok := fptestRoundingToken(tokens[1])
+	rounding, ok := fptestRoundingToken(tokens[1], src)
 	if !ok {
 		return rosettaCase{}, false
 	}
@@ -108,7 +121,7 @@ func parseFptestLine(line string) (rosettaCase, bool) {
 	}
 
 	return rosettaCase{
-		src:           srcFptest,
+		src:           src,
 		text:          line,
 		token:         op,
 		operation:     mapped,
@@ -122,6 +135,15 @@ func parseFptestLine(line string) (rosettaCase, bool) {
 
 // loadFptestFile reads all d128 fptest cases from a file.
 func loadFptestFile(path string) ([]rosettaCase, error) {
+	return loadFptestSourceFile(path, srcFptest)
+}
+
+// loadCairoFile reads all d128 cairo cases from a file.
+func loadCairoFile(path string) ([]rosettaCase, error) {
+	return loadFptestSourceFile(path, srcCairo)
+}
+
+func loadFptestSourceFile(path string, src source) ([]rosettaCase, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -131,7 +153,7 @@ func loadFptestFile(path string) ([]rosettaCase, error) {
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 0, 1<<20), 1<<20)
 	for sc.Scan() {
-		if c, ok := parseFptestLine(sc.Text()); ok {
+		if c, ok := parseFptestSourceLine(sc.Text(), src); ok {
 			cases = append(cases, c)
 		}
 	}
