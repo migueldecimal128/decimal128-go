@@ -33,36 +33,10 @@ jobs:
       - name: Test
         run: go test ./...
 
+      # The race and verify runs repeat the suite; the Cairo vectors (8.9M
+      # cases) already ran in the plain test above.
       - name: Test (race)
-        run: go test -race ./...
+        run: go test -race -skip Cairo ./...
 
       - name: Test (assertions armed)
-        run: go test -tags verify ./...
-
-  # The Cairo University vectors (8.9M cases, ~365x fptest), opt-in via
-  # ROSETTA_CAIRO=1 and run here in their own job (CairoVectorsWorkOrder.md D-3).
-  # In the test job the two cairo tests skip.
-  cairo:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive   # decimal128-resources (rosetta + telco) mounted at resources/
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: false # pure stdlib, no go.sum — nothing to cache
-
-      # -v prints the ROSETTA report lines; the grep proves both runners ran the
-      # corpus (a skipped test passes silently).
-      - name: Cairo vectors (core + wrapper)
-        env:
-          ROSETTA_CAIRO: "1"
-        run: |
-          set -o pipefail
-          go test -run 'Cairo' -count=1 -v . | tee cairo.log
-          for r in core wrapper; do
-            grep -q "ROSETTA go $r cairo TOTAL " cairo.log || { echo "the $r cairo test did not run"; exit 1; }
-          done
-          grep "cairo TOTAL" cairo.log
+        run: go test -tags verify -skip Cairo ./...

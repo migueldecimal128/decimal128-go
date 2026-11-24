@@ -1232,10 +1232,8 @@ func TestWrapperRosettaRosettaWrapperIntel(t *testing.T) {
 	rosettaSource(t, "wrapper", "intel", dispatchWrapper)
 }
 
-// The Cairo vectors (8.9M cases): opt-in, ROSETTA_CAIRO=1
-// (CairoVectorsWorkOrder.md D-3). Without it the test skips.
+// The Cairo University vectors (CairoVectorsWorkOrder.md).
 func TestWrapperRosettaRosettaWrapperCairo(t *testing.T) {
-	cairoEnabled(t)
 	rosettaSource(t, "wrapper", "cairo", dispatchWrapper)
 }
 

@@ -12,10 +12,8 @@ func TestRosettaRunnerRosettaCoreDectest(t *testing.T) { rosettaSource(t, "core"
 func TestRosettaRunnerRosettaCoreFptest(t *testing.T)  { rosettaSource(t, "core", "fptest", dispatch) }
 func TestRosettaRunnerRosettaCoreIntel(t *testing.T)   { rosettaSource(t, "core", "intel", dispatch) }
 
-// The Cairo vectors (8.9M cases): opt-in, ROSETTA_CAIRO=1
-// (CairoVectorsWorkOrder.md D-3). Without it the test skips.
+// The Cairo University vectors (CairoVectorsWorkOrder.md).
 func TestRosettaRunnerRosettaCoreCairo(t *testing.T) {
-	cairoEnabled(t)
 	rosettaSource(t, "core", "cairo", dispatch)
 }
 

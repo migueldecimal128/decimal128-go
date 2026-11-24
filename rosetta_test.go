@@ -1,7 +1,6 @@
 package decimal128
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 )
@@ -21,15 +20,6 @@ func sampleFailures(r rosettaResult) []string {
 // rosettaSource runs one runner over one source: every file the shared data
 // selects (files.index), reported and checked against expected.tsv
 // (rosetta_shared_test.go).
-// cairoEnabled: the cairo tests run only when ROSETTA_CAIRO=1
-// (CairoVectorsWorkOrder.md D-3 (b)); otherwise they skip, never pass.
-func cairoEnabled(t *testing.T) {
-	t.Helper()
-	if os.Getenv("ROSETTA_CAIRO") != "1" {
-		t.Skip("the Cairo vectors run only with ROSETTA_CAIRO=1")
-	}
-}
-
 func rosettaSource(t *testing.T, runner, source string, dispatchFn func(*rosettaCase) (outcome, string)) {
 	rep := newRosettaReport(runner, source)
 	for _, name := range sharedFiles(source) {
