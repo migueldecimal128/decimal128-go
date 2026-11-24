@@ -11,8 +11,13 @@ func d128_fma_rnd_ctxnull(x, y, a d128, rounding round, ctxnull *context) d128 {
 	prod := mul_256_128x128(x.ubdLo64, d128_hi49(x), y.ubdLo64, d128_hi49(y))
 	prodQExp := d128_qExp(x) + d128_qExp(y)
 	prodSignFlag := d128_signFlag(x) != d128_signFlag(y)
+	// Fast path: product fits in 128 bits, exponent in range, x, y and a finite.
+	// x and y must be checked too: a special's qExp is an encoding code, and a
+	// zero coefficient makes the product "fit", so the range test alone lets
+	// Inf/NaN times a low-exponent zero through (CairoVectorsWorkOrder.md §3.2).
 	if (prod.dw3|prod.dw2) == 0 && ushr_64_64(prod.dw1, 48) == 0 &&
-		prodQExp >= -6176 && prodQExp <= 6111 && d128_isFIN(a) {
+		prodQExp >= -6176 && prodQExp <= 6111 &&
+		d128_isFIN(x) && d128_isFIN(y) && d128_isFIN(a) {
 		lo := prod.lo()
 		product := d128Pack(prodSignFlag, prodQExp, lo.dw0, lo.dw1)
 		return d128_add_rnd_ctxnull(product, a, rounding, ctxnull)
