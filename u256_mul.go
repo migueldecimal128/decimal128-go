@@ -1,11 +1,14 @@
-// The U256 mul family (PrimitiveLayer.md §4.2), D9 segment grammar. Limb forms
-// are the uniform API. Swift uses native UInt128 full-width products; Go
-// synthesizes from uint64 limbs via math/bits.
+// The U256 mul family (PrimitiveLayer.md Section 4.2), in the D9 full segment grammar.
+// The limb forms (operand-major, ascending per D23) are the uniform-API
+// implementations; ops trap where the result must fit. mul_256_128x64 has no core
+// consumer (the D21 test), so it is Primitive-interior only (PrimitiveLayer.md Section
+// 3.4), consumed by mulPow10_256_256.
 //
-// mul_256_256x256 faithfully replicates Swift's 128-bit column accumulator with
-// an overflow flag: it traps when a column sum exceeds 2^128 (not only when the
-// product exceeds 2^256), so callers pass operands bounded well below the limit
-// (decimal128 coefficients < 10^34).
+// In Go: the products are synthesized from uint64 limbs via math/bits.
+// mul_256_256x256 replicates Swift's 128-bit column accumulator with an overflow flag:
+// it traps when a column sum exceeds 2^128 (not only when the product exceeds 2^256),
+// so callers pass operands bounded well below the limit (decimal128 coefficients <
+// 10^34).
 
 package decimal128
 

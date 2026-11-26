@@ -1,6 +1,10 @@
-// decimal128 → string formatting (GDAS to-scientific/engineering/plain, plus the
-// coefficient×10^qExp debug form). d128_format is the boundary entry.
-// Renders directly into a heap-allocated String.
+// decimal128 to-string formatting. `d128_format` is the boundary entry. Its style codes
+// are the canonical package-boundary values, consistent with the int-only Core
+// boundary: FORMAT_AUTO, the GDAS to-scientific form (plain when the exponent is <= 0
+// and the adjusted exponent is >= -6, scientific otherwise); FORMAT_EXPONENTIAL;
+// FORMAT_ENGINEERING; and FORMAT_COEFFICIENT_QEXP, the raw coefficient and qExp.
+//
+// In Go: renders directly into a heap-allocated string.
 
 package decimal128
 

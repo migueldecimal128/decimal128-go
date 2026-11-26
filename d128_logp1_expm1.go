@@ -1,17 +1,20 @@
-// IEEE 754-2019 §9.2 lnp1, log2p1, log10p1, expm1, exp10m1
-// (LogP1ExpM1WorkOrder.md), each in D48 with one final rounding. Correctly
-// rounded except in the documented 1-ulp gap (CrossPlatformArchitecture.md,
-// "Transcendental accuracy").
+// IEEE 754-2019 Section 9.2 lnp1, log2p1, log10p1, expm1, exp10m1
+// (LogP1ExpM1WorkOrder.md), each in D48 with one final rounding. Correctly rounded
+// except in the documented 1-ulp gap (CrossPlatformArchitecture.md Section 12,
+// "Transcendental Accuracy").
 //
-// Log family, L = ln(1 + x): |x| < 10^-5 runs the log1p series on x (exact in
-// D48, accurate relative to x however small); otherwise t = 1 + x is formed in
-// D48 -- exact for 10^-5 <= |x| < 10^48 -- and d48_logMagnitude(t) sees t − 1 = x
-// exactly. log10p1 / log2p1 divide L by ln 10 / ln 2.
-// Exp family: |x| < 10^-5 runs the expm1 series (on x·ln10 for exp10m1);
-// otherwise the exp / exp10 kernel gives S = e^x / 10^x and r = S − 1 in D48,
-// with the ambiguity bound scaled by the digits the subtraction cancels.
+// Log family, L = ln(1 + x): |x| < 10^-5 runs the log1p series on x (exact in D48,
+// accurate relative to x however small); otherwise t = 1 + x is formed in D48 -- exact
+// for 10^-5 <= |x| < 10^48 -- and d48_logMagnitude(t) sees t - 1 = x exactly. log10p1
+// / log2p1 divide L by ln 10 / ln 2.
+//
+// Exp family: |x| < 10^-5 runs the expm1 series (on x * ln10 for exp10m1); otherwise
+// the exp / exp10 kernel gives S = e^x / 10^x and r = S - 1 in D48, with the ambiguity
+// bound scaled by the digits the subtraction cancels.
+//
 // A result near a rounding boundary goes, in order, to the exact rules, the tiny
-// rules, then R2 / RN / RP (§3); one none of them decides is rounded as is.
+// rules, then R2 / RN / RP (LogP1ExpM1WorkOrder.md Section 3); one none of them
+// decides is rounded as is.
 
 package decimal128
 

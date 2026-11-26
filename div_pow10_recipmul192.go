@@ -1,11 +1,10 @@
-// The 192-bit-dividend (3x3) reciprocal-multiply divPow10 (1..77): x / 10^pow10
-// with a classified residue, taken when the stripped dividend A = x>>(pow10-1)
-// fits 3 limbs (A < 2^191). A narrowed sibling of divPow10_q128res_256_recipmul
-// (DivPow10RecipMul192WorkOrder.md): the reciprocal M also fits 3 limbs, so the
-// recip multiply is a 192x192->384 comba -- 9 64x64 macs vs the 4x4's 16. Only
-// the multiply narrows; the strip / shift / residue tail reuses the 256 kernel's
-// shared helpers. Backs div_256_pow10_q128res when bitLen(x) <= 190 + pow10.
-// Tables in div_pow10_recipmul192_tables.go.
+// 192-bit-dividend (3x3) recipmul divPow10 kernel (DivPow10RecipMul192WorkOrder.md),
+// pow10 1..77: divPow10_q128res_256_recipmul (D47) one tier down. When the stripped
+// dividend A = x >> (pow10-1) fits 3 limbs (A < 2^191), the reciprocal M also fits 3
+// limbs (m3 == 0, by the N=191 gate), so the recip multiply is a 192x192->384 comba --
+// 9 64x64 macs instead of the 4x4's 16. Everything else (strip, shift, residue
+// classification) is the 256 kernel's tail. Backs the Core div_256_pow10_q128res
+// dispatch when bitLen(x) <= 190 + pow10; the tables are in DivPow10RecipMul192Tables.
 
 package decimal128
 

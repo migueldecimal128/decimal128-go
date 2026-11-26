@@ -1,8 +1,9 @@
-// D48 decision helpers (Swift D48Decide.swift): the rounding-boundary test that
-// gates the exact rules, the exact-result emitter, the tiny-argument rule, and
-// the Inexact signal. There is no slow path: an ambiguous D48 result that no
-// exact rule decides is rounded as is -- the documented 1-ulp gap
-// (CrossPlatformArchitecture.md, "Transcendental accuracy").
+// D48 decision helpers: the rounding-boundary test that gates the exact rules, the
+// exact-result emitter, the tiny-argument rule, the Inexact signal, and the one
+// rounding of a D48 result into decimal128 (finalizeD48_ctxnull). There is no slow
+// path: an ambiguous D48 result that no exact rule decides is rounded as is -- the
+// documented 1-ulp gap (CrossPlatformArchitecture.md Section 12, "Transcendental
+// Accuracy").
 
 package decimal128
 

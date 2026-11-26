@@ -1,8 +1,6 @@
-// Exact integer floor square root over U256, used by the D128 squareRoot (the
-// D48 sqrt has its own, u320_sqrt.go). Scales the coefficient to a 75–76 digit integer R (parity
-// chosen so (scaleUp − qExp) is even, keeping the exponent halving exact), takes
-// its exact floor root s = floor(√R) (always 38 digits), and derives the round
-// residue from the exact remainder.
+// Exact integer floor square root over U256, for the D128 squareRoot (the D48 sqrt has
+// its own, U320Sqrt). It scales the coefficient into a 75-76 digit integer R whose
+// exact floor root is 38 digits, then rounds from the exact remainder.
 
 package decimal128
 

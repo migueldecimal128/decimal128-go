@@ -1,8 +1,8 @@
-// IEEE 754-2019 §5.3.3 logB and scaleB.
-//
-// logB(x) returns the adjusted (scientific) exponent of x as a D128. scaleB(x,n)
-// returns x × 10^n, rounded within ctx. Both treat infinities and NaNs per the
-// standard; logB(±0) signals divisionByZero.
+// IEEE 754-2019 Section 5.3.3 logB and scaleB, Section 5.7.3 sameQuantum, the
+// quantum-exponent query, and Section 5.3.2 quantize. logB(x) returns the adjusted
+// (scientific) exponent of x as a D128 and signals divisionByZero on a zero; scaleB(x,
+// n) returns x * 10^n. quantize is the one operation here with the _tte / _rnd / _ctx
+// / _rnd_ctxnull ladder.
 
 package decimal128
 

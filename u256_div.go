@@ -1,9 +1,10 @@
-// Core 256÷128 division with residue (the divide hot path). Delegates to the
-// primitive 256÷64 / 128÷128 kernels where the operands fit, and to the
-// Möller–Granlund reciprocal divide for the wide case (x > 2^128, y > 2^64).
-// Two MG wrappers: a branch-light 2-step form for the ≤128-bit quotient the D128
-// divide contract guarantees, and a schoolbook loop for the full U256 quotient
-// (sqrt). 128-bit rem intermediates are synthesized from (remHi, remLo).
+// 256-bit division dispatch: fast paths for narrow divisors and narrow dividends,
+// otherwise Moller-Granlund reciprocal division (U256DivMG). The divider behind the
+// D128 divide (u256DivResidue_128) and the sqrt wide-quotient consumer.
+//
+// In Go: two MG wrappers -- a branch-light 2-step form for the <= 128-bit quotient the
+// D128 divide contract guarantees, and a schoolbook loop for the full U256 quotient
+// (sqrt); the 128-bit remainder intermediates are synthesized from (remHi, remLo).
 
 package decimal128
 

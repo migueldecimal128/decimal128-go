@@ -1,9 +1,9 @@
 // Natural log and base-10 log. The finite non-zero magnitude is computed in the
-// 48-digit D48 domain (d128_log_d48.go: argument reduction, square-root
-// reduction, an [11/12] Padé approximation), then rounded once into D128 with
-// the caller's rounding. Correctly rounded except in the documented 1-ulp gap
-// for arguments very close to 1 in directed modes (CrossPlatformArchitecture.md
-// §12, "Transcendental accuracy").
+// 48-digit D48 domain (D128LogD48: argument reduction, square-root reduction, an
+// [11/12] Pade approximation), then rounded once into D128 with the caller's rounding.
+// Correctly rounded except in the documented 1-ulp gap for arguments very close to 1
+// in directed modes (CrossPlatformArchitecture.md Section 12, "Transcendental
+// Accuracy").
 
 package decimal128
 

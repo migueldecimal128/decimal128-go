@@ -1,8 +1,10 @@
-// The U128 magnitude type (PrimitiveLayer.md §4.2). Swift uses the native
-// UInt128; Go has none, so — per D-G5 — u128 is a struct of two signed int64
-// dwords (dw0 least significant), the Java/Kotlin limb model. It is a pure
-// arithmetic magnitude: coefficient/quotient/intermediate are roles layered on
-// by usage, not subtypes.
+// U128 -- a pure 128-bit arithmetic magnitude (PrimitiveLayer.md Section 4.2). No
+// role-specific meaning: coefficient, quotient and intermediate are roles layered on by
+// usage, not subtypes. Core sees only the signed dword surface dw0/dw1, dw0 least
+// significant (D23); the arithmetic vocabulary over this type lives in U128Arith.
+//
+// In Go: there is no native 128-bit type, so (D-G5) u128 is a struct of two signed
+// int64 dwords, the Java/Kotlin limb model.
 
 package decimal128
 

@@ -1,10 +1,10 @@
-// The invalid-operation causes (CrossPlatformArchitecture.md §6). SCREAMING_SNAKE per §6.2.
+// The cause carried with a signaled INVALID_OPERATION: a diagnostic tag that lets
+// callers (and the test harness) tell causes apart. The engine sets the
+// INVALID_OPERATION flag regardless of the cause; the integer values are not
+// load-bearing (no wire or bit encoding depends on them).
 
 package decimal128
 
-// invalidCause tags an invalid-operation signal (diagnostic; not load-bearing).
-// The full set lands with the arithmetic operations in Phase 3; parse needs only
-// causeParseMalformed.
 type invalidCause int
 
 const (

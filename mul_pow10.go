@@ -1,5 +1,8 @@
-// The mulPow10 family (PrimitiveLayer.md D4): table-driven over the pow10 tables.
-// The int exponent operand is implied by the op name.
+// The mulPow10 family (PrimitiveLayer.md D4): multiply by 10^pow10, table-driven over
+// the POW10 store (10^0..10^38 as two-dword entries, 10^39..10^77 as four-dword
+// entries read through pow10_256_dw0..3), dispatching by result width and operand
+// magnitude, and trapping where the result must fit. The int exponent operand is
+// implied by the op name.
 
 package decimal128
 

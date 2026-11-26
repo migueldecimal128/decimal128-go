@@ -1,14 +1,12 @@
-// IEEE 754-2019 §5.3.1 nextUp / nextDown.
-//
-// Returns the immediately-larger (nextUp) or immediately-smaller (nextDown)
-// representable value. The two are duals: nextDown(x) == -nextUp(-x).
-//
-// For finite values, the operation walks one ulp in the chosen direction. To
-// handle decade boundaries cleanly (so that nextUp(0.99999...) → 1.00000... in
-// the natural cohort), the coefficient is first promoted to full precision (34
-// digits) by absorbing headroom from the representation, then the ±1 step is
-// applied. Carry across a decade boundary increments the exponent; underflow
-// below the smallest subnormal collapses to zero or saturates by direction.
+// IEEE 754-2019 Section 5.3.1 nextUp / nextDown, plus the extreme finite-magnitude
+// factories (maxFiniteMagnitude, minFiniteMagnitude). nextUp / nextDown return the
+// immediately-larger / immediately-smaller representable value. The two are duals:
+// nextDown(x) == -nextUp(-x). For finite values, the operation walks one ulp in the
+// chosen direction. To handle decade boundaries cleanly (so that nextUp(0.99999...) ->
+// 1.00000... in the natural cohort), the coefficient is first promoted to full
+// precision (34 digits) by absorbing headroom from the representation, then the +-1
+// step is applied. Carry across a decade boundary increments the exponent; underflow
+// below the smallest subnormal collapses to zero or saturates depending on direction.
 
 package decimal128
 

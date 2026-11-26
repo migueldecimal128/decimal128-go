@@ -1,6 +1,7 @@
-// IEEE 754-2019 §5.3.3 stripTrailingZeros: remove trailing decimal zeros from a
-// finite coefficient, raising qExp correspondingly. The numeric value is
-// unchanged; only the cohort representation differs.
+// stripTrailingZeros, an extended operation: removes up to maxToStrip trailing decimal
+// zeros from a finite value's coefficient and raises its exponent by the same count,
+// capped by the upward exponent room. The numeric value is unchanged; only the cohort
+// representation differs. sqrt uses it for its GDAS ideal-exponent reduction.
 
 package decimal128
 

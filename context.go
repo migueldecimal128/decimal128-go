@@ -1,12 +1,23 @@
-// The arithmetic context: a rounding direction plus a shared, mutable exception-
-// flag sink. A pointer type (Swift's reference Context); a nil *context is the
-// "quiet" / no-flag path (Swift's Context?). The NaN/invalid-operation signal
-// helpers (which need invalidCause) land with the arithmetic operations in
-// Phase 3; the inexact/overflow/underflow/divByZero signals finalize needs are
-// here.
-
 package decimal128
 
+// Configuration and flag-accumulation context for decimal128 arithmetic. A Context
+// carries a rounding direction that governs how inexact results are rounded, and a
+// shared Flags sink that accumulates the IEEE 754 exception flags raised by operations
+// performed through it. Operations without a context round ties-to-even and track no
+// flags.
+//
+// Reference semantics: passing a context hands over a shared reference; a change to
+// its rounding or its flags sink is visible to every holder. withRounding returns a new
+// context that shares the same Flags sink, so a sequence of operations under different
+// rounding modes accumulates every raised flag into one sink; withRoundingAndNewFlags
+// starts a fresh sink.
+//
+// Concurrency: a context and its Flags are for use within a single task. To use
+// contexts from several tasks, construct one per task and aggregate the flags at the
+// end.
+//
+// In Go: a pointer type (Swift's reference Context); a nil `*context` is the quiet,
+// no-flag path (Swift's `Context?`).
 type context struct {
 	round round
 	flags *flags

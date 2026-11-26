@@ -1,10 +1,41 @@
-// The D128 value type — the library's internal UBD representation (UBD.md §3.2),
-// stored as two int64 dword limbs. Layout: top 14 bits qExp, next 1 bit sign,
-// low 49 bits the coefficient high half (ubdLo64 holds the low 64). Non-finite
-// values use special qExp ranges with coefficient >= 10^34. coeff == 0 implies a
-// zero cohort member.
+// This file holds the D128 value type, its field accessors, the classification
+// predicates, and the finite and non-finite factories.
 //
-// In Go the public Decimal128 (Phase 5) wraps this unexported d128.
+// Layout (UBD.md Section 3.2), two 64-bit limbs:
+//   ubdHi64 bits 63..50: qExp (14-bit two's complement, unbiased)
+//   ubdHi64 bit  49:     sign
+//   ubdHi64 bits 48..0:  coeffHi49 (coefficient bits 112..64)
+//   ubdLo64 bits 63..0:  coefficient bits 63..0
+// Finite values have qExp in -6176..6111 and coefficient < 10^34.
+//
+// Non-finite values are coded in qExp values above the finite range:
+//   INF:  qExp == 7168         ushr_64_64(ubdHi64, 59) == 14
+//   QNAN: qExp in 7680..7683   ushr_64_64(ubdHi64, 58) == 30
+//   SNAN: qExp in 7936..7939   ushr_64_64(ubdHi64, 58) == 31
+//   any non-finite:            ushr_64_64(ubdHi64, 60) == 7
+// ubdHi64 bit 58 is the signaling bit. The sign of INF and NAN is the
+// ordinary sign bit (bit 49).
+//
+// Every non-finite value has NON_FINITE_BIAS (0x1_F000_0000_0000, i.e.
+// 0x1F << 44) added to coeffHi49, so its coefficient is >= 0x1F << 108
+// (about 1.006e34), which is > 10^34 (coeffHi49 of 10^34 is
+// 0x1_ED09_BEAD_87C0). Two consequences:
+//   - If a fast-path sum of two coefficients fits in 112 bits, both
+//     operands are finite.
+//   - No non-finite value has a zero coefficient, so coeff == 0 implies
+//     zero.
+//
+// INF has no payload; its coefficient is exactly 0x1F << 108
+// (ubdHi64 = 0x7001_F000_0000_0000 for +INF, 0x7003_F000_0000_0000 for -INF).
+//
+// NAN payloads of up to 33 digits (< 10^33, so 110 bits; see d128_nan_64x64)
+// are split three ways:
+//   payload bits 63..0:    ubdLo64
+//   payload bits 107..64:  added to NON_FINITE_BIAS in coeffHi49
+//   payload bits 109..108: qExp bits 1..0 (ubdHi64 bits 51..50), the payloadQBits
+// so a NAN's qExp is 7680 (QNAN) or 7936 (SNAN) plus its payloadQBits.
+//
+// In Go: the public Decimal128 wraps this unexported d128.
 
 package decimal128
 

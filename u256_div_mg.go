@@ -1,4 +1,12 @@
-// Möller–Granlund 256/128 division (PrimitiveLayer.md; MG Alg 5, DIV3BY2).
+// Moller & Granlund reciprocal-divide wrappers (core), replacing Knuth Algorithm D for
+// the x > 2^128, y > 2^64 case: instead of one hardware divide per quotient limb, build
+// a reciprocal once and issue DIV3BY2 steps (Alg. 5, in the Primitive layer). Two
+// wrappers, deliberately distinct:
+//   - the divide hot path needs only a <= 128-bit quotient (D128 contract) -> the
+//     branch-light 2-step div_256_128_q128r128_mg;
+//   - sqrt consumes the full U256 quotient -> the div_256_128_q256r128_mg schoolbook
+//     loop.
+// Do NOT collapse the hot path into the loop.
 
 package decimal128
 

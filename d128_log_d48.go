@@ -1,6 +1,6 @@
-// ln / log10 over the 48-digit D48 domain (D48GoWorkOrder.md Phase 3; Swift
-// D128LogD48.swift): argument reduction x = k·10^e, square-root reduction until
-// |c' − 1| < 0.02, then the [11/12] Padé kernel (d48_log_constants.go).
+// ln / log10 over the 48-digit D48 domain: argument reduction x = k * 10^e,
+// square-root reduction until |c' - 1| < 0.02, then the [11/12] Pade kernel
+// (D48LogConstants).
 
 package decimal128
 

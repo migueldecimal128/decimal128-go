@@ -1,8 +1,10 @@
-// Floor square root of a u320 for the D48 sqrt (D48GoWorkOrder.md G-8; Swift
-// U320Isqrt.swift). Newton from above: a start >= the root from a float64
-// sqrt of the top 62-63 bits, then s <- (s + r/s) / 2 with the 320÷160 MG
-// divide until s stops decreasing (about three divides for D48's 95-96-digit
-// radicands). Radicands of at most 128 bits take the same iteration on 128 bits.
+// Floor square root of a U320 for the D48 sqrt: Newton from above, s <- (s + r/s) / 2
+// with the 320/160 MG divide, until s stops decreasing (about three divides for D48's
+// 95-96-digit radicands). The floor root is unique, so the result is the same in every
+// port whatever the start.
+//
+// In Go: the start (>= the root) comes from a float64 sqrt of the top 62-63 bits;
+// radicands of at most 128 bits take the same iteration on 128 bits.
 
 package decimal128
 

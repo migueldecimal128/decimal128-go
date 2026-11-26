@@ -1,7 +1,6 @@
-// D48 add/subtract (round-half-even, no flags; Swift D48AddSub.swift). Mirrors
-// d38 add/sub: aligns operands by exponent, folding the smaller operand's
-// shifted-out digits into a residue, then routes through d48_finalize_320.
-// Intermediates are u320.
+// D48 add/subtract (round-half-even, no flags): aligns the operands by exponent,
+// folding the smaller operand's shifted-out digits into a residue, then routes through
+// d48_finalize_320. Intermediates are U320.
 
 package decimal128
 

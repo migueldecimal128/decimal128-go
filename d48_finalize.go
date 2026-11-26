@@ -1,6 +1,5 @@
-// Round a (sign, qExp, coefficient, residue) into a 48-digit D48 (round-half-
-// even; Swift D48Finalize.swift): one entry over u320, where D38 has
-// d38_finalize_128 and d38_finalize_256.
+// Round a (sign, qExp, coefficient, residue) into a 48-digit D48 (round-half-even):
+// one entry, d48_finalize_320, over U320.
 
 package decimal128
 

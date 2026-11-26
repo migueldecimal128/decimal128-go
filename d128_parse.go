@@ -1,6 +1,14 @@
-// String → decimal128 parsing. Builds and correctly-rounds a finite value
-// (needs core finalize), or recognizes Infinity/NaN. d128_parse returns ok=false
-// on syntactic failure (Swift's nil); d128_parseOrNaN is best-effort.
+// Parse a decimal128 (and the exact 48-digit D48, d48_parse) from text. Accepts an
+// optional sign, a coefficient with an optional '.', an optional 'E'/'e' exponent, '_'
+// digit separators, Inf / Infinity, and NaN / qNaN / sNaN with an optional decimal
+// payload (words case-insensitive). `d128_parse_ctxnull` is the general body: on
+// syntactic failure it returns nil and signals invalidOperation on a non-nil context.
+// `d128_parseOrNaN` is best effort: a quiet NaN on failure, never nil.
+//
+// Holder structs replace multiple return values: each packet fully describes its
+// layer's output, so callers never carry loose locals alongside the status.
+//
+// In Go: d128_parse returns ok = false on syntactic failure (Swift's nil).
 
 package decimal128
 

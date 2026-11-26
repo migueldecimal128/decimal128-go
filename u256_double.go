@@ -1,6 +1,6 @@
-// Double bridges for the square-root seed (Core MagnitudeSqrt). Decimal-agnostic
-// bit math: render a 256-bit unsigned integer down to a float64 (floor of its top
-// 53 bits) so hardware sqrt produces a ~15-digit seed, then widen that seed back
+// float64 bridges for the square-root seed (Core U256Sqrt). Both are decimal-agnostic
+// bit math: render a 256-bit unsigned integer down to a float64 (floor of its top 53
+// bits) so the hardware sqrt can produce a ~15-digit seed, then widen that seed back
 // into a 128-bit unsigned integer.
 
 package decimal128

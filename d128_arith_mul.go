@@ -1,8 +1,11 @@
-// Multiply and square. The compact 64×64 hot path lives in the fast entry
-// d128_multiply_rnd_ctxnull; every other case tail-calls the (cold)
-// d128_multiply_slow_rnd_ctxnull. The bare _tte / _rnd / _ctx forms are thin
-// wrappers that all share the compact fast path. A square's fast entry carries an
-// x²-specialized guard and tail-calls the same cold body.
+// IEEE 754 multiply and square. `d128_multiply_rnd_ctxnull` is the general body; the
+// `_tte` (bare), `_rnd`, and `_ctx` forms are thin specializations of it (rounding/ctx
+// folded in). Fast/slow split (as in add): the fast entry carries the cheap 64x64
+// compact-product guard inline and tail-calls the slow entry
+// `d128_multiply_slow_rnd_ctxnull` for every other case. The slow entry does the full
+// 128x128->256 product (with its own fits-in-112 early-out before finalize), plus the
+// FNZ and non-finite cases. Square's fast entry carries an x^2-specialized guard and
+// tail-calls the same slow entry.
 
 package decimal128
 

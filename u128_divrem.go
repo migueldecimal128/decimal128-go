@@ -1,10 +1,9 @@
-// The 128-bit divRem family (PrimitiveLayer.md §4.2).
+// The 128-bit divRem family (PrimitiveLayer.md Section 4.2, D15).
 //
-// Swift uses native UInt128 division; Go synthesizes. divRem_q128r64 uses the
-// hardware 128÷64 (bits.Div64). divRem_q128r128 follows the JVM strategy named in
-// the Swift comment: a sub-2^64 divisor delegates to the 128÷64 kernel; otherwise
-// the quotient fits in 64 bits, reached by one normalized DIV3BY2 step
-// (Möller–Granlund) instead of native division.
+// In Go: divRem_q128r64 uses the hardware 128/64 (bits.Div64). divRem_q128r128 follows
+// the JVM strategy: a sub-2^64 divisor delegates to the 128/64 kernel; otherwise the
+// quotient fits in 64 bits and is reached by one normalized DIV3BY2 step
+// (Moller-Granlund) instead of native division.
 
 package decimal128
 

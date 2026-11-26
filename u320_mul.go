@@ -1,7 +1,10 @@
-// u320 multiplies for the D48 domain (D48GoWorkOrder.md G-2; Swift
-// U320Mul.swift). Every product is written out as 64x64 -> 128 limb products
-// (bits.Mul64) in comba (column) order into the three-word column accumulator
-// of macCol512 (div_pow10_recipmul256.go), so a column sum never loses a carry.
+// U320 multiplies for the D48 domain. In every port but Zig, each product is written
+// out as 64x64 -> 128 limb products in comba (column) order into an accumulator wide
+// enough that a column sum never loses a carry -- the shape of mul512_256x256
+// (DivPow10RecipMul256).
+//
+// In Go: the products are bits.Mul64, into the three-word column accumulator of
+// macCol512 (div_pow10_recipmul256.go).
 
 package decimal128
 

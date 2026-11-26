@@ -1,11 +1,9 @@
-// 320-bit-dividend recipmul divPow10 kernel for the D48 domain
-// (D48GoWorkOrder.md Phase 1; Swift DivPow10RecipMul320.swift). The 256-bit
-// kernel (D47) one tier up: strip k-1 low bits (the 2^(k-1) factor of 10^k),
-// multiply by the 5^k reciprocal M = ceil(2^S / 5^k) (<= 320 bits, five
-// dwords) with the explicit 5x5 comba, take P >> S = 2q + roundBit, and
-// classify the residue from the product bits. Contract: 1 <= k <= 96, x <
-// 10^96 (every D48 intermediate). Tables in div_pow10_recipmul320_tables.go
-// (generated).
+// 320-bit-dividend recipmul divPow10 kernel for the D48 domain: the 256-bit kernel
+// (D47) one tier up. Strip k-1 low bits (the 2^(k-1) factor of 10^k), multiply by the
+// 5^k reciprocal M = ceil(2^S / 5^k) (<= 320 bits, five dwords) with the 5x5 comba,
+// take P >> S = 2q + roundBit, and classify the residue from the product bits.
+// Contract: 1 <= k <= 96, x < 10^96 (every D48 intermediate). The tables are in
+// DivPow10RecipMul320Tables (generated).
 
 package decimal128
 

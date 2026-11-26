@@ -1,6 +1,5 @@
-// D48 round-to-integral (ties-to-away and toward-negative) and the exact
-// D48 → int64 conversion used by the integer-exponent math kernels (Swift
-// D48RoundToIntegral.swift).
+// D48 round-to-integral (ties-to-away and toward-negative) and the exact D48 -> int64
+// conversion used by the integer-exponent math kernels.
 
 package decimal128
 

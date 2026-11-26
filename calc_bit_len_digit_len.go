@@ -1,7 +1,11 @@
-// The length family (PrimitiveLayer.md D6, D22): bitLen/digitLen over 128- and
-// 256-bit magnitudes. Limb forms (ascending dwords; trailing precomputed bitLen
-// last). The digit-length estimate uses the (bitLen * 1233) >> 12 ≈ bitLen *
-// log10(2) lower bound, then one table compare to settle the exact count.
+// The length family (PrimitiveLayer.md D6, D22): bitLen/digitLen over 128- and 256-bit
+// magnitudes. Limb forms only (D23/D24): operands are ascending dword limbs; trailing
+// scalars (the precomputed bitLen) last. digitLen is the two-step (bitLen * 1233) >> 12
+// floor estimate plus one unsigned POW10 compare; bitLen composes from leading-zero
+// counts. Lengths are always recomputed, never cached (D7). digitLen_int_32 is the
+// scalar (32-bit-operand) member of the contract length family (D32, narrowing D22);
+// helpers such as calcBitLenInt and calcDigitLen64 are platform-local decomposition per
+// D6, not contract.
 
 package decimal128
 

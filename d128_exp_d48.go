@@ -1,7 +1,7 @@
-// exp / exp10 over the 48-digit D48 domain (D48GoWorkOrder.md Phase 3; Swift
-// D128ExpD48.swift): range reduction, then exp(r) = exp(r/8)^8 via the [12/12]
-// Padé kernel (d48_exp_constants.go) and three squarings. exp's reduction uses
-// ln10 at 90 digits in u320.
+// exp / exp10 over the 48-digit D48 domain: range reduction, then exp(r) = exp(r/8)^8
+// via the [12/12] Pade kernel (D48ExpConstants) and three squarings; exp's reduction
+// uses ln10 at 90 digits in U320. Then the rounding of the result into D128
+// (finalizeScaled), with the tiny-argument rule behind the boundary test.
 
 package decimal128
 

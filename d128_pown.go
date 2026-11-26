@@ -1,10 +1,11 @@
-// IEEE 754-2019 §9.2 pown(x, n): x raised to a signed integer power. Left-to-
-// right binary exponentiation in the 48-digit D48 domain with a single final
-// round (n >= 3 and n <= −2; n <= −2 first tries the exact 2^a / 5^b rule),
-// exact fast paths for n ∈ {0, ±1, 2} and |x| ∈ {1, 10}, plus the special
-// classes (zero / infinity / NaN). Correctly rounded except in the documented
-// 1-ulp gap for bases very close to 1 in directed modes
-// (CrossPlatformArchitecture.md §12, "Transcendental accuracy").
+// IEEE 754-2019 Section 9.2 pown(x, n): x raised to a signed integer power.
+// Left-to-right binary exponentiation in the 48-digit D48 domain with a single final
+// round (n >= 3 and n <= -2; n <= -2 first tries the exact 2^a / 5^b rule), exact fast
+// paths for n in {0, +-1, 2} and |x| in {1, 10}, plus the special classes (zero /
+// infinity / NaN). For |n| > 2^31 the result comes from pown_largeN's log route, whose
+// error does not grow with n (PownLargeNWorkOrder.md). Correctly rounded except in the
+// documented 1-ulp gap for bases very close to 1 in directed modes
+// (CrossPlatformArchitecture.md Section 12, "Transcendental Accuracy").
 
 package decimal128
 

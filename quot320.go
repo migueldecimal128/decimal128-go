@@ -1,4 +1,8 @@
-// The quot320Residue and quot320Rem160 result aggregates (CrossPlatformArchitecture.md §5, §4.8).
+// The 320-bit quotient aggregates of the D48 domain, stored as dword limbs
+// (PrimitiveLayer.md D23) and returned by value (CrossPlatformArchitecture.md Section
+// 5). Quot320Residue: a 320-bit quotient with the residue of the discarded digits, for
+// the divPow10_q320res_* family. Quot320Rem160: the quotient and remainder (below the
+// <= 160-bit divisor) of divRem_320_160_mg.
 
 package decimal128
 

@@ -1,12 +1,12 @@
-// IEEE 754-2019 §9.2 pow(x, y): x raised to a decimal power. Integer exponents
-// in int32 delegate to pown; a larger integer y keeps x's sign iff y is odd
-// (powHugeIntegerY). The finite-nonzero transcendental core computes x^y =
-// exp10(y · log10(x)) entirely in the 48-digit D48 intermediate (a single final
-// round), with an integer exactness test for results that are exact decimals;
-// an exact result takes the GDAS preferred exponent ⌊y·Q(x)⌋, an inexact one
-// keeps all 34 digits (IEEE 754-2019 §5.2). Correctly rounded except in the
-// documented 1-ulp gap for results very close to 1 in directed modes
-// (CrossPlatformArchitecture.md §12, "Transcendental accuracy").
+// IEEE 754-2019 Section 9.2 pow(x, y): x raised to a decimal power. Integer exponents
+// in int32 delegate to d128_pown; a larger integer y keeps x's sign iff y is odd
+// (powHugeIntegerY). The finite-nonzero transcendental core computes
+// x^y = exp10(y * log10(x)) entirely in the 48-digit D48 intermediate (a single final
+// round), with an integer exactness test for results that are exact decimals; an exact
+// result takes the GDAS preferred exponent floor(y * Q(x)), an inexact one keeps all 34
+// digits (IEEE 754-2019 Section 5.2). Correctly rounded except in the documented 1-ulp
+// gap for results very close to 1 in directed modes (CrossPlatformArchitecture.md
+// Section 12, "Transcendental Accuracy").
 
 package decimal128
 

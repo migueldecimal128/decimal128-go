@@ -1,9 +1,10 @@
-// u192 and u320: the D48 domain's integer types (D48GoWorkOrder.md G-1; Swift
-// U320.swift). u192 holds a D48 coefficient as a value (< 10^48 < 2^160, three
-// limbs); u320 holds every D48 intermediate (< 10^96 < 2^320, five limbs). Both
-// mirror u256: signed int64 limb fields in ascending order (D23, D-G2),
-// arithmetic on uint64 limbs through math/bits, every multiply written out
-// explicitly (u320_mul.go).
+// U192 and U320, the D48 domain's integer types: U192 holds a D48 coefficient as a
+// value (< 10^48 < 2^160, three limbs); U320 holds every D48 intermediate (< 10^96 <
+// 2^320, five limbs). Both mirror U256: signed int64 limb fields in ascending order
+// (D23), with the arithmetic on unsigned 64-bit limbs.
+//
+// In Go: the arithmetic runs on uint64 limbs through math/bits, and every multiply is
+// written out explicitly (u320_mul.go).
 
 package decimal128
 

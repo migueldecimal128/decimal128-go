@@ -1,6 +1,11 @@
-// The accumulating IEEE 754 exception-flag sink. A pointer type so contexts
-// derived from a common parent share one sink (mutations visible through all).
-// Not safe for concurrent use — one context per task.
+// Accumulating set of IEEE 754 exception flags: a packed int64 bit word, bit positions
+// per Exception754. Contexts derived from a common parent share a single flag sink, so
+// mutations through any of them are visible through all, which is the intended
+// behavior for chained calculations under varying rounding modes. Flags performs no
+// internal synchronization: a Context (and therefore its Flags) is for use within a
+// single task, so with concurrency, construct one context per task.
+//
+// In Go: a pointer type.
 
 package decimal128
 

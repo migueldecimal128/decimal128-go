@@ -1,7 +1,8 @@
-// Core composition over the primitive divPow10 kernels: the strategy dispatch
-// (D16) that picks magic/recipmul by exponent and width. The q256res FMA-
-// alignment path (only AddWide) stays on the chunked Barrett loop; the q128res
-// 128- and 256-bit-dividend paths are single reciprocal-multiply kernels (D45/D47).
+// The Core divPow10 dispatch: divide a 128- or 256-bit coefficient by 10^pow10,
+// returning the quotient and a classified residue. pow10 == 1 uses the divide-by-10
+// magic; otherwise a single reciprocal-multiply kernel serves the q128res reductions of
+// 128-, 192- and 256-bit dividends (D45/D47/D52). The Barrett q256res chunk loop runs
+// only when the quotient is wider than 128 bits (more than 34 digits).
 
 package decimal128
 

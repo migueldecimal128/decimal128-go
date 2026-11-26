@@ -1,8 +1,11 @@
-// The 256÷64 simple-division unit (PrimitiveLayer.md D3, §4.4): full 256÷64
-// quotient and 64-bit remainder. The dispatcher specializes by divisor shape —
-// power-of-two (shift+mask), 16- and 32-bit divisors (hardware divides on 48/32-
-// bit chunks), and 33–64-bit divisors (one Möller–Granlund reciprocal build plus
-// four DIV2BY1 steps). Ported from Swift; uint64 limb bodies.
+// The simple-division unit (PrimitiveLayer.md D3, Section 4.4): the full 256/64
+// quotient and 64-bit remainder, divisor nonzero. It calls only downward, so the whole
+// ladder ships behind the single uniform entry point divRem_q256r64_256x64; the
+// dispatcher specializes by divisor width (power-of-two, 16-bit, 32-bit, 33-64-bit),
+// and everything below it is platform-local decomposition (PrimitiveLayer.md Section
+// 3.4). In every port but Zig, the 33-64-bit case uses Moller-Granlund Algorithm 4
+// (DIV2BY1): one single-word reciprocal build, then four reciprocal-multiply steps
+// with <= 2 corrections each -- no per-limb hardware divide.
 
 package decimal128
 

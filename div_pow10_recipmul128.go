@@ -1,8 +1,10 @@
-// The 128-bit reciprocal-multiply divPow10 (1..38): x / 10^pow10 with a
-// classified residue, via a single 128×128→256 reciprocal multiply. 10^k =
-// 2^(k-1) · (2 · 5^k): strip k-1 low bits (tracked as sticky), multiply by the
-// tabulated 5^k reciprocal M, then shift by the tabulated S and read the round
-// and sticky bits to classify the residue.
+// Single reciprocal-multiply kernel for x / 10^pow10 (128-bit dividend), pow10 1..38,
+// returning the quotient and a classified residue: one 128x128->256 multiply plus a
+// shift, uniform across the whole range. Backs the Core divPow10 dispatch for
+// pow10 >= 2 (pow10 == 1 keeps the divide-by-10 magic). M = ceil(2^S / 5^k) with
+// S = S128 + 128: multiplying the 2^(k-1)-stripped dividend by M and shifting right by
+// S yields 2*(x / 10^k) -- stripping one bit short of 2^k deliberately keeps the
+// half-ulp bit as the LSB. Both tables are 1-based (index 0 unused).
 
 package decimal128
 

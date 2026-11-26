@@ -1,9 +1,21 @@
-// BID (Binary Integer Decimal) encode/decode for decimal128 (IEEE 754-2019
-// §3.5.2). The coefficient is a plain binary integer in the trailing significand
-// T, with the top 3 coefficient bits in the G combination field (no declets).
+// BID (Binary Integer Decimal) encode/decode for decimal128, plus a decimal64-BID
+// decode (d128_from_bid64).
 //
-// 128-bit layout: bit 127 sign; bits 126..110 the 17-bit G field; bits 109..0
-// the 110-bit trailing significand T.
+// Unlike DPD, BID stores the coefficient as a plain
+// binary integer in the trailing significand T, with the top 3 coefficient
+// bits encoded in the G combination field. There is no declet encoding.
+//
+// 128-bit BID layout (IEEE 754-2019 Section 3.5.2):
+//   bit 127:    sign
+//   bits 126..110: 17-bit G combination field (encodes biased exponent + top
+//                  3 bits of coefficient, or non-finite tag)
+//   bits 109..0:  110-bit trailing significand T
+//
+// Combination field encoding:
+//   G[0:1]  = 00,01,10        Case A: exponent MSBs in G[0:9], MSD bits in G[10:12]
+//   G[0:3]  = 1100,1101,1110  Case B: exponent MSBs in G[2:11], MSD bits = 100<G12>
+//   G[0:4]  = 11110           Infinity
+//   G[0:4]  = 11111           NaN (G[5] = signaling flag)
 
 package decimal128
 

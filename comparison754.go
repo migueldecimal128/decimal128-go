@@ -1,9 +1,14 @@
-// The four-way IEEE 754 comparison result (CrossPlatformArchitecture.md §6).
+// Comparison754 is the Core's compare currency (used by the compare cores and the IEEE
+// 754 predicate family). Its values ARE the tri-state boundary codes (LT = 0, EQ = 1,
+// GT = 2, UNORDERED = 3), so the cores cross the wrapper/core boundary with the raw
+// value -- no mapping table, no conversion. The CMP754_* constants are the single point
+// that names those codes for callers of the `d128_comparePartial*` int API, so the two
+// can never drift.
+//
+// In Go: Comparison754 is an int alias, so .rawValue is identity.
 
 package decimal128
 
-// Comparison754 tri-state codes (the wrapper/core boundary value). Comparison754
-// is an int alias so .rawValue is identity.
 type comparison754 = int
 
 const (

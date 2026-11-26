@@ -1,14 +1,21 @@
-// The three internal assertion contracts (CrossPlatformArchitecture.md §9),
-// identical in behavior across every port. In the single-package Go layout they
-// are unexported, so the bare Swift call-site names (verify/demand/impossible)
-// are preserved exactly.
+// The three internal assertion contracts (CrossPlatformArchitecture.md Section 9),
+// identical in behavior across every port and spelled in each language's idiom:
+//   - verify -- compile-gated state assertion (Section 9.1): checked only in a verify
+//     build, compiled to nothing otherwise.
+//   - demand -- production runtime guard (Section 9.2): always evaluated; routes
+//     through impossible on failure.
+//   - impossible -- unconditional abort for unreachable code (Section 9.3); it does
+//     not return.
+// The empty string "" is the legal way to omit a message (the regime prohibits
+// defaulting it).
+//
+// In Go: in the single-package layout they are unexported, so the bare Swift call-site
+// names (verify/demand/impossible) are preserved exactly. verifyEnabled gates verify;
+// its value is set by the build tag in verify_off.go / verify_on.go: false by default
+// (the compiler eliminates the verify body and the dead condition expressions), true
+// under -tags verify.
 
 package decimal128
-
-// verifyEnabled gates verify (§9.1) — the Go analogue of Swift's
-// #if VERIFY_ENABLED. Its value is set by the build tag in verify_off.go /
-// verify_on.go: false by default (the compiler eliminates the verify body and
-// the dead condition expressions), true under `-tags verify`. See those files.
 
 // Compile-gated state assertion (CrossPlatformArchitecture.md Section 9.1):
 // the condition is evaluated and checked only in a verify build; otherwise

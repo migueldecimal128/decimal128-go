@@ -1,9 +1,4 @@
-// Single Barrett-reduction step for a 64-bit dividend chunk (D10). Given dividend
-// dw, denominator denom, and precomputed reciprocal mu = floor(2^64 / denom),
-// returns (q, r) with dw = q*denom + r and 0 <= r < denom. qHat = (dw*mu) >> 64
-// is never above the true quotient and at most 1 below, so a single conditional
-// subtract corrects exactly. Requires dw < 2^64 and a contract-satisfying
-// mu/denom pair (e.g. a tabulated 5^k denominator).
+// Single Barrett-reduction step for a 64-bit dividend chunk (D10).
 
 package decimal128
 

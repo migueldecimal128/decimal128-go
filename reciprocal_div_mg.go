@@ -1,13 +1,14 @@
-// Möller & Granlund 2011 ("Improved division by invariant integers") reciprocal
-// division primitives (tier-1). Each division STEP estimates a quotient word by
-// multiplying the numerator by a precomputed reciprocal v, then applies ≤2
-// compare-subtract corrections — no hardware divide in the step. One 128÷64
-// divide remains in the reciprocal build.
+// Moller & Granlund 2011 ("Improved division by invariant integers") reciprocal
+// division primitives (tier-1, like barrettStep). Each division STEP estimates a
+// quotient word by multiplying the numerator by a precomputed reciprocal v, then
+// applies <= 2 compare-subtract corrections -- no hardware divide in the step. One
+// 128/64 divide remains in the reciprocal build (vReciprocal_*); a table+Newton build
+// would remove even that (MgDivideProductionMigrationWorkOrder.md Section 9).
+// Algorithm numbering (M&G): Alg. 3 = single-word reciprocal; Alg. 4 = DIV2BY1 (2-word
+// / 1-word); Alg. 5 = DIV3BY2 (3-word / 2-word). GMP symbols: invert_limb, invert_pi1,
+// udiv_qrnnd_preinv, udiv_qr_3by2.
 //
-// Algorithm numbering (M&G): Alg. 3 = single-word reciprocal; Alg. 4 = DIV2BY1
-// (2-word ÷ 1-word); Alg. 5 = DIV3BY2 (3-word ÷ 2-word). Swift uses native
-// UInt128 for the exact 128-bit intermediates; Go synthesizes them from uint64
-// limbs via math/bits.
+// In Go: the 128-bit intermediates are synthesized from uint64 limbs via math/bits.
 
 package decimal128
 

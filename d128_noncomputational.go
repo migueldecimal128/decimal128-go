@@ -1,5 +1,5 @@
-// Non-computational sign operations (IEEE 754-2019 §5.5.1): negate/abs/copy/
-// copySign. Bit-level, no rounding, no flags.
+// IEEE 754-2019 Section 5.5.1 non-computational sign operations: negate, abs, copy and
+// copySign. Pure bit manipulation of the sign bit; no rounding, no flags.
 
 package decimal128
 

@@ -1,10 +1,8 @@
-// Context-aware IEEE 754-2019 §5.3.1 min/max operations.
-//
-// The quiet free functions (d128_minimum, d128_maximum, ...) are value-only.
-// These _ctx forms add flag observability: the invalid-operation check is
-// performed on the inputs before dispatching to the quiet function — if either
-// operand is a signaling NaN, invalidOperation is recorded on ctx. The numeric
-// result is then whatever the quiet function returns (a quieted NaN per IEEE).
+// Context-aware IEEE 754-2019 Section 5.3.1 min/max. The quiet forms (d128_minimum,
+// d128_maximum, ...) raise no flags. The _ctx forms add flag observability: they check
+// the inputs before dispatching to the quiet form and record invalidOperation on ctx
+// when either operand is a signaling NaN, then return the quiet form's result (a
+// quieted NaN per IEEE).
 
 package decimal128
 

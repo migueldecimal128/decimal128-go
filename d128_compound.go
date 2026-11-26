@@ -1,5 +1,5 @@
-// IEEE 754-2019 §9.2 compound(x, n) = (1+x)^n for x ≥ -1 and integer n. Form
-// t = 1+x, reject x < -1, then raise t to the n -- never from a t rounded to 34
+// IEEE 754-2019 Section 9.2 compound(x, n) = (1+x)^n for x >= -1 and integer n.
+// Form t = 1+x, reject x < -1, then raise t to the n -- never from a t rounded to 34
 // digits, whose error the power multiplies by |n| (CompoundD48OnePlusXWorkOrder.md).
 // Three cases by the digit span of 1 + x:
 //   - at most 34 digits: t is an exact D128, so the D128 add and pown are already
@@ -7,10 +7,10 @@
 //   - 35..48 digits: t is exact in D48;
 //   - more than 48: t is 1 + x rounded to odd at 48 digits, which keeps the side
 //     of the dropped part for the final rounding in the directed modes.
-// Past the fast path, t^n runs on pown's D48 bodies (n = 2 and n = −1 included,
+// Past the fast path, t^n runs on pown's D48 bodies (n = 2 and n = -1 included,
 // CX-3) and is rounded once; n = 1 is the single D128 add. x = -1 (t = 0) and the
 // special classes are handled directly; a zero result carries the preferred
-// exponent ⌊|n|·min(0, Q(x))⌋.
+// exponent |n| * min(0, Q(x)), clamped to the exponent range.
 
 package decimal128
 

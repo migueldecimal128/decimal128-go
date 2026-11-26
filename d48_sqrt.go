@@ -1,5 +1,4 @@
-// D48 square root (round-half-even) via the exact scaled integer floor root
-// (Swift D48Sqrt.swift).
+// D48 square root (round-half-even) via the exact scaled integer floor root.
 
 package decimal128
 

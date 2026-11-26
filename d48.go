@@ -1,13 +1,12 @@
-// D48: the 48-digit internal extended-precision domain (D48GoWorkOrder.md G-1;
-// Swift D48.swift). Same contract as D38: round-half-even, no flags, no
-// rounding modes, finite only, no −0, unbounded exponent; 48 digits instead of
-// 38, with 96-digit (u320) exact intermediates.
+// D48 -- the 48-digit internal extended-precision domain: round-half-even, no flags, no
+// rounding modes, finite only, no -0, unbounded exponent; 48 digits, with 96-digit
+// (U320) exact intermediates. The coefficient is three dword limbs (lo first, D23;
+// < 10^48 < 2^160); qExpAndSignBit packs the signed quantum exponent over the sign
+// bit. This file holds the type, its accessors, and multiply/square (which route
+// through d48_finalize_320).
 
 package decimal128
 
-// d48 is the coefficient as three dword limbs (lo first, D23; < 10^48 < 2^160)
-// and qExpAndSignBit, the signed quantum exponent over the sign bit, last (the
-// small field last, as Swift's D48).
 type d48 struct {
 	coeffDw0       int64
 	coeffDw1       int64

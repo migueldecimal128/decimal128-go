@@ -1,21 +1,16 @@
-// Constant tables (PrimitiveTables.swift): the low-bit masks, then the shared
-// power-of-ten table.
+// Shared read-only power-of-ten tables (PrimitiveLayer.md Section 4.5, D16):
+// 10^0..10^38 as 128-bit entries, 10^39..10^77 as 256-bit entries, the 320-bit powers
+// the D48 domain reads, and 5^0..5^13. Core reads only the dword surface
+// (pow10_128_dw0/_dw1, pow10_256_dw0..3, pow10_320_dw0..4, pow5_64); Primitive composes
+// whole values from those accessors. Every index is masked (POW10_BCE and its
+// siblings), so each read is provably in bounds. The values are the same in every
+// port; the storage layout is platform-local.
 //
-// Naming note: Swift spells the masks MASK16L/MASK32L/MASK48L (SCREAMING per §6.2).
-// Go must lowercase them to keep them unexported (engine-internal); this is the
-// usual Go capitalization divergence.
-//
-// Shared read-only power-of-ten table (PrimitiveLayer.md §4.5, D16/D50): 10^0..10^77
-// and 5^0..5^13, stored as ONE merged interleaved int64 array `const_POW10` (D50), the
-// same canonical layout as the Java/Kotlin ports (byte-identical dword image).
-// Go has no 128-bit literal, so limbs are precomputed signed int64 dwords
-// (generated from math, not hand-transcribed). Core reads only the dword surface
-// (pow10_128_dw0/_dw1, pow10_256_dw0..3, pow5_64); Primitive composes whole values.
-//
-// Layout (index masked by const_POW10_BCE = 0xFF, so every access is provably in range):
-//   region A 10^0..10^38 : (lo,hi)   at [p<<1], [p<<1|1]
-//   region B 10^39..10^77: (dw0..dw3) at [const_POW10_QUAD_BASE + ((p-39)<<2) + k]
-//   tail     5^0..5^13   : one int64 at [const_POW5_BASE + p]
+// In Go: one merged interleaved int64 array const_POW10 (D50), the Java/Kotlin dword
+// image: region A 10^0..10^38 (lo, hi) at [p<<1], [p<<1|1]; region B 10^39..10^77
+// (dw0..dw3) at [const_POW10_QUAD_BASE + ((p-39)<<2) + k]; then 5^0..5^13, one int64
+// at [const_POW5_BASE + p]; every index is masked by const_POW10_BCE = 0xFF. Go has no
+// 128-bit literal, so the limbs are precomputed signed int64 dwords.
 
 package decimal128
 

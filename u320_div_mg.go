@@ -1,11 +1,9 @@
-// 320 ÷ 160 division for the D48 divide and isqrt (D48GoWorkOrder.md Phase 1;
-// Swift U320DivMG.swift). Schoolbook over 64-bit limbs in the shape of GMP's
-// mpn_sbpi1_div_qr: normalize, then per quotient limb one Möller–Granlund
-// DIV3BY2 estimate on the top three remainder limbs (reciprocal_div_mg.go), a
-// multiply-subtract of the divisor's remaining low limb, and at most one
-// add-back. A one-limb divisor takes the DIV2BY1 loop instead. When the top two
-// remainder limbs equal the divisor's, DIV3BY2's precondition fails and the
-// quotient limb is 2^64 - 1.
+// 320/160 division for the D48 divide and isqrt. Schoolbook over 64-bit limbs in the
+// shape of GMP's mpn_sbpi1_div_qr: normalize, then per quotient limb one
+// Moller-Granlund DIV3BY2 estimate on the top three remainder limbs (ReciprocalDivMG),
+// a multiply-subtract of the divisor's remaining low limb, and at most one add-back. A
+// one-limb divisor takes the DIV2BY1 loop instead. When the top two remainder limbs
+// equal the divisor's, DIV3BY2's precondition fails and the quotient limb is 2^64 - 1.
 
 package decimal128
 

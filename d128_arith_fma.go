@@ -1,7 +1,9 @@
-// Fused multiply-add: x*y + a with a single rounding. The fast path (product
-// fits 128 bits, in range, a finite) makes the product an exact D128 and reuses
-// add. The slow path keeps the product as a wide U256, widens a to U256, aligns,
-// adds, and finalizes once — so the whole fma rounds exactly once.
+// Fused multiply-add: x * y + a with a single rounding (IEEE 754-2019).
+// `d128_fma_rnd_ctxnull` is the general body; the `_tte`, `_rnd` and `_ctx` forms are
+// thin specializations. The fast path (product fits in 128 bits, exponent in range, a
+// finite) makes the product an exact D128 and reuses add. The slow path keeps the
+// product as a wide U256, widens a to U256, aligns, adds and finalizes once, so the
+// whole fma rounds exactly once.
 
 package decimal128
 

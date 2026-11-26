@@ -1,8 +1,8 @@
-// Financial functions built on the decimal128 core ops. They live in the core
-// (not just the wrapper) so every platform shares one byte-identical
-// implementation. These are compositions of the IEEE primitives, not IEEE
-// operations themselves, so they expose no rounding/flag ladder — a single
-// ties-to-even (_tte) form each. compound(x, n) is (1+x)^n.
+// Financial functions built on the decimal128 Core ops. They live in Core (not the
+// wrapper) so every platform shares one byte-identical implementation. These are
+// compositions of the IEEE primitives, not IEEE operations themselves, so they expose
+// no rounding/flag ladder -- a single ties-to-even (_tte) form each. compound(x, n) is
+// (1+x)^n (d128_compound); rootn is the integer root.
 
 package decimal128
 

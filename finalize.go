@@ -1,8 +1,10 @@
-// The finalize/rounding engine: turn an (sign, qExp, coefficient, residue) tuple
-// into a canonical decimal128, applying precision rounding, the underflow/
-// subnormal diversion, overflow, and clamping. finalize_128_ctxnull/finalize_256_ctxnull
-// are the general entries; finalizeAddSubFnz/finalizeSwampedFnz are the FE
-// fast-path entries with narrowed, provable contracts.
+// The rounding/packing heart: take a sign, exponent, coefficient and a residue
+// describing already-discarded digits, then round (per the rounding direction), handle
+// the overflow / underflow / subnormal regions, signal the IEEE 754 flags on a
+// (possibly nil) context, and pack a canonical D128. finalize_128_ctxnull and
+// finalize_256_ctxnull are the general entries; finalizeAddSubFnz_128_ctxnull and
+// finalizeSwampedFnz_128_ctxnull are the FE fast-path entries with narrowed, provable
+// contracts.
 
 package decimal128
 

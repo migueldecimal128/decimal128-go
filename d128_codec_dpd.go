@@ -1,7 +1,7 @@
-// DPD (Densely Packed Decimal) encode/decode for decimal128. On-the-wire format:
-// 1 sign bit + 17-bit combination field G + 110-bit trailing significand T
-// encoded as 11 declets of 10 bits. The declet codec is Cowlishaw's branchless
-// dpd2bcd/bcd2dpd.
+// DPD (Densely Packed Decimal) encode/decode for decimal128, plus a decimal64-DPD
+// decode (d128_from_dpd64). The on-the-wire format is 1 sign bit + 17-bit combination
+// field G + 110-bit trailing significand T encoded as 11 declets of 10 bits. The
+// declet codec is Cowlishaw's branchless dpd2bcd/bcd2dpd.
 
 package decimal128
 

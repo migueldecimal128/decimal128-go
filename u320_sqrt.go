@@ -1,8 +1,7 @@
-// Exact integer floor square root for the D48 sqrt (Swift U320Sqrt.swift; kept
-// separate from the shared u256 sqrtFloorScaled, which d128_sqrt keeps using
-// unchanged). Scales the coefficient into a 95-96 digit integer R whose exact
-// floor root is 48 digits, then classifies the exact remainder. The root is the
-// Newton isqrt_320 kernel.
+// Exact integer floor square root for the D48 sqrt, separate from U256Sqrt's
+// sqrtFloorScaled, which d128_sqrt keeps using. Scales the coefficient into a 95-96
+// digit integer R whose exact floor root is 48 digits, then classifies the exact
+// remainder. The root is the Newton isqrt_320 kernel (U320Isqrt).
 
 package decimal128
 

@@ -1,6 +1,10 @@
-// Integer-to-ASCII digit rendering (the print substrate). The renderers fill
-// decimal digits into a raw byte pointer via reciprocal-multiply digit extraction
-// without bounds checking.
+// Integer-to-ASCII rendering for the print routines: 64- and 128-bit magnitudes via
+// reciprocal-multiply digit extraction, 8 digits at a time, then the tail. Print-only,
+// despite the name. The magic constants divide by powers of 10; dwords are signed
+// int64, and sign-bit-set constants are written from the unsigned value they
+// represent.
+//
+// In Go: the renderers fill digits through a raw byte pointer without bounds checking.
 
 package decimal128
 

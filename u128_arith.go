@@ -1,11 +1,11 @@
-// The U128 core vocabulary (PrimitiveLayer.md §5, D5): the uniformly named
-// operations through which core expresses all 128-bit arithmetic. The limb forms
-// (xDw0, xDw1, … — operand-major, ascending per D23) are the uniform API.
+// The U128 core vocabulary (PrimitiveLayer.md Section 5, D5): the uniformly named
+// operations through which core code expresses all 128-bit arithmetic. The limb forms
+// (xDw0, xDw1, ... -- operand-major, ascending per D23) are the uniform-API
+// implementations. Arithmetic is wrapping (bit-bucket semantics), matching the native
+// &+ / &- / &* expressions these calls replace in core.
 //
-// Swift reconstructs a native UInt128 and uses &+/&-/&* (wrapping). Go has no
-// uint128, so the bodies synthesize from uint64 limbs via math/bits
-// (Add64/Sub64/Mul64 carry chains) — the Java/Kotlin model. Arithmetic is
-// wrapping (bit-bucket semantics).
+// In Go: there is no uint128, so the bodies synthesize from uint64 limbs via math/bits
+// (Add64/Sub64/Mul64 carry chains), the Java/Kotlin model.
 
 package decimal128
 

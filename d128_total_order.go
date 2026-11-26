@@ -1,11 +1,9 @@
-// IEEE 754 §5.10 totalOrder.
-//
-// Ordering (least to greatest):
+// IEEE 754 Section 5.10 totalOrder, and totalOrderMag on |x| and |y|. Ordering (least
+// to greatest):
 //   -qNaN < -sNaN < -Inf < -finite < -0 < +0 < +finite < +Inf < +sNaN < +qNaN
-//
-// Within a finite cohort: for positives, smaller exponent comes first
-// (1.0 < 1.00); for negatives, larger exponent comes first (-1.00 < -1.0).
-// NaNs are ordered by payload (sign-adjusted).
+// Within a finite cohort: for positives, smaller exponent comes first (1.0 < 1.00);
+// for negatives, larger exponent comes first (-1.00 < -1.0). NaNs are ordered by
+// payload (sign-adjusted).
 
 package decimal128
 

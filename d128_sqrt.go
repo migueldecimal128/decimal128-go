@@ -1,6 +1,8 @@
-// IEEE 754-2019 §5.4.1 squareRoot. Special classes per §6.3; the finite nonzero
-// magnitude is an exact integer square root in the unsigned-integer domain
-// (sqrtFloorScaled), correctly rounded for every input.
+// IEEE 754-2019 Section 5.4.1 squareRoot. The dispatch handles the special classes;
+// the finite non-zero magnitude is computed by sqrtMagnitudeFnz_ctxnull as an exact
+// integer square root in the unsigned-integer domain, which yields a correctly-rounded
+// result for every input. An exact (perfect-square) result is then reduced toward the
+// GDAS ideal exponent floor(Q/2).
 
 package decimal128
 

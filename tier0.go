@@ -1,9 +1,10 @@
-// Tier 0 (PrimitiveLayer.md §3.2): the irreducible scalar operations. Dword
-// operands cross the uniform API as signed int64 (the JVM `long` contract,
-// D-G2); the `u` op prefix marks the unsigned semantics the bodies apply by
-// casting to uint64. Where a scalar maps to a math/bits intrinsic (Mul64,
-// LeadingZeros64) the body uses it; otherwise it casts and uses native uint64
-// operators.
+// Tier 0 (PrimitiveLayer.md Section 3.2): the irreducible scalar operations. Dword
+// operands cross the uniform API as signed int64 (the JVM's 64-bit contract); the u op
+// prefix marks the unsigned semantics the bodies apply via bit-pattern
+// reinterpretation (D11).
+//
+// In Go: where a scalar maps to a math/bits intrinsic (Mul64, LeadingZeros64) the body
+// uses it; otherwise it casts to uint64 and uses native operators (D-G2).
 
 package decimal128
 

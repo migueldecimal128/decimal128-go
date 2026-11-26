@@ -1,7 +1,8 @@
-// Trailing-zero decimal-digit stripping (D18, relocated by D20). Bulk removal
-// goes through the exact-remainder Barrett pow10 unit in chunks of
-// const_BARRETT_POW10_MAX; a nonzero remainder ends the bulk phase and the dword tail
-// helper finishes the job.
+// Trailing-zero decimal-digit stripping (D18, relocated by D20): strips up to
+// maxToStrip trailing zero digits from a nonzero c. Bulk removal goes through the
+// exact-remainder Barrett pow10 unit in chunks of BARRETT_POW10_MAX; a nonzero
+// remainder ends the bulk phase and the dword tail helper finishes the job. The
+// trailing-zero count is platform-local (D21).
 
 package decimal128
 

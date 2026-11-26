@@ -1,7 +1,9 @@
-// The add/sub/subAbs family (PrimitiveLayer.md §4.2), D9 segment grammar
-// op_result_operands. Limb forms (operand-major, ascending per D23) are the
-// uniform API. Swift reconstructs UInt128 halves; Go runs uint64 carry/borrow
-// chains via math/bits.
+// The U256 add/sub/subAbs family (PrimitiveLayer.md Section 4.2), in the D9 full
+// segment grammar op_result_operands. The limb forms (operand-major, ascending per D23)
+// are the uniform-API implementations. Unlike the wrapping U128 vocabulary, the add/sub
+// forms trap where the result must fit: overflow on add, underflow on sub.
+//
+// In Go: uint64 carry/borrow chains via math/bits.
 
 package decimal128
 

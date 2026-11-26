@@ -1,7 +1,10 @@
-// IEEE 754-2019 §5.3.1 roundToIntegral{*} and §5.4.1 convertToInteger{*} (Int64).
-// suppressInexact distinguishes the roundToIntegral{Rule} forms (no inexact
-// signal) from the Exact/SignalInexact forms. The Int64 out-of-range / non-finite
-// sentinel is Int64.min (Intel bid128_to_int64_* convention).
+// IEEE 754-2019 Section 5.3.1 roundToIntegral{*} and Section 5.4.1 convertToInteger{*}
+// for int64 and uint64, plus the range predicates fitsInt64 / fitsUInt64.
+// roundToIntegral comes in all five directions, each as a quiet form (no flags), a
+// _ctx form, and a SignalInexact form that raises inexact when the result differs from
+// the operand; in the shared body, suppressInexact tells them apart. The int64
+// out-of-range / non-finite sentinel is math.MinInt64 (the Intel bid128_to_int64_*
+// convention).
 
 package decimal128
 
@@ -11,6 +14,10 @@ const minInt64 int64 = -1 << 63
 
 // --- roundToIntegral{Rule} (value form; no inexact signal) ---
 
+// Returns the integral value with the same sign as `x`, rounded
+// using `tiesToEven`. Equivalent to `roundToIntegral_rnd(.ROUND_TIES_TO_EVEN)`.
+//
+// IEEE 754-2019 Section 5.3.1 `roundToIntegralTiesToEven`.
 func d128_roundToIntegral(x d128) d128 {
 	return roundToIntegral128_ctxnull(x, const_ROUND_TIES_TO_EVEN, nil, true)
 }

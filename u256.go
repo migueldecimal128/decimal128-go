@@ -1,7 +1,9 @@
-// The U256 magnitude type (PrimitiveLayer.md §4.2) — four signed int64 limbs,
-// ascending (D23, D-G2). Swift carries native UInt128 lo/hi halves; Go
-// reconstructs them as u128 values when convenient (§3.4 primitive-interior
-// spelling). The shift family lives here, matching the Swift file layout.
+// U256 -- a pure 256-bit arithmetic magnitude (PrimitiveLayer.md Section 4.2): four
+// signed int64 dwords, dw0 least significant (D23/D28). The field list (names, types,
+// order) is the uniform cross-platform surface.
+//
+// In Go: the u128 halves are reconstructed where convenient (a primitive-interior
+// spelling, PrimitiveLayer.md Section 3.4). The shift family lives here, as in Swift.
 
 package decimal128
 

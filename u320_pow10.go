@@ -1,8 +1,7 @@
-// Comparisons against 10^p for the D48 domain (D48GoWorkOrder.md; Swift
-// U320Pow10.swift): the digit count, and the residue of a remainder against a
-// power of ten or a general divisor. Every power of ten is read at its own
-// width from regions A/B (10^0..10^77, pow10) or region C (10^78..10^96,
-// const_POW10_320_DW); none is built as a five-limb value.
+// Comparisons against 10^p for the D48 domain: the digit count, and the residue of a
+// remainder against a power of ten or a general divisor. Every power of ten is read at
+// its own width from regions A/B (10^0..10^77) or region C (10^78..10^96); none is
+// built as a five-limb value.
 
 package decimal128
 

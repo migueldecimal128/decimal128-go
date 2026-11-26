@@ -1,14 +1,14 @@
-// The 256-bit-dividend reciprocal-multiply divPow10 (1..77): x / 10^pow10 with a
-// classified residue, for coefficients wider than 128 bits. Mirrors
-// divPow10_q128res_128_recipmul one tier up (PrimitiveLayer.md D47): strip the
-// k-1 low bits (the 2^(k-1) factor of 10^k, tracked as sticky), multiply the
-// 256-bit dividend by the tabulated 5^k reciprocal M (<= 256 bits, two 128-bit
-// limbs) into a 512-bit product, shift right by S, then read the round and
-// sticky bits to classify the residue. Backs div_256_pow10_q128res for hi != 0.
-// Tables in div_pow10_recipmul256_tables.go.
+// 256-bit-dividend recipmul divPow10 kernel (PrimitiveLayer.md D47), pow10 1..77,
+// returning the 128-bit quotient and a classified residue: divPow10_q128res_128_recipmul
+// (D45) one tier up. Strip k-1 low bits (the 2^(k-1) factor of 10^k), multiply the U256
+// dividend by the 5^k reciprocal M (<= 256 bits) into a 512-bit product, shift right by
+// S = s256 + 256, classify the residue. M = ceil(2^S / 5^k); stripping one bit short of
+// 2^k keeps the half-ulp bit as the product LSB. Backs the Core div_256_pow10_q128res
+// dispatch for coefficients wider than 128 bits; the tables are in
+// DivPow10RecipMul256Tables.
 //
-// Go has no native 128-bit, so the 512-bit product is synthesized from uint64
-// limbs (math/bits) via a comba, mirroring the Java/Kotlin model.
+// In Go: there is no native 128-bit type, so the 512-bit product is synthesized from
+// uint64 limbs (math/bits) via a comba, as in Java and Kotlin.
 
 package decimal128
 

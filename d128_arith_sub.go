@@ -1,8 +1,9 @@
-// Subtract. The general body (d128_subtract_rnd_ctxnull) underlies the
-// _tte/_rnd/_ctx forms. Aligned same-exponent differences take a flag-free fast
-// path; otherwise subtract negates y and delegates to add's FNZ×FNZ helper
-// (addFnzFnz_rnd_ctxnull, see d128_arith_add.go), except the unaligned
-// unlike-sign magnitude subtract handled here by subMagUnalignedFnzFnz.
+// IEEE 754 subtract. Subtraction is add-with-negated-y after its own aligned fast
+// path: `d128_subtract_rnd_ctxnull` is the general body under the `_tte`, `_rnd` and
+// `_ctx` forms. The aligned magnitude-add subcase delegates to add's
+// `addFnzFnz_rnd_ctxnull`; the unaligned magnitude-subtract kernel
+// `subMagUnalignedFnzFnz_rnd_ctxnull` lives here, and add's unlike-sign path reaches it
+// too.
 
 package decimal128
 

@@ -1,8 +1,8 @@
-// The 128- and 256-bit exact-remainder Barrett pow10 unit (D20). Divides a u128
-// or u256 by 10^k (k in 1..const_BARRETT_POW10_MAX) returning the full quotient and the
-// exact 64-bit remainder. 10^k = 2^k · 5^k: the 2^k part is a shift, the 5^k part
-// is Barrett reduction over the tabulated reciprocals. The residue-classifying
-// entries (the Quot*Residue shape, D17/D42) wrap the exact-remainder forms.
+// The 128- and 256-bit exact-remainder Barrett pow10 unit (D20). Divides a U128 or U256
+// by 10^k (k in 1..BARRETT_POW10_MAX), returning the full quotient and the exact 64-bit
+// remainder. 10^k = 2^k * 5^k: the 2^k part is a shift, the 5^k part is Barrett
+// reduction over the tabulated reciprocals. The residue-classifying entries (D42) wrap
+// these for the Core divPow10 dispatch.
 
 package decimal128
 

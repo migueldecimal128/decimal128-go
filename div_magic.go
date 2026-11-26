@@ -1,6 +1,6 @@
-// Magic divide-by-10: a fixed-reciprocal multiply (the barrettStep pattern with a
-// hardcoded constant), returning quotient and the residue of the single discarded
-// digit.
+// The magic divide-by-10 (D19): a fixed-reciprocal high-word multiply (the barrettStep
+// pattern with a hardcoded constant), returning the quotient and the residue of the
+// single discarded digit.
 
 package decimal128
 

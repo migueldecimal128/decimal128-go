@@ -1,16 +1,12 @@
-// IEEE 754-2019 §5.3.1 minimum / maximum operations.
-//
-// Eight variants from three orthogonal axes:
+// IEEE 754-2019 Section 5.3.1 minimum / maximum operations. Eight variants from three
+// orthogonal axes:
 //   - min vs max
 //   - numeric vs not (numeric: NaN treated as missing operand)
 //   - magnitude vs not (compare |x| vs |y|; numeric value used to break ties)
-//
-// On magnitude ties, the numeric-value comparison determines the result
-// (e.g. minimumMagnitude(-3, +3) returns -3). On numeric-value ties between
-// distinct cohorts or signed zeros, totalOrder breaks the tie.
-//
-// These quiet free functions are value-only (flag-free even on signaling NaN);
-// flag observability is provided by the _ctx forms in d128_ctx_minmax.go.
+// On magnitude ties, the numeric-value comparison determines the result (e.g.
+// minimumMagnitude(-3, +3) returns -3). On numeric-value ties between distinct cohorts
+// or signed zeros, totalOrder breaks the tie. These quiet forms raise no flags, even on
+// a signaling NaN; the _ctx forms in D128CtxMinMax add flag observability.
 
 package decimal128
 

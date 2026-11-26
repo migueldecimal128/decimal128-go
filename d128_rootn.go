@@ -1,9 +1,9 @@
-// IEEE 754-2019 §9.2 rootn(x, n) = x^(1/n) for integer n ≠ 0. When |n| is a
-// power of two, take √ repeatedly (then the reciprocal for n < 0): in D48 with
-// one final round when that is two or more steps, as single D128 operations for
-// n = 2 and n = ±1. Otherwise |x|^(1/n) via pow, restoring the sign for odd n.
-// Correctly rounded except in the documented 1-ulp gap near 1 in directed modes
-// (CrossPlatformArchitecture.md §12, "Transcendental accuracy").
+// IEEE 754-2019 Section 9.2 rootn(x, n) = x^(1/n) for integer n != 0. When |n| is a
+// power of two, take sqrt repeatedly (then the reciprocal for n < 0): in D48 with one
+// final round when that is two or more steps, as single D128 operations for n = 2 and
+// n = +-1. Otherwise 10^(log10|x| / n) in D48, rounded once with the result's sign
+// (rootnGeneral_d48). Correctly rounded except in the documented 1-ulp gap near 1 in
+// directed modes (CrossPlatformArchitecture.md Section 12, "Transcendental Accuracy").
 
 package decimal128
 

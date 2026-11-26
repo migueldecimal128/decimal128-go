@@ -1,19 +1,18 @@
-// Residue classification (PrimitiveLayer.md §4; CrossPlatformArchitecture.md
-// §6.4 — the Residue D17 type). A residue classifies the remainder discarded by
-// a truncating operation, relative to half an ulp of the kept result:
+// A residue classifies the remainder discarded by a truncating operation, relative to
+// half an ulp of the kept result (D17):
+//   RESIDUE_EXACT   (0) -- remainder == 0
+//   RESIDUE_LT_HALF (1) -- 0 < 2*remainder < divisor
+//   RESIDUE_HALF    (2) -- 2*remainder == divisor
+//   RESIDUE_GT_HALF (3) -- 2*remainder > divisor
+// Encoding: bit 1 is the round bit (>= half), bit 0 is the sticky bit -- residue =
+// (round << 1) | sticky. A residue is a plain 2-bit int defined at the primitive layer
+// (no wrapper type). The primitive layer holds the constants and the classifiers over
+// 64- and 128-bit remainders; the Core helpers merge residues, map them through
+// subtraction, and classify 256-bit remainders and decades. Direction semantics -- what
+// a residue means under a rounding mode -- live in Round.
 //
-//	const_RESIDUE_EXACT   (0) — remainder == 0
-//	const_RESIDUE_LT_HALF (1) — 0 < 2·remainder < divisor
-//	const_RESIDUE_HALF    (2) — 2·remainder == divisor
-//	const_RESIDUE_GT_HALF (3) — 2·remainder > divisor
-//
-// Encoding: bit 1 is the round bit (≥ half), bit 0 is the sticky bit —
-// residue = (round << 1) | sticky. A residue is a 2-bit value carried in an int,
-// a bit bucket like the dwords (no zero-cost wrapper, so no core wraps it).
-//
-// The _pow10 forms (which look up the 10^pow10 divisor in the pow10 tables) land
-// with PrimitiveTables in a later increment; the _divisor and digit forms here
-// need no tables.
+// In Go: the constants are const_RESIDUE_*; the value is carried in an int, a bit
+// bucket like the dwords (there is no zero-cost wrapper).
 
 package decimal128
 

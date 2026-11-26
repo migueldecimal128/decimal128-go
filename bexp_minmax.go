@@ -1,6 +1,8 @@
-// Conservative lower/upper bounds on the binary exponent of a finite decimal
-// value x = coeff·10^qExp, via fixed-point qExp·log2(10). Branch-free; the
-// returned bounds always bracket the true binary exponent.
+// Conservative lower/upper bounds on the binary exponent of a finite decimal value
+// x = coeff * 10^qExp, via fixed-point qExp * log2(10), with log2(10) bracketed by
+// LOG2_10_FLOOR / 2^32 and LOG2_10_CEIL / 2^32. Branch-free; the bounds always bracket
+// the true binary exponent. Used by the magnitude compare to bracket two values by
+// binary exponent before an exact alignment.
 
 package decimal128
 

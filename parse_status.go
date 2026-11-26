@@ -1,9 +1,11 @@
-// The parse status codes (CrossPlatformArchitecture.md §6). SCREAMING_SNAKE per §6.2.
+// Internal status returned by the numeric parser, mapped to an InvalidCause / result
+// by the caller. A diagnostic tag only; the integer values are not load-bearing.
+//
+// In Go: not load-bearing or boundary-crossing, so (unlike the SCREAMING boundary
+// enums) it is unexported camelCase.
 
 package decimal128
 
-// parseStatus is the internal parse outcome. Not load-bearing or boundary-
-// crossing, so (unlike the SCREAMING boundary enums) it is unexported camelCase.
 type parseStatus int
 
 const (

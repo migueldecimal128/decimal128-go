@@ -1,10 +1,9 @@
-// exp(x) = e^x and exp10(x) = 10^x. The finite non-zero magnitude is computed
-// in the 48-digit D48 domain (d128_exp_d48.go: range reduction, a [12/12] Padé
-// approximation, three squarings), then rounded once into D128 with the
-// caller's rounding. A non-special exp/exp10 result is irrational, hence always
-// INEXACT. Correctly rounded except in the documented 1-ulp gap for arguments
-// very close to 0 in directed modes (CrossPlatformArchitecture.md §12,
-// "Transcendental accuracy").
+// exp(x) = e^x and exp10(x) = 10^x. The finite non-zero magnitude is computed in the
+// 48-digit D48 domain (D128ExpD48: range reduction, a [12/12] Pade approximation,
+// three squarings), then rounded once into D128 with the caller's rounding. A
+// non-special exp/exp10 result is irrational, hence always INEXACT. Correctly rounded
+// except in the documented 1-ulp gap for arguments very close to 0 in directed modes
+// (CrossPlatformArchitecture.md Section 12, "Transcendental Accuracy").
 
 package decimal128
 

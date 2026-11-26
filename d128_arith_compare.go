@@ -1,8 +1,10 @@
-// IEEE 754-2019 §5.6.1 comparison. Two tri-state cores (quiet / signaling) over
-// Comparison754, the 22 required Boolean predicates, and the Int CMP754_* shims.
-// NaN operands yield UNORDERED; the quiet cores signal invalid only on sNaN, the
-// signaling cores on any NaN. The magnitude compare (cmpMagFnzFnz) lives in
-// compare_mag.go.
+// IEEE 754-2019 Section 5.6.1 comparison: the quiet and signaling tri-state cores over
+// Comparison754, the int boundary shims (`d128_comparePartial`,
+// `d128_comparePartialSignaling`), the FNZ magnitude compare `cmpMagFnzFnz` (shared
+// with the other operations) with its binary-exponent bracket pre-check, and the
+// Boolean comparison predicates, each in a quiet and a `_ctx` form. NaN operands yield
+// UNORDERED; the quiet cores signal invalid only on sNaN, the signaling cores on any
+// NaN.
 
 package decimal128
 

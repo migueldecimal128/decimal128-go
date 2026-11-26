@@ -1,8 +1,7 @@
-// Divide. The general body dispatches the finite/zero/infinity/NaN cases; the
-// FNZ÷FNZ path scales the numerator to 34 extra digits, runs the core 256÷128
-// divide with residue, strips exact trailing zeros toward the preferred
-// exponent, then finalizes. (divideInteger and remainder land later — they need
-// roundToIntegral and fma.)
+// IEEE 754 divide, divideInteger, and remainderTrunc / remainderNear.
+// `d128_divide_rnd_ctxnull` is the general divide body; the `_tte`, `_rnd` and `_ctx`
+// forms fold in rounding/context. divideInteger and the remainders never round: the
+// result is exact or NaN.
 
 package decimal128
 

@@ -1,8 +1,8 @@
-// D48 fused multiply-add (round-half-even): x·y + c in one rounding step (Swift
-// D48Fma.swift). The product is an exact u320 (<= 96 digits); d48_addWide
-// aligns it against c and rounds once. Sizing (D48ZigPrototypeWorkOrder.md §2):
-// the like-sign sum stays < 10^96, the unlike-sign shift fills u320 to 96
-// digits. No FMA exact-alignment shortcut (G-6).
+// D48 fused multiply-add (round-half-even): x * y + c in one rounding step. The
+// product is an exact U320 (<= 96 digits); d48_addWide aligns it against c and rounds
+// once. Sizing (D48ZigPrototypeWorkOrder.md Section 2): the like-sign sum stays
+// < 10^96, the unlike-sign shift fills U320 to 96 digits. There is no exact-alignment
+// shortcut: it measured no gain.
 
 package decimal128
 

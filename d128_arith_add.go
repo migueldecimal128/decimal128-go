@@ -1,8 +1,9 @@
-// Add. The general body (d128_add_rnd_ctxnull) underlies the _tte/_rnd/_ctx
-// forms. Aligned same-exponent sums take a flag-free fast path; otherwise the
-// FNZ×FNZ paths align (near) or use the unaligned far-exponent helpers with the
-// FE finalize entries. The shared addFnzFnz_rnd_ctxnull helper is also reached
-// from subtract's negate-and-add path (see d128_arith_sub.go).
+// IEEE 754 add. `d128_add_rnd_ctxnull` is the general body; the `_tte` (bare), `_rnd`,
+// and `_ctx` forms are thin specializations of it (rounding/ctx folded in). Its fast
+// entry returns directly, with no rounding and no flags, for the same sign, the same
+// exponent and a coefficient sum that fits in 112 bits; every other case tail-calls
+// the out-of-line `d128_add_slow_rnd_ctxnull`. Subtract reaches the shared
+// `addFnzFnz_rnd_ctxnull` for its aligned magnitude-add subcase.
 
 package decimal128
 

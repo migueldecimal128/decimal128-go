@@ -1,14 +1,14 @@
-// The rounding direction selector and the rounding-decision logic. Round is a
-// plain selector (code 0..4); the decision functions are branchless packed-table
-// lookups. needsRoundUp maps the signed-space direction into magnitude space
-// (forMagnitude) and reads the ulp-bias table.
+// The five IEEE 754 rounding directions, and the rounding decisions as branchless
+// packed-table lookups: needsRoundUp (round/sticky -> up?), the magnitude-space
+// direction remap (forMagnitude), and the overflow/underflow collapse predicates. The
+// direction codes are load-bearing: they index the packed bit-tables
+// (CrossPlatformArchitecture.md Section 6.4), so do not reorder.
+//
+// In Go: a typed int constant: the codes are true compile-time constants, and the
+// named type keeps the selector out of plain-int positions.
 
 package decimal128
 
-// round is a C-style int-backed selector: the constants are true compile-time
-// constants (immutable, foldable immediates), and the named type keeps the
-// selector out of plain-int positions. The values are load-bearing: they index
-// the packed bit-tables below (§6.4), so do not reorder.
 type round int
 
 const (
