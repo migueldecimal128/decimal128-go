@@ -1,7 +1,7 @@
 // IEEE 754 add. `d128_add_rnd_ctxnull` is the general body; the `_tte` (bare), `_rnd`,
 // and `_ctx` forms are thin specializations of it (rounding/ctx folded in). Its fast
 // entry returns directly, with no rounding and no flags, for the same sign, the same
-// exponent and a coefficient sum that fits in 112 bits; every other case tail-calls
+// exponent and coefficients that each fit in 64 bits; every other case tail-calls
 // the out-of-line `d128_add_slow_rnd_ctxnull`. Subtract reaches the shared
 // `addFnzFnz_rnd_ctxnull` for its aligned magnitude-add subcase.
 
@@ -13,20 +13,17 @@ func d128_add_ctx(x, y d128, ctx *context) d128 {
 	return d128_add_rnd_ctxnull(x, y, ctx.round, ctx)
 }
 
-// Fast entry: same sign and exponent, and a coefficient sum that fits in 112
-// bits, returns directly (no rounding, no flags). Every other case tail-calls
-// the out-of-line d128_add_slow_rnd_ctxnull.
+// Fast entry: same sign and exponent, and both coefficients below 2^64,
+// returns directly (no rounding, no flags). Every other case tail-calls the
+// out-of-line d128_add_slow_rnd_ctxnull.
 func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
-	xHi49 := d128_hi49(x)
-	yHi49 := d128_hi49(y)
-	hi49Sum := xHi49 + yHi49
-	if ushr_64_64(hi49Sum, 48) == 0 && d128_qExpAndSignBit(x) == d128_qExpAndSignBit(y) {
-		// Same sign and exponent; sum fits in 112 bits (+ carry). No rounding.
-		// Add y's coefficient (its top 15 bits are zero) straight onto x's full
-		// UBD word: qExpAndSign(x) rides along untouched, so there is no
-		// re-extract/rebuild. The guard above (hi49Sum < 2^48) guarantees the
-		// coefficient carry cannot reach the qExp/sign field.
-		sum := add_128_128x128(x.ubdLo64, x.ubdHi64, y.ubdLo64, yHi49)
+	// One test: (xHi ^ yHi) | xHi << 15 == 0 holds exactly when the high words
+	// are equal (same qExp and sign) and hold no coefficient bits, which also
+	// excludes the non-finite values (their coefficient bits are set).
+	if ((x.ubdHi64 ^ y.ubdHi64) | (x.ubdHi64 << 15)) == 0 {
+		// The sum is below 2^65, so canonical; its carry goes into x's high
+		// word, whose qExp and sign carry through unchanged.
+		sum := add_128_128x128(x.ubdLo64, x.ubdHi64, y.ubdLo64, 0)
 		return d128{ubdLo64: sum.dw0, ubdHi64: sum.dw1}
 	}
 	return d128_add_slow_rnd_ctxnull(x, y, rounding, ctxnull)
@@ -42,18 +39,25 @@ func d128_add_slow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 	// exceeds the ~80 inline budget, so it does not collapse into Add (unlike the
 	// native ports' operators); the split's Go payoff is hot/cold code separation.
 	// The go:noinline directive pins that contract.
-	// Aligned unlike-sign magnitude subtraction, hoisted ahead of the cold
+	// Aligned operands whose coefficients sum below 2^112, ahead of the cold
 	// ladder. hi49Sum fitting in 48 bits proves BOTH operands finite (nonfinite
-	// coefficients are >= 10^34, whose bit 48 is set), and the sole caller is
-	// the fast entry, which consumed every aligned like-sign pair with this
-	// property — so the signs differ here. Both coefficients are canonical and
-	// unscaled, so the difference is < 10^34 and packs raw; swapped means
-	// |x| < |y|, and the result takes the larger magnitude's sign. Mirror of
-	// the subtract fast path's subAbs arm.
+	// coefficients are >= 10^34, whose bit 48 is set). The same sign adds the
+	// two-word coefficients; otherwise the signs differ and the magnitudes
+	// subtract. Both coefficients are canonical and unscaled, so the
+	// difference is < 10^34 and packs raw; swapped means |x| < |y|, and the
+	// result takes the larger magnitude's sign. Mirror of the subtract slow
+	// entry's first test.
 	xHi49 := d128_hi49(x)
 	yHi49 := d128_hi49(y)
 	hi49Sum := xHi49 + yHi49
 	if ushr_64_64(hi49Sum, 48) == 0 && d128_qExp(x) == d128_qExp(y) {
+		if d128_qExpAndSignBit(x) == d128_qExpAndSignBit(y) {
+			// Same sign, coefficients of up to 112 bits: the two-word sum.
+			// hi49Sum < 2^48, so the sum never carries into the qExp field and
+			// x's qExp and sign carry through in its high word.
+			sum := add_128_128x128(x.ubdLo64, x.ubdHi64, y.ubdLo64, yHi49)
+			return d128{ubdLo64: sum.dw0, ubdHi64: sum.dw1}
+		}
 		verify("", func() bool { return d128_signFlag(x) != d128_signFlag(y) })
 		ds := subAbs_d128swap_128x128(x.ubdLo64, xHi49, y.ubdLo64, yHi49)
 		if isZero_bool_128(ds.diffDw0, ds.diffDw1) {
