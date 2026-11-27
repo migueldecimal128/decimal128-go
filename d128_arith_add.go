@@ -22,8 +22,10 @@ import "math/bits"
 // The result is at the smaller exponent, the preferred one, so it is exact; one
 // that needs 35 digits or more (it would round) goes to the slow entry. An exact
 // cancellation is +0, as rounding ties to even gives. Then coefficients of up to
-// two words whose exponents are close enough that the scaled operand still has at
-// most 34 digits: the same arithmetic in two words, also exact.
+// two words at one exponent: the two-word sum, or the two-word difference chosen
+// by selects, which cannot reach 10^34. Then those whose exponents are close enough
+// that the scaled operand still has at most 34 digits: the same arithmetic in two
+// words, also exact.
 func d128_add_tte(x, y d128) d128 {
 	xh, yh := x.ubdHi64, y.ubdHi64
 	if ((xh ^ yh) | (xh << 15)) == 0 {
@@ -98,6 +100,23 @@ func d128_add_tte(x, y d128) d128 {
 			if bw != 0 {
 				return d128{ubdLo64: int64(lo), ubdHi64: xh>>49<<49 | int64(hi)}
 			}
+		} else if (xh^yh)>>50 == 0 {
+			// One exponent, opposite signs: the two-word difference that did
+			// not borrow, chosen by selects. Its magnitude is at most the
+			// larger operand's, below 10^34, so it is exact: no digit count and
+			// no 10^34 check. An exact zero is +0.
+			lo, b := bits.Sub64(uint64(x.ubdLo64), uint64(y.ubdLo64), 0)
+			hi, bw := bits.Sub64(uint64(xh)&(1<<49-1), uint64(yh)&(1<<49-1), b)
+			m := -bw // all ones when y's magnitude was the larger
+			nlo, nb := bits.Sub64(0, lo, 0)
+			nhi, _ := bits.Sub64(0, hi, nb)
+			lo = lo&^m | nlo&m
+			hi = hi&^m | nhi&m
+			sign := (xh ^ int64(bw)<<49) & (1 << 49)
+			if hi|lo == 0 {
+				sign = 0 // an exact cancellation: +0
+			}
+			return d128{ubdLo64: int64(lo), ubdHi64: xh>>50<<50 | sign | int64(hi)}
 		}
 		al, ah, bl, bh := uint64(x.ubdLo64), xh, uint64(y.ubdLo64), yh
 		if xh < yh {

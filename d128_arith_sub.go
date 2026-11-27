@@ -88,6 +88,23 @@ func d128_subtract_tte(x, y d128) d128 {
 			if bw != 0 {
 				return d128{ubdLo64: int64(lo), ubdHi64: xh>>49<<49 | int64(hi)}
 			}
+		} else if (xh^yh)>>50 == 0 {
+			// One exponent, opposite signs: the two-word difference that did
+			// not borrow, chosen by selects. Its magnitude is at most the
+			// larger operand's, below 10^34, so it is exact: no digit count and
+			// no 10^34 check. An exact zero is +0.
+			lo, b := bits.Sub64(uint64(x.ubdLo64), uint64(y.ubdLo64), 0)
+			hi, bw := bits.Sub64(uint64(xh)&(1<<49-1), uint64(yh)&(1<<49-1), b)
+			m := -bw // all ones when y's magnitude was the larger
+			nlo, nb := bits.Sub64(0, lo, 0)
+			nhi, _ := bits.Sub64(0, hi, nb)
+			lo = lo&^m | nlo&m
+			hi = hi&^m | nhi&m
+			sign := (xh ^ int64(bw)<<49) & (1 << 49)
+			if hi|lo == 0 {
+				sign = 0 // an exact cancellation: +0
+			}
+			return d128{ubdLo64: int64(lo), ubdHi64: xh>>50<<50 | sign | int64(hi)}
 		}
 		al, ah, bl, bh := uint64(x.ubdLo64), xh, uint64(y.ubdLo64), yh
 		if xh < yh {
