@@ -7,6 +7,8 @@
 
 package decimal128
 
+import "math/bits"
+
 // `d128_fma_rnd_ctxnull` is the general body; the `_tte` (bare), `_rnd`,
 // and `_ctx` forms are thin specializations.
 func d128_fma_rnd_ctxnull(x, y, a d128, rounding round, ctxnull *context) d128 {
@@ -27,8 +29,196 @@ func d128_fma_rnd_ctxnull(x, y, a d128, rounding round, ctxnull *context) d128 {
 	return fmaSlow_rnd_ctxnull(x, y, a, prod.hi(), prod.lo(), rounding, ctxnull)
 }
 
+// d128_fma_tte is the ties-to-even x * y + a without a context, in one frame for
+// finite nonzero operands (GoUbdKernelGapWorkOrder.md, FMA). The product p is
+// formed exactly (up to 68 digits); m is the operand with the larger exponent and
+// n the other, G apart.
+//
+//   - Exact alignment (digits(m) + G <= 76): m * 10^G +- n is exact in four words
+//     at n's exponent, and is rounded once to 34 digits: half of 10^j is added and
+//     one reciprocal division by 10^j (divRemPow10_256) gives the quotient; a zero
+//     remainder is a tie (made even). An exact cancellation is +0.
+//   - The addend far above the product (m = a, past exact alignment): a is scaled
+//     to 34 digits and p / 10^d, rounded half up the same way, is added or
+//     subtracted, as in d128_add_tte's rounding path; a sum of 35 digits is
+//     rounded once more from the truncated sum and whether anything below is
+//     nonzero.
+//
+// A product of at most 112 bits is packed and added by d128_add_tte. Everything
+// else (specials, zeros, a product far above the addend, results that leave the
+// format or lose a digit) goes to d128_fma_rnd_ctxnull, which gives the same value
+// there.
 func d128_fma_tte(x, y, a d128) d128 {
-	return d128_fma_rnd_ctxnull(x, y, a, const_ROUND_TIES_TO_EVEN, nil)
+	xl, xh, yl, yh := uint64(x.ubdLo64), uint64(d128_hi49(x)), uint64(y.ubdLo64), uint64(d128_hi49(y))
+	al, ah := uint64(a.ubdLo64), uint64(d128_hi49(a))
+	if !bothFinite(x, y) || !d128_isFIN(a) || xl|xh == 0 || yl|yh == 0 || al|ah == 0 {
+		return d128_fma_rnd_ctxnull(x, y, a, const_ROUND_TIES_TO_EVEN, nil)
+	}
+	// The product, four words.
+	g00, p0 := bits.Mul64(xl, yl)
+	g01, f01 := bits.Mul64(xl, yh)
+	g10, f10 := bits.Mul64(xh, yl)
+	g11, f11 := bits.Mul64(xh, yh)
+	p1, k1 := bits.Add64(g00, f01, 0)
+	p1, k2 := bits.Add64(p1, f10, 0)
+	p2, k1 := bits.Add64(g01, g10, k1)
+	p2, k2 = bits.Add64(p2, f11, k2)
+	p3 := g11 + k1 + k2
+	ep := d128_qExp(x) + d128_qExp(y)
+	ea := d128_qExp(a)
+	pSign := (x.ubdHi64 ^ y.ubdHi64) & (1 << 49)
+	aSign := a.ubdHi64 & (1 << 49)
+	if p3|p2 == 0 && p1>>48 == 0 && ep >= -6176 && ep <= 6111 {
+		return d128_add_tte(d128{ubdLo64: int64(p0), ubdHi64: int64(ep)<<50 | pSign | int64(p1)}, a)
+	}
+	dp := digitLen_u256(p0, p1, p2, p3)
+	da := digitLen_u128(al, ah)
+
+	var s0, s1, s2, s3 uint64 // the exact sum, or a scaled to 34 digits
+	var exp int
+	var sign int64
+	if ep >= ea && dp+ep-ea <= 76 || ea > ep && da+ea-ep <= 76 {
+		// Exact alignment: m * 10^G at n's exponent, then +- n.
+		var m0, m1, m2, m3, n0, n1, n2, n3 uint64
+		var g int
+		var mSign int64
+		if ep >= ea {
+			m0, m1, m2, m3, n0, n1, mSign, g, exp = p0, p1, p2, p3, al, ah, pSign, ep-ea, ea
+		} else {
+			m0, m1, n0, n1, n2, n3, mSign, g, exp = al, ah, p0, p1, p2, p3, aSign, ea-ep, ep
+		}
+		nSign := (pSign ^ aSign) ^ mSign
+		if g > 0 {
+			sc := mulPow10_256_256(int64(m0), int64(m1), int64(m2), int64(m3), g)
+			m0, m1, m2, m3 = uint64(sc.dw0), uint64(sc.dw1), uint64(sc.dw2), uint64(sc.dw3)
+		}
+		var c uint64
+		sign = mSign
+		if pSign == aSign {
+			s0, c = bits.Add64(m0, n0, 0)
+			s1, c = bits.Add64(m1, n1, c)
+			s2, c = bits.Add64(m2, n2, c)
+			s3 = m3 + n3 + c
+		} else {
+			s0, c = bits.Sub64(m0, n0, 0)
+			s1, c = bits.Sub64(m1, n1, c)
+			s2, c = bits.Sub64(m2, n2, c)
+			s3, c = bits.Sub64(m3, n3, c)
+			if c != 0 {
+				// n was the larger: negate, take its sign.
+				s0, c = bits.Sub64(0, s0, 0)
+				s1, c = bits.Sub64(0, s1, c)
+				s2, c = bits.Sub64(0, s2, c)
+				s3, _ = bits.Sub64(0, s3, c)
+				sign = nSign
+			}
+			if s0|s1|s2|s3 == 0 && exp >= -6176 && exp <= 6111 {
+				return d128{ubdHi64: int64(exp) << 50} // an exact cancellation: +0
+			}
+		}
+		// Rounded once to 34 digits.
+		if j := digitLen_u256(s0, s1, s2, s3) - 34; j > 0 {
+			if exp+j < -6176 {
+				// The subnormal range removes more digits than the precision does.
+				return d128_fma_rnd_ctxnull(x, y, a, const_ROUND_TIES_TO_EVEN, nil)
+			}
+			h0, h1, h2, h3 := pow10_4(j)
+			h0, h1, h2, h3 = h0>>1|h1<<63, h1>>1|h2<<63, h2>>1|h3<<63, h3>>1
+			s0, c = bits.Add64(s0, h0, 0)
+			s1, c = bits.Add64(s1, h1, c)
+			s2, c = bits.Add64(s2, h2, c)
+			s3 += h3 + c
+			var r0, r1, r2, r3 uint64
+			s0, s1, r0, r1, r2, r3 = divRemPow10_256(s0, s1, s2, s3, j)
+			s2, s3 = 0, 0 // the quotient is below 10^34 + 1
+			if r0|r1|r2|r3 == 0 {
+				s0 &^= 1 // a tie: the even neighbour
+			}
+			exp += j
+			if s1 == uint64(pow10_128_dw1(34)) && s0 == uint64(pow10_128_dw0(34)) {
+				s0, s1, exp = uint64(pow10_128_dw0(33)), uint64(pow10_128_dw1(33)), exp+1
+			}
+		}
+	} else if ea > ep {
+		// The addend far above the product: a scaled to 34 digits, p / 10^d
+		// rounded half up beside it (d > 42 here, so the quotient is small; past
+		// 76, p is below half a unit and only says the result is inexact).
+		m := 34 - da
+		t0, t1 := uint64(pow10_128_dw0(m)), uint64(pow10_128_dw1(m))
+		s1, s0 = bits.Mul64(al, t0)
+		s1 += al*t1 + ah*t0
+		exp = ea - m
+		d := exp - ep
+		var q0, q1, h0, h1, h2, h3 uint64
+		rbZero, rbBelowHalf, rbHalf := false, false, false
+		if d <= 76 {
+			h0, h1, h2, h3 = pow10_4(d)
+			h0, h1, h2, h3 = h0>>1|h1<<63, h1>>1|h2<<63, h2>>1|h3<<63, h3>>1
+			var c uint64
+			t0, c := bits.Add64(p0, h0, 0)
+			t1, c := bits.Add64(p1, h1, c)
+			t2, c := bits.Add64(p2, h2, c)
+			t3 := p3 + h3 + c
+			var r0, r1, r2, r3 uint64
+			q0, q1, r0, r1, r2, r3 = divRemPow10_256(t0, t1, t2, t3, d)
+			rbZero = r0|r1|r2|r3 == 0
+			_, lt := bits.Sub64(r0, h0, 0)
+			_, lt = bits.Sub64(r1, h1, lt)
+			_, lt = bits.Sub64(r2, h2, lt)
+			_, lt = bits.Sub64(r3, h3, lt)
+			rbBelowHalf = lt != 0
+			rbHalf = r0 == h0 && r1 == h1 && r2 == h2 && r3 == h3
+		}
+		sign = aSign // a scaled is the larger magnitude
+		var c uint64
+		if pSign == aSign {
+			s0, c = bits.Add64(s0, q0, 0)
+			s1 += q1 + c
+			if _, bw := bits.Sub64(s0, uint64(pow10_128_dw0(34)), 0); true {
+				if _, bw = bits.Sub64(s1, uint64(pow10_128_dw1(34)), bw); bw == 0 {
+					// 35 digits: rounded once more, at exp + 1, from the
+					// truncated sum and whether anything below it is nonzero.
+					if d <= 76 && rbBelowHalf {
+						s0, c = bits.Sub64(s0, 1, 0)
+						s1 -= c
+					}
+					sticky := d > 76 || !rbHalf
+					var u uint64
+					s0, s1, u, _ = divRemPow10_recip128(s0, s1, 1)
+					if u > 5 || u == 5 && (sticky || s0&1 != 0) {
+						s0, c = bits.Add64(s0, 1, 0)
+						s1 += c
+					}
+					exp++
+				} else if rbZero {
+					s0 &^= 1 // a tie: the even neighbour
+				}
+			}
+		} else {
+			s0, c = bits.Sub64(s0, q0, 0)
+			s1 -= q1 + c
+			if rbZero {
+				s0, c = bits.Add64(s0, s0&1, 0) // halfway: the even one
+				s1 += c
+			}
+			_, bw := bits.Sub64(uint64(pow10_128_dw0(33)), s0, 0)
+			if _, bw = bits.Sub64(uint64(pow10_128_dw1(33)), s1, bw); bw == 0 {
+				// At most 10^33: a digit was lost to the scale.
+				return d128_fma_rnd_ctxnull(x, y, a, const_ROUND_TIES_TO_EVEN, nil)
+			}
+		}
+	} else {
+		return d128_fma_rnd_ctxnull(x, y, a, const_ROUND_TIES_TO_EVEN, nil)
+	}
+	if s3|s2 != 0 || exp < -6176 || exp > 6111 {
+		return d128_fma_rnd_ctxnull(x, y, a, const_ROUND_TIES_TO_EVEN, nil)
+	}
+	if _, bw := bits.Sub64(s0, uint64(pow10_128_dw0(34)), 0); true {
+		if _, bw = bits.Sub64(s1, uint64(pow10_128_dw1(34)), bw); bw == 0 {
+			return d128_fma_rnd_ctxnull(x, y, a, const_ROUND_TIES_TO_EVEN, nil)
+		}
+	}
+	return d128{ubdLo64: int64(s0), ubdHi64: int64(exp)<<50 | sign | int64(s1)}
 }
 func d128_fma_rnd(x, y, a d128, rnd round) d128 { return d128_fma_rnd_ctxnull(x, y, a, rnd, nil) }
 func d128_fma_ctx(x, y, a d128, ctx *context) d128 {
