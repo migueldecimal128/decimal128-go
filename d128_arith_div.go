@@ -5,8 +5,188 @@
 
 package decimal128
 
+import "math/bits"
+
+// d128_divide_tte is the ties-to-even divide without a context, in one frame for a
+// one-word divisor (GoUbdKernelGapWorkOrder.md L2). Every other case (a special or
+// zero operand, a two-word divisor, an exponent that leaves the format, a quotient
+// that rounds up to 10^34) goes to d128_divide_rnd_ctxnull, which gives the same
+// value there.
+//
+//   - A power-of-ten divisor moves the point: the dividend, stripped of up to
+//     digits(y) - 1 trailing zeros toward the preferred exponent.
+//   - Otherwise the dividend is scaled by 10^k so that the quotient has exactly 34
+//     digits (k from the digit counts and one branch-free compare), half of the
+//     divisor is added, and the division is two steps of two words by one. The
+//     rounded quotient is then the truncated one; a remainder equal to the half
+//     means the division was exact (the quotient is stripped back toward the
+//     preferred exponent), and a zero remainder with an even divisor is a tie
+//     (made even).
+//   - The two steps divide by 32-bit halves on the hardware divider for a
+//     divisor below 2^32, and otherwise by the Moller-Granlund reciprocal
+//     (vReciprocal_64_64_mgNewton, no divide): bits.Div64 is a software routine
+//     on arm64.
 func d128_divide_tte(x, y d128) d128 {
-	return d128_divide_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
+	a, xhi, b := uint64(x.ubdLo64), uint64(d128_hi49(x)), uint64(y.ubdLo64)
+	if !bothFinite(x, y) || d128_hi49(y) != 0 || b == 0 || a|xhi == 0 {
+		return d128_divide_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
+	}
+	signBit := (x.ubdHi64 ^ y.ubdHi64) & (1 << 49) // the quotient's sign, at bit 49
+	exp := d128_qExp(x) - d128_qExp(y)             // the preferred exponent
+	db := digitLen_word(b)
+
+	if b == uint64(pow10_128_dw0(db-1)) {
+		// A power of ten.
+		q0, q1, e := a, xhi, exp-(db-1)
+		if db > 1 {
+			ss := strip_s128sc_128(int64(a), int64(xhi), db-1)
+			q0, q1, e = uint64(ss.strippedDw0), uint64(ss.strippedDw1), e+int(ss.stripCount)
+		}
+		if e < -6176 || e > 6111 {
+			return d128_divide_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
+		}
+		return d128{ubdLo64: int64(q0), ubdHi64: int64(e)<<50 | signBit | int64(q1)}
+	}
+
+	// An exact quotient of one-word operands, without the long division
+	// (GoUbdKernelGapWorkOrder.md L3). With b = 2^tb * 5^fb * g, b divides
+	// a * 10^j for some j exactly when g divides a; the least such j is then
+	// max(tb - twos(a), fb - fives(a), 0), and a * 10^j / b is the result at j
+	// places below the preferred exponent, already stripped. An inexact division
+	// leaves at the test of g.
+	if xhi == 0 {
+		tb := bits.TrailingZeros64(b)
+		fb, g := fives_64(b >> uint(tb))
+		if a%g == 0 {
+			fa := fivesUpTo_128(a, 0, fb)
+			j := max(tb-bits.TrailingZeros64(a), fb-fa, 0)
+			if j <= 19 {
+				if hi, lo := bits.Mul64(a, uint64(pow10_128_dw0(j))); hi == 0 {
+					if e := exp - j; e >= -6176 && e <= 6111 {
+						return d128{ubdLo64: int64(lo / b), ubdHi64: int64(e)<<50 | signBit}
+					}
+				}
+			}
+		}
+	}
+
+	// The dividend scaled by 10^k, three words, with k such that the quotient has
+	// 34 digits: lt is 1 when the dividend's leading digits are below the
+	// divisor's once both are aligned.
+	var n0, n1, n2 uint64
+	var k int
+	if xhi == 0 {
+		// One-word dividend: whichever coefficient is shorter is scaled by the
+		// difference in digits, the other by 10^0.
+		e := db - digitLen_word(a)
+		ea, eb := e, -e
+		if ea < 0 {
+			ea = 0
+		}
+		if eb < 0 {
+			eb = 0
+		}
+		ah, al := bits.Mul64(a, uint64(pow10_128_dw0(ea)))
+		bh, bl := bits.Mul64(b, uint64(pow10_128_dw0(eb)))
+		_, lt := bits.Sub64(al, bl, 0)
+		_, lt = bits.Sub64(ah, bh, lt)
+		k = 33 + e + int(lt)
+		m, p := a, k
+		if k > 38 {
+			// Past the last 128-bit power: a has at most digits(b) - 4 digits
+			// then, and a * 10^(k - 38) fits one word.
+			m, p = a*uint64(pow10_128_dw0(k-38)), 38
+		}
+		t0, t1 := uint64(pow10_128_dw0(p)), uint64(pow10_128_dw1(p))
+		var h0, l1, c uint64
+		h0, n0 = bits.Mul64(m, t0)
+		n2, l1 = bits.Mul64(m, t1)
+		n1, c = bits.Add64(h0, l1, 0)
+		n2 += c
+	} else {
+		// Two-word dividend: it is the longer by e >= 0 digits, and the divisor
+		// scaled by 10^e still fits two words.
+		e := digitLen_int_128(int64(a), int64(xhi)) - db
+		t0, t1 := uint64(pow10_128_dw0(e)), uint64(pow10_128_dw1(e))
+		bh, bl := bits.Mul64(b, t0)
+		bh += b * t1
+		_, lt := bits.Sub64(a, bl, 0)
+		_, lt = bits.Sub64(xhi, bh, lt)
+		k = 33 - e + int(lt)
+		t0, t1 = uint64(pow10_128_dw0(k)), uint64(pow10_128_dw1(k))
+		h00, l00 := bits.Mul64(a, t0)
+		h01, l01 := bits.Mul64(a, t1)
+		h10, l10 := bits.Mul64(xhi, t0)
+		var c1, c2 uint64
+		n0 = l00
+		n1, c1 = bits.Add64(h00, l01, 0)
+		n1, c2 = bits.Add64(n1, l10, 0)
+		n2 = h01 + h10 + xhi*t1 + c1 + c2
+	}
+	half := b >> 1
+	var c uint64
+	n0, c = bits.Add64(n0, half, 0)
+	n1, c = bits.Add64(n1, 0, c)
+	n2 += c
+
+	// The quotient is below 2^113, so n2 < b: each step's quotient is one word.
+	var q1, q0, rem uint64
+	if b>>32 == 0 {
+		// 32 bits at a time: each partial dividend is below b * 2^32.
+		w := n2<<32 | n1>>32
+		qa := w / b
+		w = (w-qa*b)<<32 | n1&(1<<32-1)
+		qb := w / b
+		w = (w-qb*b)<<32 | n0>>32
+		q1 = qa<<32 | qb
+		qa = w / b
+		w = (w-qa*b)<<32 | n0&(1<<32-1)
+		qb = w / b
+		q0 = qa<<32 | qb
+		rem = w - qb*b
+	} else {
+		s := uint(bits.LeadingZeros64(b))
+		d := b << s
+		v := vReciprocal_64_64_mgNewton(d)
+		u2 := n2<<s | n1>>(64-s)
+		u1 := n1<<s | n0>>(64-s)
+		st := divRem_q64r64_128x64x64_v_mg(int64(u2), int64(u1), int64(d), int64(v))
+		q1 = uint64(st.quotDw0)
+		st = divRem_q64r64_128x64x64_v_mg(st.remDw0, int64(n0<<s), int64(d), int64(v))
+		q0, rem = uint64(st.quotDw0), uint64(st.remDw0)>>s
+	}
+
+	e := exp - k
+	if rem == half {
+		// Exact: the zeros the scale put in go, as far as the preferred exponent.
+		// q * b = x * 10^k, so q has k - j trailing zeros to strip, with j the
+		// least power for which b divides x * 10^j (see the one-word test above):
+		// one exact division by 10^(k - j).
+		tb := bits.TrailingZeros64(b)
+		fb, _ := fives_64(b >> uint(tb))
+		tx := bits.TrailingZeros64(a)
+		if a == 0 {
+			tx = 64 + bits.TrailingZeros64(xhi)
+		}
+		j := max(tb-tx, fb-fivesUpTo_128(a, xhi, fb), 0)
+		q0, q1 = divExactPow10_128(q0, q1, k-j)
+		e = exp - j
+	} else if rem == 0 && b&1 == 0 {
+		q0 &^= 1 // a tie: the even neighbour
+	}
+	if q1 == uint64(pow10_128_dw1(34)) && q0 == uint64(pow10_128_dw0(34)) || e < -6176 || e > 6111 {
+		return d128_divide_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
+	}
+	return d128{ubdLo64: int64(q0), ubdHi64: int64(e)<<50 | signBit | int64(q1)}
+}
+
+// digitLen_word is the number of decimal digits of c (0 for 0): the estimate from
+// the bit length is the count or one short, and it is short exactly when
+// c - 10^t does not borrow.
+func digitLen_word(c uint64) int {
+	t := (bits.Len64(c) * 1233) >> 12
+	_, b := bits.Sub64(c, uint64(pow10_128_dw0(t)), 0)
+	return t + 1 - int(b)
 }
 func d128_divide_rnd(x, y d128, rnd round) d128 { return d128_divide_rnd_ctxnull(x, y, rnd, nil) }
 func d128_divide_ctx(x, y d128, ctx *context) d128 {
@@ -362,4 +542,85 @@ func remainderNearFnzFnz(x, y d128) d128 {
 		return decimalFNZ_128(sign, e, hr.dw0, hr.dw1)
 	}
 	return remResult(d128_signFlag(x), e, r)
+}
+
+// fives_64 returns how many times 5 divides n (n != 0) and n without those
+// factors. n is a multiple of 5 exactly when n times the inverse of 5 modulo 2^64
+// is at most floor((2^64 - 1) / 5), and that product is then n / 5.
+func fives_64(n uint64) (int, uint64) {
+	c := 0
+	for {
+		m := n * 0xCCCCCCCCCCCCCCCD
+		if m > 0x3333333333333333 {
+			return c, n
+		}
+		n, c = m, c+1
+	}
+}
+
+// fivesUpTo_128 returns how many times 5 divides (hi:lo), which is not zero, up
+// to limit: the 128-bit form of fives_64's test.
+func fivesUpTo_128(lo, hi uint64, limit int) int {
+	c := 0
+	for c < limit {
+		// m = (hi:lo) * (2^128 inverse of 5), modulo 2^128.
+		mh, ml := bits.Mul64(lo, 0xCCCCCCCCCCCCCCCD)
+		mh += lo*0xCCCCCCCCCCCCCCCC + hi*0xCCCCCCCCCCCCCCCD
+		if mh > 0x3333333333333333 || mh == 0x3333333333333333 && ml > 0x3333333333333333 {
+			return c
+		}
+		lo, hi, c = ml, mh, c+1
+	}
+	return c
+}
+
+// const_INV5POW_128[(s<<1)+0..1] is the inverse of 5^s modulo 2^128, lo/hi dwords,
+// for s in [0, 34]; the rest is padding for the index mask.
+var const_INV5POW_128 = [128]int64{
+	1, 0, -3689348814741910323, -3689348814741910324,
+	-8116567392432202711, 2951479051793528258, 2066035336255469781, 7968993439842526298,
+	-3276141747490816367, 5283147502710415582, 6723469279985657373, -2632719314199827207,
+	8723391485480952121, -4215892677581875765, -1944670517645719899, -4532527350258285477,
+	-4078282918271054303, -906505470051657096, -8194354213138031507, -7559998723494152066,
+	5739826786856214345, 5866697884784990233, 1147965357371242869, 8552037206440818693,
+	3918941886216158897, -5668290188195656908, -6594909252240588867, 2555690777102778941,
+	6059715779035702873, 511138155420555788, 8590640785290961221, -3587121183657799166,
+	-1971220657683718079, -717424236731559834, -4083592946278653939, 7235212782137508679,
+	-4506067403997641111, -2242306258314408588, 2788135333942382101, -7827158881146702364,
+	-3131721747953433903, -8944129405713161120, -8005041979074507427, 5589871748341188422,
+	5777689233668919161, -2571374465073672639, -2533810968008126491, -7892972522498555175,
+	3182586621140285025, -1578594504499711035, 636517324228057005, -315718900899942207,
+	127303464845611401, 7315553849303832205, -3663888121772788043, -2226238044881143883,
+	-8111475253838378255, -445247608976228777, -1622295050767675651, 3600299292946664567,
+	3364889804588375193, -6658637770894487733, 8051675590401495685, -1331727554178897547,
+	1610335118080299137, 7112352118648041137, -7056630605867760819, 5111819238471518550,
+	-5100674935915462487, -6356333781789516937, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 0,
+}
+
+// divExactPow10_128 returns (hi:lo) / 10^s for a quotient known to be exact, s in
+// [0, 34]: the factor 2^s is a shift, and the factor 5^s a multiply by its inverse
+// modulo 2^128.
+func divExactPow10_128(lo, hi uint64, s int) (uint64, uint64) {
+	sh := uint(s)
+	lo = lo>>sh | hi<<(64-sh)
+	hi >>= sh
+	i0 := uint64(const_INV5POW_128[(s<<1)&127])
+	i1 := uint64(const_INV5POW_128[((s<<1)|1)&127])
+	qh, ql := bits.Mul64(lo, i0)
+	qh += lo*i1 + hi*i0
+	return ql, qh
 }
