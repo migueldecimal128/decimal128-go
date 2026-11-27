@@ -8,10 +8,10 @@ package decimal128
 import "math/bits"
 
 // d128_divide_tte is the ties-to-even divide without a context, in one frame for a
-// one-word divisor (GoUbdKernelGapWorkOrder.md L2). Every other case (a special or
-// zero operand, a two-word divisor, an exponent that leaves the format, a quotient
-// that rounds up to 10^34) goes to d128_divide_rnd_ctxnull, which gives the same
-// value there.
+// one-word divisor (GoUbdKernelGapWorkOrder.md L2); everything else goes to
+// divideSlow_tte, which takes a two-word divisor in one more frame. Every other case (a special or zero operand, an exponent that
+// leaves the format, a quotient that rounds up to 10^34) goes to
+// d128_divide_rnd_ctxnull, which gives the same value there.
 //
 //   - A power-of-ten divisor moves the point: the dividend, stripped of up to
 //     digits(y) - 1 trailing zeros toward the preferred exponent.
@@ -29,7 +29,7 @@ import "math/bits"
 func d128_divide_tte(x, y d128) d128 {
 	a, xhi, b := uint64(x.ubdLo64), uint64(d128_hi49(x)), uint64(y.ubdLo64)
 	if !bothFinite(x, y) || d128_hi49(y) != 0 || b == 0 || a|xhi == 0 {
-		return d128_divide_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
+		return divideSlow_tte(x, y)
 	}
 	signBit := (x.ubdHi64 ^ y.ubdHi64) & (1 << 49) // the quotient's sign, at bit 49
 	exp := d128_qExp(x) - d128_qExp(y)             // the preferred exponent
@@ -178,6 +178,151 @@ func d128_divide_tte(x, y d128) d128 {
 		return d128_divide_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
 	}
 	return d128{ubdLo64: int64(q0), ubdHi64: int64(e)<<50 | signBit | int64(q1)}
+}
+
+// divideSlow_tte is what d128_divide_tte's one-word path does not take. A two-word
+// divisor (20 to 34 digits) with finite nonzero operands has the same scale, bias and reading of the remainder as the
+// one-word path, with the division as two Moller-Granlund 3-by-2 steps (Alg. 5),
+// written in: as calls they pass the quotient and remainder words through memory.
+// Everything else goes to d128_divide_rnd_ctxnull. It is a function of its own,
+// reached from the one-word path's fallback, so that the one-word path is unchanged:
+// written into d128_divide_tte, the two-word path slowed the one-word bands (P-fin
+// WD 13.9 -> 15.0 ns, PT 2.48 -> 2.70).
+func divideSlow_tte(x, y d128) d128 {
+	a, xhi, b, yhi := uint64(x.ubdLo64), uint64(d128_hi49(x)), uint64(y.ubdLo64), uint64(d128_hi49(y))
+	if !bothFinite(x, y) || yhi == 0 || a|xhi == 0 {
+		return d128_divide_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
+	}
+	signBit := (x.ubdHi64 ^ y.ubdHi64) & (1 << 49)
+	exp := d128_qExp(x) - d128_qExp(y)
+	// The digit counts of x and y (digitLen_u128, written in: Go does not
+	// inline it here).
+	nx, ny := bits.Len64(a), 64+bits.Len64(yhi)
+	if xhi != 0 {
+		nx = 64 + bits.Len64(xhi)
+	}
+	tx, ty := (nx*1233)>>12, (ny*1233)>>12
+	_, bx := bits.Sub64(a, uint64(pow10_128_dw0(tx)), 0)
+	_, bx = bits.Sub64(xhi, uint64(pow10_128_dw1(tx)), bx)
+	_, by := bits.Sub64(b, uint64(pow10_128_dw0(ty)), 0)
+	_, by = bits.Sub64(yhi, uint64(pow10_128_dw1(ty)), by)
+	dx, dy := tx+1-int(bx), ty+1-int(by)
+	// lt is 1 when x's leading digits are below y's once aligned: the
+	// shorter coefficient is scaled by the difference, the other by 10^0.
+	e := dy - dx
+	ex, ey := e, -e
+	if ex < 0 {
+		ex = 0
+	}
+	if ey < 0 {
+		ey = 0
+	}
+	p0, p1 := uint64(pow10_128_dw0(ex)), uint64(pow10_128_dw1(ex))
+	xh, xl := bits.Mul64(a, p0)
+	xh += a*p1 + xhi*p0
+	p0, p1 = uint64(pow10_128_dw0(ey)), uint64(pow10_128_dw1(ey))
+	yh, yl := bits.Mul64(b, p0)
+	yh += b*p1 + yhi*p0
+	_, lt := bits.Sub64(xl, yl, 0)
+	_, lt = bits.Sub64(xh, yh, lt)
+	k := 33 + e + int(lt)
+
+	// n = x * 10^k, four words. Past the last 128-bit power, x takes the
+	// excess first: it has at most dy - 4 digits then, so the product
+	// still fits two words.
+	ml, mh, kt := a, xhi, k
+	if k > 38 {
+		p0, p1 = uint64(pow10_128_dw0(k-38)), uint64(pow10_128_dw1(k-38))
+		mh, ml = bits.Mul64(a, p0)
+		mh += a*p1 + xhi*p0
+		kt = 38
+	}
+	t0, t1 := uint64(pow10_128_dw0(kt)), uint64(pow10_128_dw1(kt))
+	h00, n0 := bits.Mul64(ml, t0)
+	h01, l01 := bits.Mul64(ml, t1)
+	h10, l10 := bits.Mul64(mh, t0)
+	h11, l11 := bits.Mul64(mh, t1)
+	n1, c1 := bits.Add64(h00, l01, 0)
+	n1, c2 := bits.Add64(n1, l10, 0)
+	n2, c1 := bits.Add64(h01, h10, c1)
+	n2, c2 = bits.Add64(n2, l11, c2)
+	n3 := h11 + c1 + c2
+
+	// Biased by half the divisor.
+	hl, hh := b>>1|yhi<<63, yhi>>1
+	var c uint64
+	n0, c = bits.Add64(n0, hl, 0)
+	n1, c = bits.Add64(n1, hh, c)
+	n2, c = bits.Add64(n2, 0, c)
+	n3 += c
+
+	// Normalized: the divisor's top bit set (s >= 15, since yhi < 2^49),
+	// the dividend shifted with it. The quotient is below 2^113, so the
+	// first step's quotient word is below 2^49 and its precondition
+	// (u2:u1) < (v1:v0) holds.
+	s := uint(bits.LeadingZeros64(yhi))
+	rs := 64 - s
+	v1, v0 := yhi<<s|b>>rs, b<<s
+	vv := vReciprocal_64_128_mgNewton(v1, v0)
+	var q1, q0, r1, r0 uint64
+	u2, u1, u0 := n3<<s|n2>>rs, n2<<s|n1>>rs, n1<<s|n0>>rs
+	for step := 0; step < 2; step++ {
+		// (q : qf) = vv * u2 + (u2 : u1); the remainder against q + 1,
+		// corrected once (q) and, rarely, once more.
+		q, qf := bits.Mul64(vv, u2)
+		qf, c = bits.Add64(qf, u1, 0)
+		q += u2 + c
+		th, tl := bits.Mul64(q, v0)
+		th += q * v1
+		r0, c = bits.Sub64(u0, tl, 0)
+		r1, _ = bits.Sub64(u1, th, c)
+		r0, c = bits.Sub64(r0, v0, 0)
+		r1, _ = bits.Sub64(r1, v1, c)
+		q++
+		if r1 >= qf {
+			q--
+			r0, c = bits.Add64(r0, v0, 0)
+			r1, _ = bits.Add64(r1, v1, c)
+		}
+		if r1 > v1 || r1 == v1 && r0 >= v0 {
+			q++
+			r0, c = bits.Sub64(r0, v0, 0)
+			r1, _ = bits.Sub64(r1, v1, c)
+		}
+		if step == 0 {
+			q1, u2, u1, u0 = q, r1, r0, n0<<s
+		} else {
+			q0 = q
+		}
+	}
+	remLo, remHi := r0>>s|r1<<rs, r1>>s
+	e2 := exp - k
+	if remLo == hl && remHi == hh {
+		// Exact: q * y = x * 10^k, so q has k - j trailing zeros to
+		// strip, j the least power for which y divides x * 10^j.
+		ty := bits.TrailingZeros64(b)
+		if b == 0 {
+			ty = 64 + bits.TrailingZeros64(yhi)
+		}
+		tx := bits.TrailingZeros64(a)
+		if a == 0 {
+			tx = 64 + bits.TrailingZeros64(xhi)
+		}
+		yol, yoh := b>>uint(ty)|yhi<<(64-uint(ty)), yhi>>uint(ty)
+		if ty >= 64 {
+			yol, yoh = yhi>>uint(ty-64), 0
+		}
+		fy := fivesUpTo_128(yol, yoh, 64)
+		j := max(ty-tx, fy-fivesUpTo_128(a, xhi, fy), 0)
+		q0, q1 = divExactPow10_128(q0, q1, k-j)
+		e2 = exp - j
+	} else if remLo|remHi == 0 && b&1 == 0 {
+		q0 &^= 1 // a tie: the even neighbour
+	}
+	if q1 == uint64(pow10_128_dw1(34)) && q0 == uint64(pow10_128_dw0(34)) || e2 < -6176 || e2 > 6111 {
+		return d128_divide_rnd_ctxnull(x, y, const_ROUND_TIES_TO_EVEN, nil)
+	}
+	return d128{ubdLo64: int64(q0), ubdHi64: int64(e2)<<50 | signBit | int64(q1)}
 }
 
 // digitLen_word is the number of decimal digits of c (0 for 0): the estimate from

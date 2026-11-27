@@ -163,3 +163,27 @@ func vReciprocal_64_64_mgNewton(d uint64) uint64 {
 	_, c := bits.Add64(l, d, 0)
 	return v3 - (h + d + c)
 }
+
+// vReciprocal_64_128_mg for the normalized 2-word divisor (d1:d0), started from the
+// divide-free vReciprocal_64_64_mgNewton: the same value, no 128/64 divide.
+func vReciprocal_64_128_mgNewton(d1, d0 uint64) uint64 {
+	v := vReciprocal_64_64_mgNewton(d1)
+	p := d1*v + d0
+	if p < d0 {
+		v = v - 1
+		if p >= d1 {
+			v = v - 1
+			p = p - d1
+		}
+		p = p - d1
+	}
+	t1, t0 := bits.Mul64(d0, v)
+	p = p + t1
+	if p < t1 {
+		v = v - 1
+		if (p >= d1) && ((p > d1) || (t0 >= d0)) {
+			v = v - 1
+		}
+	}
+	return v
+}
