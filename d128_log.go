@@ -21,6 +21,12 @@ func d128_ln_ctx(x d128, ctx *context) d128 {
 // the caller's rounding. Correctly rounded, except within the documented 1-ulp
 // gap (CrossPlatformArchitecture.md, "Transcendental accuracy").
 func d128_ln_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: toward zero, then fix the last digit (round05_up.go).
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		t := d128_ln_rnd_ctxnull(x, const_ROUND_TOWARD_ZERO, tz)
+		return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
+	}
 	return logDispatch(x, false, rounding, ctxnull)
 }
 
@@ -33,6 +39,12 @@ func d128_log10_ctx(x d128, ctx *context) d128 {
 }
 
 func d128_log10_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: toward zero, then fix the last digit (round05_up.go).
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		t := d128_log10_rnd_ctxnull(x, const_ROUND_TOWARD_ZERO, tz)
+		return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
+	}
 	return logDispatch(x, true, rounding, ctxnull)
 }
 

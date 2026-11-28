@@ -152,8 +152,10 @@ func toInt64Mode_ctxnull(x Decimal128, r Rounding, ctx *context, exact bool) int
 			return d128_toInt64TowardZeroSignalInexact_ctxnull(x.core, ctx)
 		case TowardPositive:
 			return d128_toInt64TowardPositiveSignalInexact_ctxnull(x.core, ctx)
-		default:
+		case TowardNegative:
 			return d128_toInt64TowardNegativeSignalInexact_ctxnull(x.core, ctx)
+		default:
+			return d128_toInt64SignalInexact_rnd_ctxnull(x.core, r.core(), ctx)
 		}
 	}
 	switch r {
@@ -165,8 +167,10 @@ func toInt64Mode_ctxnull(x Decimal128, r Rounding, ctx *context, exact bool) int
 		return d128_toInt64TowardZero_ctxnull(x.core, ctx)
 	case TowardPositive:
 		return d128_toInt64TowardPositive_ctxnull(x.core, ctx)
-	default:
+	case TowardNegative:
 		return d128_toInt64TowardNegative_ctxnull(x.core, ctx)
+	default:
+		return d128_toInt64_rnd_ctxnull(x.core, r.core(), ctx)
 	}
 }
 
@@ -183,8 +187,10 @@ func toUInt64Mode_ctxnull(x Decimal128, r Rounding, ctx *context, exact bool) ui
 			return d128_toUInt64TowardZeroSignalInexact_ctxnull(x.core, ctx)
 		case TowardPositive:
 			return d128_toUInt64TowardPositiveSignalInexact_ctxnull(x.core, ctx)
-		default:
+		case TowardNegative:
 			return d128_toUInt64TowardNegativeSignalInexact_ctxnull(x.core, ctx)
+		default:
+			return d128_toUInt64SignalInexact_rnd_ctxnull(x.core, r.core(), ctx)
 		}
 	}
 	switch r {
@@ -196,7 +202,9 @@ func toUInt64Mode_ctxnull(x Decimal128, r Rounding, ctx *context, exact bool) ui
 		return d128_toUInt64TowardZero_ctxnull(x.core, ctx)
 	case TowardPositive:
 		return d128_toUInt64TowardPositive_ctxnull(x.core, ctx)
-	default:
+	case TowardNegative:
 		return d128_toUInt64TowardNegative_ctxnull(x.core, ctx)
+	default:
+		return d128_toUInt64_rnd_ctxnull(x.core, r.core(), ctx)
 	}
 }

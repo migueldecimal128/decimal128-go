@@ -31,6 +31,12 @@ func d128_pown_ctx(x d128, n int, ctx *context) d128 {
 // Correctly rounded, except within the documented 1-ulp gap
 // (CrossPlatformArchitecture.md, "Transcendental accuracy").
 func d128_pown_rnd_ctxnull(x d128, n int, rounding round, ctxnull *context) d128 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: toward zero, then fix the last digit (round05_up.go).
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		t := d128_pown_rnd_ctxnull(x, n, const_ROUND_TOWARD_ZERO, tz)
+		return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
+	}
 	if d128_isFIN(x) {
 		if d128_isZER(x) {
 			return pownZER(x, n, ctxnull)

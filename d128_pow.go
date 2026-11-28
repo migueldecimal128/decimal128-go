@@ -37,6 +37,12 @@ func d128_pow_ctx(x, y d128, ctx *context) d128 {
 // Correctly rounded, except within the documented 1-ulp gap
 // (CrossPlatformArchitecture.md, "Transcendental accuracy").
 func d128_pow_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: toward zero, then fix the last digit (round05_up.go).
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		t := d128_pow_rnd_ctxnull(x, y, const_ROUND_TOWARD_ZERO, tz)
+		return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
+	}
 	// Integer exponent → pown. Covers y = 0 (→ 1 for any x), every integer
 	// power, and zero/inf/nan bases with integer y (pown owns those classes).
 	if d128_isExactIntegral(y) {

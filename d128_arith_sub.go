@@ -303,6 +303,10 @@ func d128_subtract_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 			return d128{ubdLo64: (diff.dw0 ^ borrowMask) - borrowMask, ubdHi64: x.ubdHi64 ^ (borrowMask & (1 << 49))}
 		}
 	}
+	if rounding == const_ROUND_05_UP {
+		// Checked here, not in the slow entry, so that entry stays as it was.
+		return d128_subtract05Up_ctxnull(x, y, ctxnull)
+	}
 	return d128_subtract_slow_rnd_ctxnull(x, y, rounding, ctxnull)
 }
 
@@ -429,4 +433,14 @@ func subMagUnalignedFnzFnz_rnd_ctxnull(zSign bool, m, s d128, rounding round, ct
 		zCoeff = sub_128_128x128(zCoeff.dw0, zCoeff.dw1, 1, 0)
 	}
 	return finalizeAddSubFnz_128_ctxnull(zSign, qAlign, zCoeff, res, rounding, ctxnull)
+}
+
+// d128_subtract05Up_ctxnull is the round-05up route for subtract (round05_up.go): toward
+// zero, then fix the last digit.
+//
+//go:noinline
+func d128_subtract05Up_ctxnull(x, y d128, ctxnull *context) d128 {
+	tz := newContextRound(const_ROUND_TOWARD_ZERO)
+	t := d128_subtract_slow_rnd_ctxnull(x, y, const_ROUND_TOWARD_ZERO, tz)
+	return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
 }

@@ -85,6 +85,10 @@ func tokenToRounding(tok string) (Rounding, bool) {
 		return TowardPositive, true
 	case "TOWARD_NEGATIVE":
 		return TowardNegative, true
+	case "AWAY_FROM_ZERO":
+		return AwayFromZero, true
+	case "05_UP":
+		return Round05Up, true
 	default:
 		return 0, false
 	}
@@ -1135,7 +1139,7 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 			return outUnsupported, "non-integer from_uint64 operand"
 		}
 		return wrapCheck(c, NewContext(), FromUInt64(n))
-	case "parse_ctx":
+	case "parse_ctx", "d128_parse_ctx":
 		// Rounding parse: the context's direction, flags into the context.
 		rnd, ok := tokenToRounding(c.rounding)
 		if !ok {
@@ -1143,14 +1147,14 @@ func dispatchWrapper(c *rosettaCase) (outcome, string) {
 		}
 		ctx := NewContextWithRounding(rnd)
 		return wrapCheck(c, ctx, ctx.ParseOrNaN(c.operands[0]))
-	case "round_integral_mode":
+	case "round_integral_mode", "d128_roundToIntegral_ctx":
 		// Quiet round-to-integral in the case's direction (flag-free public form).
 		rnd, ok := tokenToRounding(c.rounding)
 		if !ok {
 			return outUnsupported, "rounding mode not representable"
 		}
 		return wrapDirectedRound(c, rnd)
-	case "to_int64_xmode":
+	case "to_int64_xmode", "d128_toInt64SignalInexact_ctx":
 		// Convert to Int64, signaling inexact, in the case's direction.
 		rnd, ok := tokenToRounding(c.rounding)
 		if !ok {

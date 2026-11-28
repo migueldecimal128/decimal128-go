@@ -311,6 +311,10 @@ func d128_add_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
 		sum := add_128_128x128(x.ubdLo64, x.ubdHi64, y.ubdLo64, 0)
 		return d128{ubdLo64: sum.dw0, ubdHi64: sum.dw1}
 	}
+	if rounding == const_ROUND_05_UP {
+		// Checked here, not in the slow entry, so that entry stays as it was.
+		return d128_add05Up_ctxnull(x, y, ctxnull)
+	}
 	return d128_add_slow_rnd_ctxnull(x, y, rounding, ctxnull)
 }
 
@@ -536,4 +540,14 @@ func digitLen_u128(lo, hi uint64) int {
 	_, b := bits.Sub64(lo, uint64(pow10_128_dw0(t)), 0)
 	_, b = bits.Sub64(hi, uint64(pow10_128_dw1(t)), b)
 	return t + 1 - int(b)
+}
+
+// d128_add05Up_ctxnull is the round-05up route for add (round05_up.go): toward
+// zero, then fix the last digit.
+//
+//go:noinline
+func d128_add05Up_ctxnull(x, y d128, ctxnull *context) d128 {
+	tz := newContextRound(const_ROUND_TOWARD_ZERO)
+	t := d128_add_slow_rnd_ctxnull(x, y, const_ROUND_TOWARD_ZERO, tz)
+	return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
 }

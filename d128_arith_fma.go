@@ -12,6 +12,12 @@ import "math/bits"
 // `d128_fma_rnd_ctxnull` is the general body; the `_tte` (bare), `_rnd`,
 // and `_ctx` forms are thin specializations.
 func d128_fma_rnd_ctxnull(x, y, a d128, rounding round, ctxnull *context) d128 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: toward zero, then fix the last digit (round05_up.go).
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		t := d128_fma_rnd_ctxnull(x, y, a, const_ROUND_TOWARD_ZERO, tz)
+		return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
+	}
 	prod := mul_256_128x128(x.ubdLo64, d128_hi49(x), y.ubdLo64, d128_hi49(y))
 	prodQExp := d128_qExp(x) + d128_qExp(y)
 	prodSignFlag := d128_signFlag(x) != d128_signFlag(y)

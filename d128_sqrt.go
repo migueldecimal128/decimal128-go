@@ -13,6 +13,12 @@ func d128_sqrt_ctx(x d128, ctx *context) d128 {
 }
 
 func d128_sqrt_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: toward zero, then fix the last digit (round05_up.go).
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		t := d128_sqrt_rnd_ctxnull(x, const_ROUND_TOWARD_ZERO, tz)
+		return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
+	}
 	if d128_isFIN(x) {
 		if d128_isZER(x) {
 			// §6.3: squareRoot(±0) = ±0, sign preserved; qExp = floor(Q/2).

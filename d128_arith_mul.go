@@ -175,6 +175,10 @@ func d128_multiply_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128
 			return d128Pack(prodSignFlag, prodQExp, prod.dw0, prod.dw1)
 		}
 	}
+	if rounding == const_ROUND_05_UP {
+		// Checked here, not in the slow entry, so that entry stays as it was.
+		return d128_multiply05Up_ctxnull(x, y, ctxnull)
+	}
 	return d128_multiply_slow_rnd_ctxnull(x, y, rounding, ctxnull)
 }
 
@@ -239,5 +243,19 @@ func d128_square_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
 			return d128Pack(false, prodQExp, prod.dw0, prod.dw1) // a square is non-negative
 		}
 	}
+	if rounding == const_ROUND_05_UP {
+		// Checked here, not in the slow entry, so that entry stays as it was.
+		return d128_multiply05Up_ctxnull(x, x, ctxnull)
+	}
 	return d128_multiply_slow_rnd_ctxnull(x, x, rounding, ctxnull)
+}
+
+// d128_multiply05Up_ctxnull is the round-05up route for multiply (round05_up.go): toward
+// zero, then fix the last digit.
+//
+//go:noinline
+func d128_multiply05Up_ctxnull(x, y d128, ctxnull *context) d128 {
+	tz := newContextRound(const_ROUND_TOWARD_ZERO)
+	t := d128_multiply_slow_rnd_ctxnull(x, y, const_ROUND_TOWARD_ZERO, tz)
+	return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
 }

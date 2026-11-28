@@ -349,6 +349,12 @@ func d128_divideInteger_ctx(x, y d128, ctx *context) d128 {
 }
 
 func d128_divide_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: toward zero, then fix the last digit (round05_up.go).
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		t := d128_divide_rnd_ctxnull(x, y, const_ROUND_TOWARD_ZERO, tz)
+		return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
+	}
 	resultSign := d128_signFlag(x) != d128_signFlag(y)
 	if bothFinite(x, y) {
 		if d128_isNotZER(x) && d128_isNotZER(y) {

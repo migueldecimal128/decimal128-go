@@ -97,8 +97,11 @@ var rosettaArity = map[string]int{
 	"from_int64":                        1,
 	"from_uint64":                       1,
 	"parse_ctx":                         1,
+	"d128_parse_ctx":                    1,
 	"round_integral_mode":               1,
 	"to_int64_xmode":                    1,
+	"d128_toInt64SignalInexact_ctx":     1,
+	"d128_roundToIntegral_ctx":          1,
 	// 2 operands
 	"d128_add_ctx":                         2,
 	"add":                                  2,

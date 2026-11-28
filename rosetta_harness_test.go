@@ -430,7 +430,7 @@ func dispatch(c *rosettaCase) (outcome, string) {
 			return outFail, "non-integer from_uint64 operand"
 		}
 		return checkValueFlags(c, d128_fromUInt64(uint(n)), "")
-	case "parse_ctx":
+	case "parse_ctx", "d128_parse_ctx":
 		// Rounding parse: rounds to 34 digits in the case's mode, raises flags. A
 		// rejected string yields NaN (+ invalid).
 		ctx := newContextRound(roundingFromToken(c.rounding))
@@ -439,7 +439,7 @@ func dispatch(c *rosettaCase) (outcome, string) {
 			z = const_D128_QNAN0
 		}
 		return checkValueFlags(c, z, ctx.exceptionLetters())
-	case "round_integral_mode":
+	case "round_integral_mode", "d128_roundToIntegral_ctx":
 		// Quiet round-to-integral in the case's rounding direction.
 		switch c.rounding {
 		case "TOWARD_NEGATIVE":
@@ -450,10 +450,12 @@ func dispatch(c *rosettaCase) (outcome, string) {
 			return checkUnaryCtx(c, d128_roundToIntegralTowardZero_ctx)
 		case "TIES_TO_AWAY":
 			return checkUnaryCtx(c, d128_roundToIntegralTiesToAway_ctx)
-		default:
+		case "TIES_TO_EVEN":
 			return checkUnaryCtx(c, d128_roundToIntegralTiesToEven_ctx)
+		default:
+			return checkUnaryCtx(c, d128_roundToIntegralSignalInexact)
 		}
-	case "to_int64_xmode":
+	case "to_int64_xmode", "d128_toInt64SignalInexact_ctx":
 		// Convert to Int64, signaling inexact, in the case's rounding direction.
 		switch c.rounding {
 		case "TOWARD_NEGATIVE":
@@ -464,8 +466,13 @@ func dispatch(c *rosettaCase) (outcome, string) {
 			return checkToInt64(c, d128_toInt64TowardZeroSignalInexact_ctxnull)
 		case "TIES_TO_AWAY":
 			return checkToInt64(c, d128_toInt64TiesToAwaySignalInexact_ctxnull)
-		default:
+		case "TIES_TO_EVEN":
 			return checkToInt64(c, d128_toInt64TiesToEvenSignalInexact_ctxnull)
+		default:
+			// The GDAS modes have no named per-mode entry.
+			return checkToInt64(c, func(x d128, ctxnull *context) int64 {
+				return d128_toInt64SignalInexact_rnd_ctxnull(x, ctxnull.round, ctxnull)
+			})
 		}
 	default:
 		// An included op with no dispatch arm is a failure, not a gap (R-7).
@@ -668,6 +675,10 @@ func roundingFromToken(tok string) round {
 		return const_ROUND_TOWARD_POSITIVE
 	case "TOWARD_NEGATIVE":
 		return const_ROUND_TOWARD_NEGATIVE
+	case "AWAY_FROM_ZERO":
+		return const_ROUND_AWAY_FROM_ZERO
+	case "05_UP":
+		return const_ROUND_05_UP
 	default:
 		return const_ROUND_TIES_TO_EVEN
 	}
@@ -1338,9 +1349,13 @@ func parseDectestRounding(line string) (string, bool) {
 		return "TOWARD_POSITIVE", true
 	case "floor":
 		return "TOWARD_NEGATIVE", true
+	case "up":
+		return "AWAY_FROM_ZERO", true
+	case "05up":
+		return "05_UP", true
 	default:
-		// "up", "05up" and "half_down" are not IEEE 754 decimal modes;
-		// loadDectestFile drops the lines under such a directive.
+		// "half_down" is not supported; loadDectestFile drops the lines under
+		// such a directive.
 		return roundingUnsupported, true
 	}
 }

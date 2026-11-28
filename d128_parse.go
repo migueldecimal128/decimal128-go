@@ -176,6 +176,12 @@ func parseDec34_ctxnull(t *txt, ctxnull *context) d128ParseResult {
 			if ctxnull != nil {
 				rounding = ctxnull.round
 			}
+			if rounding == const_ROUND_05_UP {
+				// Cold route: toward zero, then fix the last digit (round05_up.go).
+				tz := newContextRound(const_ROUND_TOWARD_ZERO)
+				t := finalize_128_ctxnull(r.sign, r.qExp, r.coeff, r.residue, const_ROUND_TOWARD_ZERO, tz)
+				return d128ParseResultSuccess(round05Up_finish_ctxnull(t, tz.flags, ctxnull))
+			}
 			value := finalize_128_ctxnull(r.sign, r.qExp, r.coeff, r.residue, rounding, ctxnull)
 			return d128ParseResultSuccess(value)
 		}

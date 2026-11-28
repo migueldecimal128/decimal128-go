@@ -54,6 +54,12 @@ func d128_lnp1_ctx(x d128, ctx *context) d128 { return d128_lnp1_rnd_ctxnull(x, 
 // decimal128 loses digits. Correctly rounded, except within the documented
 // 1-ulp gap (CrossPlatformArchitecture.md, "Transcendental accuracy").
 func d128_lnp1_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: toward zero, then fix the last digit (round05_up.go).
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		t := d128_lnp1_rnd_ctxnull(x, const_ROUND_TOWARD_ZERO, tz)
+		return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
+	}
 	return logP1Dispatch(x, const_LOGP1_BASE_E, rounding, ctxnull)
 }
 
@@ -61,6 +67,12 @@ func d128_log2p1_tte(x d128) d128               { return d128_log2p1_rnd_ctxnull
 func d128_log2p1_rnd(x d128, rnd round) d128    { return d128_log2p1_rnd_ctxnull(x, rnd, nil) }
 func d128_log2p1_ctx(x d128, ctx *context) d128 { return d128_log2p1_rnd_ctxnull(x, ctx.round, ctx) }
 func d128_log2p1_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: toward zero, then fix the last digit (round05_up.go).
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		t := d128_log2p1_rnd_ctxnull(x, const_ROUND_TOWARD_ZERO, tz)
+		return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
+	}
 	return logP1Dispatch(x, const_LOGP1_BASE_2, rounding, ctxnull)
 }
 
@@ -68,6 +80,12 @@ func d128_log10p1_tte(x d128) d128               { return d128_log10p1_rnd_ctxnu
 func d128_log10p1_rnd(x d128, rnd round) d128    { return d128_log10p1_rnd_ctxnull(x, rnd, nil) }
 func d128_log10p1_ctx(x d128, ctx *context) d128 { return d128_log10p1_rnd_ctxnull(x, ctx.round, ctx) }
 func d128_log10p1_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: toward zero, then fix the last digit (round05_up.go).
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		t := d128_log10p1_rnd_ctxnull(x, const_ROUND_TOWARD_ZERO, tz)
+		return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
+	}
 	return logP1Dispatch(x, const_LOGP1_BASE_10, rounding, ctxnull)
 }
 
@@ -77,6 +95,12 @@ func d128_expm1_tte(x d128) d128               { return d128_expm1_rnd_ctxnull(x
 func d128_expm1_rnd(x d128, rnd round) d128    { return d128_expm1_rnd_ctxnull(x, rnd, nil) }
 func d128_expm1_ctx(x d128, ctx *context) d128 { return d128_expm1_rnd_ctxnull(x, ctx.round, ctx) }
 func d128_expm1_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: toward zero, then fix the last digit (round05_up.go).
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		t := d128_expm1_rnd_ctxnull(x, const_ROUND_TOWARD_ZERO, tz)
+		return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
+	}
 	if d128_isFIN(x) {
 		if d128_isZER(x) {
 			return x // expm1(±0) = ±0
@@ -90,6 +114,12 @@ func d128_exp10m1_tte(x d128) d128               { return d128_exp10m1_rnd_ctxnu
 func d128_exp10m1_rnd(x d128, rnd round) d128    { return d128_exp10m1_rnd_ctxnull(x, rnd, nil) }
 func d128_exp10m1_ctx(x d128, ctx *context) d128 { return d128_exp10m1_rnd_ctxnull(x, ctx.round, ctx) }
 func d128_exp10m1_rnd_ctxnull(x d128, rounding round, ctxnull *context) d128 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: toward zero, then fix the last digit (round05_up.go).
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		t := d128_exp10m1_rnd_ctxnull(x, const_ROUND_TOWARD_ZERO, tz)
+		return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
+	}
 	if d128_isFIN(x) {
 		if d128_isZER(x) {
 			return x // exp10m1(±0) = ±0

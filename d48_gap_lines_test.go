@@ -24,6 +24,8 @@ var gapLineModes = map[string]round{
 	"TIES_TO_EVEN": const_ROUND_TIES_TO_EVEN, "TIES_TO_AWAY": const_ROUND_TIES_TO_AWAY,
 	"TOWARD_ZERO": const_ROUND_TOWARD_ZERO, "TOWARD_POSITIVE": const_ROUND_TOWARD_POSITIVE,
 	"TOWARD_NEGATIVE": const_ROUND_TOWARD_NEGATIVE,
+	"AWAY_FROM_ZERO":  const_ROUND_AWAY_FROM_ZERO,
+	"05_UP":           const_ROUND_05_UP,
 }
 
 // gapLineEvaluate runs one native-dialect line's operation through the core

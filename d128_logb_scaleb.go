@@ -45,6 +45,13 @@ func d128_scaleB_ctxnull(x d128, pow10Delta int, ctxnull *context) d128 {
 		if ctxnull != nil {
 			rounding = ctxnull.round
 		}
+		if rounding == const_ROUND_05_UP {
+			// Cold route: toward zero, then fix the last digit (round05_up.go).
+			tz := newContextRound(const_ROUND_TOWARD_ZERO)
+			t := finalize_128_ctxnull(d128_signFlag(x), qNew, d128_u128(x), const_RESIDUE_EXACT,
+				const_ROUND_TOWARD_ZERO, tz)
+			return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
+		}
 		return finalize_128_ctxnull(d128_signFlag(x), qNew, d128_u128(x), const_RESIDUE_EXACT, rounding, ctxnull)
 	}
 	if d128_isINF(x) {
@@ -117,6 +124,12 @@ func d128_quantize_ctx(x, y d128, ctx *context) d128 {
 // quantize(x, y): x rescaled to the quantum (encoded exponent) of y, keeping
 // x's sign (IEEE 754-2019 Section 5.3.2). The general body.
 func d128_quantize_rnd_ctxnull(x, y d128, rounding round, ctxnull *context) d128 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: toward zero, then fix the last digit (round05_up.go).
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		t := d128_quantize_rnd_ctxnull(x, y, const_ROUND_TOWARD_ZERO, tz)
+		return round05Up_finish_ctxnull(t, tz.flags, ctxnull)
+	}
 	if d128_isNAN(x) || d128_isNAN(y) {
 		return ctxNanOperand2_ctxnull(ctxnull, x, y)
 	}

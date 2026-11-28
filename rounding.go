@@ -6,7 +6,9 @@ package decimal128
 
 import "strconv"
 
-// Rounding is a rounding direction for inexact results, per IEEE 754-2019.
+// Rounding is a rounding direction for inexact results: the five IEEE 754-2019
+// directions plus two from the General Decimal Arithmetic Specification (GDAS),
+// round-up (AwayFromZero) and round-05up (Round05Up).
 //
 // The wrapper face of the core's `Round` codes (CrossPlatformArchitecture.md
 // Section 6.4); the raw values mirror the core ordering exactly.
@@ -23,6 +25,14 @@ const (
 	TowardPositive
 	// TowardNegative: round toward negative infinity (floor).
 	TowardNegative
+	// AwayFromZero: round away from zero whenever any discarded digit is nonzero
+	// (GDAS round-up).
+	AwayFromZero
+	// Round05Up: round away from zero only when the kept last digit is 0 or 5,
+	// otherwise truncate (GDAS round-05up). Rounding at a longer precision this
+	// way and then rounding again to a shorter one gives the same result as
+	// rounding once, without double rounding.
+	Round05Up
 )
 
 // core bridges to the package-internal round value (identical ordering).
@@ -41,6 +51,10 @@ func (r Rounding) String() string {
 		return "TowardPositive"
 	case TowardNegative:
 		return "TowardNegative"
+	case AwayFromZero:
+		return "AwayFromZero"
+	case Round05Up:
+		return "Round05Up"
 	default:
 		return "Rounding(" + strconv.Itoa(int(r)) + ")"
 	}

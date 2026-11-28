@@ -89,6 +89,23 @@ var roundUpCases = []struct {
 	{const_ROUND_TOWARD_NEGATIVE, const_RESIDUE_EXACT, 0, true, false},
 	{const_ROUND_TOWARD_NEGATIVE, const_RESIDUE_EXACT, 9, false, false},
 	{const_ROUND_TOWARD_NEGATIVE, const_RESIDUE_EXACT, 1, true, false},
+	// roundAwayFromZero (GDAS round-up): up on any nonzero residue, either sign
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_LT_HALF, 0, false, true},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_LT_HALF, 3, true, true},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_LT_HALF, 5, false, true},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_LT_HALF, 8, true, true},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_HALF, 0, false, true},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_HALF, 3, true, true},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_HALF, 5, false, true},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_HALF, 8, true, true},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_GT_HALF, 0, false, true},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_GT_HALF, 3, true, true},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_GT_HALF, 5, false, true},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_GT_HALF, 8, true, true},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_EXACT, 0, false, false},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_EXACT, 3, true, false},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_EXACT, 5, false, false},
+	{const_ROUND_AWAY_FROM_ZERO, const_RESIDUE_EXACT, 8, true, false},
 }
 
 func TestRoundUpUlpBiasCase(t *testing.T) {

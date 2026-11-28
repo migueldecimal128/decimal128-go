@@ -134,6 +134,18 @@ func d128_roundToIntegralSignalInexact(x d128, ctx *context) d128 {
 // Non-finite inputs and inputs that are already integral (`qExp >= 0`)
 // are returned unchanged.
 func roundToIntegral128_ctxnull(x d128, rounding round, ctxnull *context, suppressInexact bool) d128 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: toward zero, then fix the last digit (round05_up.go). The
+		// fix needs the inexact flag even when the caller suppresses it.
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		t := roundToIntegral128_ctxnull(x, const_ROUND_TOWARD_ZERO, tz, false)
+		r := round05Up_fromTowardZero(t, tz.flags.isSet(const_INEXACT))
+		if suppressInexact {
+			tz.flags.clear(const_INEXACT)
+		}
+		round05Up_mergeFlags_ctxnull(tz.flags, ctxnull)
+		return r
+	}
 	if d128_isNAN(x) {
 		return ctxNanOperand1_ctxnull(ctxnull, x)
 	}
@@ -231,6 +243,19 @@ func d128_toInt64TowardNegativeSignalInexact_ctxnull(x d128, ctxnull *context) i
 	return d128ConvertToInt64_ctxnull(x, const_ROUND_TOWARD_NEGATIVE, false, ctxnull)
 }
 
+// d128_toInt64_rnd_ctxnull is `convertToInteger` (signed) in any rounding direction,
+// including the GDAS extensions that have no IEEE 754 named operation (round-up,
+// round-05up).
+func d128_toInt64_rnd_ctxnull(x d128, rounding round, ctxnull *context) int64 {
+	return d128ConvertToInt64_ctxnull(x, rounding, true, ctxnull)
+}
+
+// d128_toInt64SignalInexact_rnd_ctxnull is `convertToIntegerExact` (signed) in any
+// rounding direction.
+func d128_toInt64SignalInexact_rnd_ctxnull(x d128, rounding round, ctxnull *context) int64 {
+	return d128ConvertToInt64_ctxnull(x, rounding, false, ctxnull)
+}
+
 // Core implementation for all decimal-to-Int64 conversions.
 //
 // Implements the IEEE 754-2019 `convertToInteger` family for signed
@@ -249,6 +274,24 @@ func d128_toInt64TowardNegativeSignalInexact_ctxnull(x d128, ctxnull *context) i
 //   - Returns: The converted `Int64`, or `Int64.min` if `x` is NaN,
 //     infinite, or out of range.
 func d128ConvertToInt64_ctxnull(x d128, rounding round, suppressInexact bool, ctxnull *context) int64 {
+	if rounding == const_ROUND_05_UP {
+		// Cold route: round to an integral value in round-05up, then convert
+		// that value, which is exact. A value that rounds out of range is
+		// invalid only, so the rounding step's inexact is dropped then.
+		c05 := newContextRound(const_ROUND_05_UP)
+		t := roundToIntegral128_ctxnull(x, const_ROUND_05_UP, c05, false)
+		tz := newContextRound(const_ROUND_TOWARD_ZERO)
+		r := d128ConvertToInt64_ctxnull(t, const_ROUND_TOWARD_ZERO, true, tz)
+		if tz.flags.isSet(const_INVALID_OPERATION) {
+			round05Up_mergeFlags_ctxnull(tz.flags, ctxnull)
+			return r
+		}
+		if suppressInexact {
+			c05.flags.clear(const_INEXACT)
+		}
+		round05Up_mergeFlags_ctxnull(c05.flags, ctxnull)
+		return r
+	}
 	if d128_isFIN(x) {
 		signMask := int64(d128_signMask(x))
 		sign := d128_signFlag(x)
@@ -389,6 +432,8 @@ func d128ConvertToUInt64_ctxnull(x d128, rounding round, suppressInexact bool, c
 	// INVALID signal (an sNaN is quieted here without a separate signal — the
 	// invalid it deserves is raised below). This is the ONLY place invalid is
 	// raised, and inexact is NEVER raised on this path (IEEE mutual exclusion).
+	// Round-05up needs no route of its own here: d128_roundToIntegral_rnd routes
+	// it, and every later step is exact.
 	t := d128_roundToIntegral_rnd(x, rounding)
 	if !d128_fitsUInt64(t) {
 		ctxSignalInvalidOperation_ctxnull(ctxnull, causeConvertNonFiniteToInteger, const_D128_QNAN0)
@@ -471,4 +516,17 @@ func d128_toUInt64TowardPositiveSignalInexact_ctxnull(x d128, ctxnull *context) 
 // IEEE 754-2019 Section 5.4.1 `convertToIntegerExactTowardNegative` (unsigned).
 func d128_toUInt64TowardNegativeSignalInexact_ctxnull(x d128, ctxnull *context) uint64 {
 	return d128ConvertToUInt64_ctxnull(x, const_ROUND_TOWARD_NEGATIVE, false, ctxnull)
+}
+
+// d128_toUInt64_rnd_ctxnull is `convertToInteger` (unsigned) in any rounding direction,
+// including the GDAS extensions that have no IEEE 754 named operation (round-up,
+// round-05up).
+func d128_toUInt64_rnd_ctxnull(x d128, rounding round, ctxnull *context) uint64 {
+	return d128ConvertToUInt64_ctxnull(x, rounding, true, ctxnull)
+}
+
+// d128_toUInt64SignalInexact_rnd_ctxnull is `convertToIntegerExact` (unsigned) in any
+// rounding direction.
+func d128_toUInt64SignalInexact_rnd_ctxnull(x d128, rounding round, ctxnull *context) uint64 {
+	return d128ConvertToUInt64_ctxnull(x, rounding, false, ctxnull)
 }
